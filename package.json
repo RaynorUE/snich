@@ -10,14 +10,65 @@
 		"Other"
 	],
 	"activationEvents": [
-		"onCommand:extension.helloWorld"
+		"onCommand:yansasync.setup.test_connection",
+        "onCommand:yansasync.do_nothing",
+		"onCommand:yansasync.setup.new_instance",
+		"onCommand:yansasync.folder.sync_record"
 	],
 	"main": "./out/extension.js",
 	"contributes": {
 		"commands": [
+            {
+                "command":"yansasync.setup.new_instance",
+                "title": "Setup New Instance",
+				"category": "YansaSync"
+			},
+            {
+				"command": "yansasync.do_nothing",
+				"title":"Do nothing. Just activate",
+				"category": "YansaSync"
+			},
 			{
-				"command": "extension.helloWorld",
-				"title": "Hello World"
+				"command": "yansasync.setup.test_connection",
+				"title": "Test Connection",
+				"category": "YansaSync"
+			},
+			{
+				"command": "yansasync.folder.sync_record",
+				"title":"Sync Record",
+				"category": "YansaSync"
+			}
+		],
+		"menus":{
+			"explorer/context": [
+				{
+					"command":"yansasync.folder.sync_record"
+				}
+			]
+		},
+		"configuration": [
+			{
+				"title": "YansaSync",
+				"properties": {
+					"log_level":{
+						"type":"string",
+						"title": "Logging Level",
+						"description": "Enable the level of logging you want. Picking a more detail log option will incldue the less detailed options \"above it\"",
+						"enum": [
+							"Debug",
+							"Info",
+							"Warn",
+							"Error"
+						],
+						"enumDescriptions": [
+							"Debug: Extremely detailed. Intended for extension development. But can help identify edge case issues.",
+							"Info: Moderately detailed. Can be useful for seeing what's going on under the hood without a bunch of noise.",
+							"Warn: This is the Default log level. Typically warnings are used for things you should be doing instead, but functionality is not yet broken.",
+							"Error: Least detailed. Use this if you only want to know when major issues occur."
+						],
+						"default":"Error"
+					}
+				}
 			}
 		]
 	},
@@ -29,10 +80,14 @@
 		"test": "npm run compile && node ./node_modules/vscode/bin/test"
 	},
 	"devDependencies": {
-		"typescript": "^3.1.4",
-		"vscode": "^1.1.25",
-		"tslint": "^5.8.0",
+		"@types/mocha": "^2.2.42",
 		"@types/node": "^8.10.25",
-		"@types/mocha": "^2.2.42"
+		"tslint": "^5.8.0",
+		"typescript": "^3.2.4",
+		"vscode": "^1.1.25"
+	},
+	"dependencies": {
+		"@types/needle": "^2.0.3",
+		"needle": "^2.2.4"
 	}
 }

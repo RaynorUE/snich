@@ -1,0 +1,265 @@
+//https://github.com/tomas/needle
+import * as needle from 'needle';
+import * as vscode from 'vscode';
+import { SystemLogHelper } from './loghelper';
+import { InstanceData } from '../myTypes/globals';
+import { OutgoingHttpHeaders } from 'http';
+import * as querystring from "querystring";
+
+
+
+export class RESTClient {
+
+    private needleOpts: needle.NeedleOptions = {
+        json: true,
+        headers: <OutgoingHttpHeaders>{}
+        
+    };
+    private instanceData: InstanceData;
+    private logger: SystemLogHelper;
+    private apiVersion: string = ''; //can be v1/, preparing for version ups when needed.
+    private lib: string = 'RESTClient';
+    private authType: String = "basic";
+
+    constructor(instanceData: InstanceData, logger?: SystemLogHelper) {
+        let func = 'constructor';
+        this.logger = logger || new SystemLogHelper();
+        this.instanceData = instanceData;
+        //this.logger.info(this.lib, func, 'START', {instanceData:instanceData});
+
+
+        if (this.instanceData.connection.auth.type === 'oauth' && this.instanceData.connection.auth.OAuth) {
+            this.setOAuth(this.instanceData.connection.auth.OAuth.client_id, this.instanceData.connection.auth.OAuth.client_secret);
+        } else if (this.instanceData.connection.auth.type === 'basic') {
+            this.setBasicAuth(this.instanceData.connection.auth.username, this.instanceData.connection.auth.password);
+        }
+
+
+        this.logger.info(this.lib, func, "END");
+
+    }
+
+    setBasicAuth(username: string, password: string) {
+        let func = 'setBasicAuth';
+        this.logger.info(this.lib, func, 'START', {
+            username: username,
+            password: password ? 'not logged' : password
+        });
+
+        this.needleOpts.username = username || "";
+        this.needleOpts.password = password || "";
+        this.authType = 'basic';
+
+        this.logger.info(this.lib, func, 'END');
+
+    }
+
+    setOAuth(clientID: string, clientSecret: string, username ? : string, password ? : string) {
+        let func = "setOAuth";
+        this.logger.info(this.lib, func, "START");
+        this.needleOpts.username = "";
+        this.needleOpts.password = "";
+        this.authType = 'oauth';
+        this.logger.info(this.lib, func, "END");
+    }
+
+    getRecord(table: string, sys_id: string) {
+        let url = this.instanceData.connection.url + '/api/now/' + this.apiVersion + 'table/' + table + '/' + sys_id;
+        return this.get(url, 'Getting record. ' + table + '_' + sys_id)
+            .then((response: any) => {
+                var record: object = {};
+                if (response.body.result) {
+                    record = response.body.result;
+                }
+                return record;
+            });
+    }
+
+    getRecords(table:string, encodedQuery: string, fields:Array<string>, displayValue?:boolean, refLinks?:boolean) {
+        displayValue = displayValue || false;
+        refLinks = refLinks === undefined ? true : refLinks;
+        let url = this.instanceData.connection.url + '/api/now/table/' + table + '?sysparm_fields=' + fields.toString() + '&sysparm_exclude_reference_link=' + refLinks + '&sysparm_display_value=' + displayValue +'&sysparm_query=' + encodedQuery;
+        return this.get(url, "Retrieving records based on url: " + url).then(function(response){
+            var recs = [];
+            if(response && response.body){
+                recs = response.body.result;
+            }
+            return recs;
+        });
+    }
+
+    updateRecord(table: string, sys_id: string, body: object) {
+        this.post('', '');
+    }
+
+    /*
+        insertRecord(fileData: SyncedFile) {
+
+        }
+    */
+
+    testConnection() {
+        let func = "testConnection";
+        this.logger.debug(this.lib, func, 'START');
+        let baseURL = this.instanceData.connection.url;
+        let url = baseURL + '/api/now/table/sys_user?sysparm_query=' + encodeURIComponent('user_name=' + this.instanceData.connection.auth.username);
+        this.logger.info(this.lib, func, 'Getting url: ' + url);
+        return this.get(url, `Testing connection for ${baseURL}`).then((response) => {
+            this.logger.info(this.lib, func, 'Response body recieved:', response);
+            if(response && response.body && response.body.result.length > 0){
+                vscode.window.showInformationMessage("Connection Successful!");
+                return true;
+            } else {
+                vscode.window.showErrorMessage("Connection failed. See log for details.");
+                return false;
+            }
+        }, (err) =>{
+            console.log('Error occured!', err);
+        });
+    }
+
+    private get(url: string, progressMessage: string) {
+        let func = "get";
+        return vscode.window.withProgress( < vscode.ProgressOptions > {
+            location: vscode.ProgressLocation.Notification,
+            title: progressMessage,
+            cancellable: false
+        }, (progress, token) => {
+
+            return this.handleAuth().then(() => {
+                this.logger.info(this.lib, func, 'Auth handled. Needleopts:', this.needleOpts );
+                this.logger.info(this.lib, func, "Getting url:" + url);
+                return needle('get', url, this.needleOpts).then((response) => {
+                    progress.report({
+                        increment: 100
+                    });
+                    this.logger.info(this.lib, func, "response received.", response);
+                    return response;
+                });
+            }).catch((err) =>{
+                console.log("error occured:", err);
+            });
+        });
+    }
+
+    private post(url: string, body: any) {
+        return needle('post', url, body, this.needleOpts).then((response) => {
+            return response;
+        });
+    }
+
+    private handleAuth() {
+        return new Promise((resolve, reject) => {
+            if (this.authType === 'basic') {
+                return resolve();  //needleOpts already taken care of since we'll be storing ID/PW and loading from instance options.
+            }
+
+            if (this.authType === 'oauth') {
+                this.processOAuth().then(() => {resolve();});
+            }
+        });
+    }
+    
+    private processOAuth(getNew?:boolean):Promise<any> {
+        return new Promise((resolve,reject) =>{
+            let func = 'processOAuth';
+            this.logger.info(this.lib, func, 'START', {getNew:getNew});
+            
+            let oauthData = this.instanceData.connection.auth.OAuth;
+            if(!oauthData.token.access_token){
+                //if we don' thave any access token yet, jump straight to getNew!
+                getNew = true;
+            }
+            let now = Date.now();
+            let hadTokenFor = now - oauthData.lastRetrieved + 10000; //add 10000 milliseconds (10 seconds), to account for time sync issues, and making sure we attempt to get a new token BEFORE it actually expires.
+            let expiresIn = oauthData.token.expires_in * 1000; //SN returns "Seconds" need this to be milliseconds for comparison
+            this.logger.debug(this.lib, func, "oAuth Data about to be used.", {oauthData:oauthData,now:now,hadTokenFor:hadTokenFor,expiresIn:expiresIn});
+            if(hadTokenFor < expiresIn && !getNew){
+                this.logger.info(this.lib, func, 'Token not yet expire! Using it.');
+                
+                if(this.needleOpts.headers){
+                    this.needleOpts.headers.authorization = "Bearer " + oauthData.token.access_token;
+                }
+                this.logger.info(this.lib, func, 'END');
+                return resolve();
+            } else if(hadTokenFor > expiresIn && oauthData.token.refresh_token && !getNew){
+                this.logger.info(this.lib, func, '//token expired! Attempt to get new access token using refresh token!');
+                var connectionData = this.instanceData.connection;
+                let url = this.instanceData.connection.url + '/oauth_token.do';
+                var formEncodedParams = "grant_type=password&";
+                formEncodedParams += "client_id=" + encodeURIComponent(connectionData.auth.OAuth.client_id) + "&";
+                formEncodedParams += "client_secret=" + encodeURIComponent(connectionData.auth.OAuth.client_secret) + "&";
+                formEncodedParams += "refresh_token=" + encodeURIComponent(connectionData.auth.OAuth.token.refresh_token);
+                return needle('post', url, formEncodedParams).then((authResponse) =>{
+                    if(authResponse.body && authResponse.body.access_token){
+                        var tokenData = authResponse.body;
+                        var authHeader = "Bearer " + tokenData.access_token;
+                        if(this.needleOpts.headers){
+                            this.needleOpts.headers.authorization = authHeader;
+                        }
+                        this.instanceData.connection.auth.OAuth.token = tokenData;
+                        this.instanceData.connection.auth.OAuth.lastRetrieved = Date.now();
+                        //new configMgmt().updateInstanceData(this.instancData);
+                        this.logger.info(this.lib, func, 'END');
+                        return resolve();
+                    } else {
+                        this.logger.info(this.lib, func, 'Did not get back access token. Attempting to reprocess forcing to getNew.', );
+                        this.logger.info(this.lib, func, 'END');
+                        return resolve(this.processOAuth(true));
+                    }
+                });
+            }
+
+            if(getNew){
+                this.logger.info(this.lib, func, 'Attempting to get new Access token.');
+                vscode.window.showInputBox(<vscode.InputBoxOptions>{"placeholder":`Enter password for ${this.instanceData.connection.url}.`,"password":true})
+                .then((value) =>{
+                    this.logger.info(this.lib, func, "asked user for password. Proceeding to attempt to auth.", );
+                    
+
+
+                    var connectionData = this.instanceData.connection;
+                    var url = connectionData.url + '/oauth_token.do';
+
+                    var formData = {
+                        grant_type:"password",
+                        client_id:connectionData.auth.OAuth.client_id,
+                        client_secret:connectionData.auth.OAuth.client_secret,
+                        username:connectionData.auth.username,
+                        password: value || ""
+                    
+                    };
+
+                    var formString = querystring.stringify(formData);
+                    this.logger.info(this.lib, func, "formString:",formString);
+
+                    var formEncodedParams = "grant_type=password&";
+                    formEncodedParams += "client_id=" + encodeURI(connectionData.auth.OAuth.client_id) + "&";
+                    formEncodedParams += "client_secret=" + encodeURI(connectionData.auth.OAuth.client_secret) + "&";
+                    formEncodedParams += "username=" + encodeURI(connectionData.auth.username) + "&";
+                    this.logger.info(this.lib, func, "formEncoded PArams without password:", formEncodedParams);
+                    formEncodedParams += "password=" + encodeURI(value || "");
+                    this.logger.debug(this.lib, func, "formEncodedParams with PW:", formEncodedParams);
+                    return needle('post', url, formString, <needle.NeedleOptions>{parse:"json",headers:{content_type:"application/x-www-form-urlencoded"}})
+                    .then((authResponse) => {
+                        this.logger.info(this.lib, func, "retrieved auth response!", authResponse);
+                        if(authResponse.body && authResponse.body.access_token){
+                            var tokenData = authResponse.body;
+
+                            this.instanceData.connection.auth.OAuth.lastRetrieved = Date.now();
+                            this.instanceData.connection.auth.OAuth.token = tokenData;
+                            
+                            if(this.needleOpts.headers){
+                                this.needleOpts.headers.authorization = "Bearer " + tokenData.access_token;
+                            }
+                            this.logger.info(this.lib, func, 'NeedleOptions have been set.', this.needleOpts);
+                            this.logger.info(this.lib, func, 'END');
+                            return resolve();
+                            //new configMgmt().updateInstanceData(this.instancData);
+                        }
+                    }).catch((err) => {console.log(err);});
+                });
+            }
+        });
+    }   
+}

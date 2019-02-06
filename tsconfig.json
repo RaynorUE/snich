@@ -6,8 +6,9 @@
 		"lib": [
 			"es6"
 		],
+		"typeRoots": ["/src/myTypes"],
 		"sourceMap": true,
-		"rootDir": "src",
+        "rootDir": "src",
 		/* Strict Type-Checking Option */
 		"strict": true,   /* enable all strict type-checking options */
 		/* Additional Checks */
@@ -20,4 +21,5 @@
 		"node_modules",
 		".vscode-test"
 	]
+	
 }

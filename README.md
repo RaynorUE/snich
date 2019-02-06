@@ -2,6 +2,10 @@
 
 This is the README for your extension "yansasync". After writing up a brief description, we recommend including the following sections.
 
+## Setup
+After installing the extension, open the command palette (ctrl+p) and type in yansasync and look for the "configure" command. 
+<a href="https://www.youtube.com/watch?feature=player_embedded&v=6bfHf17td6c" target="_blank"><img src="https://i.imgur.com/FY1AbSo.gif" alt="Setup Video" width="240" height="180" border="0" /></a>
+
 ## Features
 
 Describe specific features of your extension including screenshots of your extension in action. Image paths are relative to this README file.
