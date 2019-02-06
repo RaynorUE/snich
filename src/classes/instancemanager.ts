@@ -46,7 +46,7 @@ export class InstanceManager {
             var quickPickItems = <Array<vscode.QuickPickItem>>[
                 {label:"Basic",description:"Use basic authentication."}, 
                 {label:"OAuth",description:"Use OAuth to authenticate. More Secure as PW is not stored."}
-            ]
+            ];
             this.logger.info(this.lib, func, 'About to ask for auth type.');
             
             return vscode.window.showQuickPick(quickPickItems, <vscode.QuickPickOptions>{placeHolder:"Select an authentcation option",ignoreFocusOut:true});
@@ -81,7 +81,7 @@ export class InstanceManager {
                         if(pickedFolder){
                             wsFolderRoot = pickedFolder.uri;
                         }
-                    })
+                    });
                 }
 
                 var instanceFSPath =  wsFolderRoot + '/' + this.instanceData.name;
@@ -145,10 +145,10 @@ export class InstanceManager {
         var instanceExists = false;
         if(this.instanceList.length > 0){
             this.instanceList.forEach((instance) =>{
-                if(instance.name == instanceName){
+                if(instance.name === instanceName){
                     instanceExists = true;
                 }
-            })
+            });
         }
         return instanceExists;
     }
@@ -167,7 +167,7 @@ class InstanceDataObj {
         this.applications = [];
         this.tableConfig = {
             tables: []
-        }
+        };
         this.connection = {
             url:"",
             auth: {
@@ -187,6 +187,6 @@ class InstanceDataObj {
                     }
                 }
             }
-        }
+        };
     }
 }

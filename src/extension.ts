@@ -6,7 +6,7 @@ import { SystemLogHelper } from './classes/loghelper';
 import { RESTClient } from './classes/restclient';
 import { InstanceData } from './myTypes/globals';
 import { WorkspaceManager } from './classes/workspaceManager';
-import { SSL_OP_ALLOW_UNSAFE_LEGACY_RENEGOTIATION } from 'constants';
+
 
 // this method is called when your extension is activated
 // your extension is activated the very first time the command is executed
@@ -90,7 +90,6 @@ export function activate(context: vscode.ExtensionContext) {
 	vscode.commands.registerCommand('yansasync.instance.refresh_meta', () =>{
 		//this command will crawl dictionary entries matching the various "development" criteria and store locally the fields/tables/etc. 
 		//also executed on first instance setup.
-		let func = 'yansasync.isntance.refresh_meta';
 	});
 
 	vscode.commands.registerCommand('yansasync.instance.configure_authentication', () =>{
@@ -163,7 +162,7 @@ export function activate(context: vscode.ExtensionContext) {
 																	//var location = vscode.window.activeTextEditor !== undefined ? vscode.window.activeTextEditor + 1 || 0;
 																	vscode.window.showTextDocument(doc, 0, true);
 																});
-															})
+															});
 														}
 													});
 												}
@@ -173,7 +172,6 @@ export function activate(context: vscode.ExtensionContext) {
 								});
 							});
 						}
-
 					});
                 }
             });
