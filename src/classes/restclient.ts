@@ -63,8 +63,10 @@ export class RESTClient {
         this.logger.info(this.lib, func, "END");
     }
 
-    getRecord(table: string, sys_id: string) {
-        let url = this.instanceData.connection.url + '/api/now/' + this.apiVersion + 'table/' + table + '/' + sys_id;
+    getRecord(table: string, sys_id: string, fields:Array<String>, displayValue?:boolean, refLinks?:boolean) {
+        displayValue = displayValue || false;
+        refLinks = refLinks === undefined ? true : refLinks;
+        let url = this.instanceData.connection.url + '/api/now/' + this.apiVersion + 'table/' + table + '/' + sys_id + '?sysparm_fields=' + fields + '&sysparm_exclude_reference_link=' + refLinks + '&sysparm_display_value=' + displayValue;
         return this.get(url, 'Getting record. ' + table + '_' + sys_id)
             .then((response: any) => {
                 var record: object = {};

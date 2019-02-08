@@ -3,101 +3,42 @@ All notable changes to the "yansasync" extension will be documented in this file
 
 Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how to structure this file.
 
-## [Initial Version]
+## [Unreleased]()
+Features and Functionality that have been completed but not yet released. See [FeatureRoadmap.md](/FeatureRoadmap.md) for in progress items.
 
+### Added
 
-## [Planned Features]
-- Initial release
+### Changed
+- Sync Record into appropriate application folder tree.
 
-- Have a way to sync records through command palette? Like "Sync Record" if "No folder" prompts for table to sync record from list of "already setup/synced/pre-configured" table list? 
+## [v0.1.0]()
 
-- AutoConfig Tables with Multiple Fields
-    - Widget
-    - UI Page
-    - A way to add their own custom? Should be doable..
+### Extension Functionality (Using this extension)
+Below are features and functionality specific to "using" the extension. 
+#### Added
+- Setup new Instance.
+    - Please view this [Instructional Video](https://youtube.com) on how to setup a new instance!
+    - Will auto-create global scope and default folder tree.
+- Multiple Instances in one Workspace.
+- Test Connection
+    - Allows for testing connectivity to an instance.
+- Sync Record (No auto-file creation)
+    - Sync a record, open it in a new file, does not save in file tree automatically.
+- Logging level setting.
+    - Can now adjust how noisy the logging is when executing commands! Can be useful for providing detailed information when bugs are found.
 
-- Logging
-    Verbose logging options! woo!
+#### Changed
+- Nothing changed, initial release!
 
-- Data Storage: Still use .json file? But just have the one in the main folder? Yea... let's do that...
-- sysparm_transaction_scope  ... does this put things in the right places???? also sysparm_record_scope
-- Feature: Loading dialog on initial "Setup" ... Instructions would be to go into settings and set values accordingly... (Instance, Auth type, etc);
-            Then have a "First time setup" execution that will do any "heavy pre-queryign to the SN Instance" to build and setup things for quick call / access locally (Things like tables, etc);
-            Then have an option to "Update on demand" 
-            Then also have an option where we "Update on Demand" in the background "on load of the extension" Is there a way to do this without having to execute a command?
+#### Removed
+- Nothing removed, initial release!
 
-- IMPORTANT: When saving for a given application, flip to that application for them before saving!
+### Internal Extension Features (Devleoping this extension)
+Below are features and functionality internal to development of this extension.
+#### Added
+- RESTClient
+    - For handling RESTCalls to the SN Instance. Setup so we can easily get/retrieve records from our other calls
+    - Will automatically handle authentication for whatever instance we are connecting to. 
+- InstanceManager
 
-Allow Multiple Instances in one VSCode Editor? Yes. 
--- Initial Setup Flow
-    Instace Name
-    Auth Type
-        - Basic -- ID & PW
-        - oAuth -- Client Secret and API Key (naming?)   <-- ID password asked on "Command execution" if key expired. 
-    
-    lastStep: Launch Folder picker to have user pick where to store (Indicate if we can that we will create a folder based on instanceName);
-        AutoCreate anything if needed.
-            - Default Folder Set -> Auto-create a set of folders for commmon things (See been/johns folder for sublime);
--- Auto File/folder creation?
-    - Determine what files need synced based on the field types of a given record type. Script, "dictionary = xml = true", HTML, XML, ?????
-        - Auto create folder based on displayName of field and then auto create files for any of the field types that match where file names are the field names
-
--- Major Features
-    - Sync Application
-        - Creates all  for that app and syncs all files. Show Loading dialog and progress indicator. 
-    -Annotate Table
-        - Use defaults John has
-        - Break functionality into it's own file, so we can expand on over time. Right now it's simple but could see this growing. 
-    -Delete Files
-        - Useful for resyncing.
-    -Set Update Set
-        -- Query and set accordingly
-    -Set Application
-        --Set application accordingly, indicate via showMessage which update set is selected. 
-    -Load New App Files
-        -- Allow on a folder as well as full app..?
-    --Compare Record to Server
-        -- Check on Save
-    -- Have option for a given files context mean to "Sync entire Record as JSON" so someone can look at it's entire details... Do we provide option to save back as?
-
-How do we represent apps on a given instance? Should we create "global" app scope? Then folders inside? 
-
-Command Pallet Actions
-    - Sync Application 
-    
-
-
-- current feature set
--- Sync Table  <--- Builds folder struture, allows sycing files   <-- load and Cache? When do we refresh? On command? Do we do a diff? 
--- Test Connection  <--- good to have, also use at "Setup time"
-
-
-General Design
-    How does the explorer menu get the sections? Ideally will create one for every configured instance, and 
-    Use globalState to store as we make changes, so state can be restored next lunch??? Any other way to store this? Ideally would like to get away from .json files...
-
-
-
-## [Core Functionality for Expansion]
-- ServiceNow_Config.json
-    - Contains details for instance
-        - URL and Auth Detail
-        - Contains folder tree hierarchy (Useful if needing to restore and all you have is the configjson..)
-
-- REST Client
-    - Get Record
-    - Get Records
-    - Post Record
-    - Test Connection
-    - Set Basic Auth
-    - Set oAuth
-
-- File Management
-    - Create New File
-    - Compare Contents
-
-- Caching / Storage of "App File Tables" and perform diffs in the background on each load? Or just on demand?
-
-
-
-## [Sublime Sync Features to Port]
+#### Changed

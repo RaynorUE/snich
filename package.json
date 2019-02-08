@@ -1,6 +1,6 @@
 {
-	"name": "yansasync",
-	"displayName": "YansaSync",
+	"name": "now-code",
+	"displayName": "NOW Code",
 	"description": "Yansa Labs ServiceNow Sync Tool",
 	"version": "0.0.1",
 	"engines": {
@@ -10,10 +10,9 @@
 		"Other"
 	],
 	"activationEvents": [
-		"onCommand:yansasync.setup.test_connection",
         "onCommand:yansasync.do_nothing",
 		"onCommand:yansasync.setup.new_instance",
-		"onCommand:yansasync.folder.sync_record"
+		"workspaceContains:**/servicenow.json"
 	],
 	"main": "./out/extension.js",
 	"contributes": {
@@ -34,7 +33,7 @@
 				"category": "YansaSync"
 			},
 			{
-				"command": "yansasync.folder.sync_record",
+				"command": "yansasync.instance.sync_record",
 				"title":"Sync Record",
 				"category": "YansaSync"
 			}
@@ -42,7 +41,7 @@
 		"menus":{
 			"explorer/context": [
 				{
-					"command":"yansasync.folder.sync_record"
+					"command":"yansasync.instance.sync_record"
 				}
 			]
 		},

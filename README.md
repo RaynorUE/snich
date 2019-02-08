@@ -1,69 +1,49 @@
 # yansasync README
+This application is intended to accelerate and increase the efficiency of working with ServiceNow Records(files) that have some kind of scripting, coding, or html to them. The primary reason is that vsCode offers considerably more rich editing environment as compared to ServiceNows embedded editors.
 
-This is the README for your extension "yansasync". After writing up a brief description, we recommend including the following sections.
 
 ## Setup
-After installing the extension, open the command palette (ctrl+p) and type in yansasync and look for the "configure" command. 
+
+### Extension Activation
+- First Time Setup
+    - Refer to the setup section, as no other commands will work until an instance is setup.
+- Automated Activation
+    - Will automatically activate if you load a folder with existing instance configurations
+
+Execute the "Setup New Instance" command.
+
 <a href="https://www.youtube.com/watch?feature=player_embedded&v=6bfHf17td6c" target="_blank"><img src="https://i.imgur.com/FY1AbSo.gif" alt="Setup Video" width="240" height="180" border="0" /></a>
 
 ## Features
 
-Describe specific features of your extension including screenshots of your extension in action. Image paths are relative to this README file.
+### [Setup New Instance]()
+Will kick off new instance configuration. Asking for the following information.
+>Note: Multiple Instances supported. Will create a unique instance folder inside your workspace folder.
+- Instance name
+- Authentication Type
+    - Basic (Warning: Will store ID and PW unencrypted. Be sure your computer is secure.)
+        > Requires UserName and Password
+    - oAuth (Stores oAuth info unencrypted, but we DO NOT store your password at all in this scenario.);
+- Authentication Information
+    - Depending on auth type selected, it will ask for the appropriate authentication information.
 
-For example if there is an image subfolder under your extension project workspace:
 
-\!\[feature X\]\(images/feature-x.png\)
-
-> Tip: Many popular extensions utilize animations. This is an excellent way to show off your extension! We recommend short, focused animations that are easy to follow.
+### [Test Connection]()
+Once an instance has been configured, you can execute the test connection command to verify connectivity. This will be automatically executed during the New Instance setup process. 
 
 ## Requirements
 
-If you have any requirements or dependencies, add a section describing those and how to install and configure them.
+### [ServiceNow Intsance](https://www.servicenow.com)
+You must have access to a ServiceNow.com instance in order for this extension to work. If you're company does not have one or provide you access, you can [sign up for a FREE personal developer instance](https://developer.service-now.com).
 
-## Extension Settings
-
-Include if your extension adds any VS Code settings through the `contributes.configuration` extension point.
-
-For example:
-
-This extension contributes the following settings:
-
-* `myExtension.enable`: enable/disable this extension
-* `myExtension.thing`: set to `blah` to do something
+### [Needle.js Node Application]()
+Need to still test if this has to be installed manually or can be included as part of the extension.
 
 ## Known Issues
 
-Calling out known issues can help limit users opening duplicate issues against your extension.
+- Aborting mid-flight of New Istance Setup causes some whacky behavior where it leaves things half-setup. 
+- Aborting mid-flight of sync record opens an empty record and general weirdness. 
 
 ## Release Notes
-
-Users appreciate release notes as you update your extension.
-
-### 1.0.0
-
-Initial release of ...
-
-### 1.0.1
-
-Fixed issue #.
-
-### 1.1.0
-
-Added features X, Y, and Z.
-
------------------------------------------------------------------------------------------------------------
-
-## Working with Markdown
-
-**Note:** You can author your README using Visual Studio Code.  Here are some useful editor keyboard shortcuts:
-
-* Split the editor (`Cmd+\` on macOS or `Ctrl+\` on Windows and Linux)
-* Toggle preview (`Shift+CMD+V` on macOS or `Shift+Ctrl+V` on Windows and Linux)
-* Press `Ctrl+Space` (Windows, Linux) or `Cmd+Space` (macOS) to see a list of Markdown snippets
-
-### For more information
-
-* [Visual Studio Code's Markdown Support](http://code.visualstudio.com/docs/languages/markdown)
-* [Markdown Syntax Reference](https://help.github.com/articles/markdown-basics/)
-
-**Enjoy!**
+> See change Log
+---------------------------------------------------------------------------------------------------

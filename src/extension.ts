@@ -106,8 +106,7 @@ export function activate(context: vscode.ExtensionContext) {
 
 	});
 
-	//Code folders Explorer Context Commands
-	vscode.commands.registerCommand('yansasync.folder.sync_record', (folder) =>{
+	vscode.commands.registerCommand('yansasync.instance.sync_record', (folder) =>{
 		let func = 'folder.sync_record';
 		logger.info(lib, func, "selectedFolder is:", folder);
 		if(folder){
@@ -125,51 +124,41 @@ export function activate(context: vscode.ExtensionContext) {
 				
 				if(selected){
 					let selectedInstance = selected.value;
-                    instanceList.forEach((instance) => {
-						if(instance.name === selected.label){
-							logger.info(lib, func, "Selected instance:", instance);
-							selectedInstance = instance;
-						}
-					});
+					logger.info(lib, func, 'Selected instance:', selectedInstance );
+					
 					let client = new RESTClient(selectedInstance, logger);
 					client.getRecords('sys_db_object', 'super_class.name=sys_metadata', ["sys_id","name","label","sys_scope"], true).then(function(tableRecs){
 						logger.info(lib, func, "records returned:", tableRecs.length);
-						let tableqpItems:Array<vscode.QuickPickItem> = [];
+						let tableqpItems:Array<any> = [];
 						if(tableRecs.length > 0){
 							tableRecs.forEach((record:any) =>{
-								tableqpItems.push({"label":record.label, "detail": record.name + ' - ' + record.sys_scope});
+								tableqpItems.push({"label":record.label, "detail": record.name + ' - ' + record.sys_scope, value:record});
 							});
 							logger.info(lib, func, "Built quick pick options based on records returned.");
 							vscode.window.showQuickPick(tableqpItems, <vscode.QuickPickOptions>{"placeHolder":"Select table to retrieve record from.", ignoreFocusOut:true, matchOnDetail:true, matchOnDescription:true}).then((selected) =>{
-								tableRecs.forEach((tableRec:any) =>{
-									if(selected && tableRec.label === selected.label){
-										logger.info(lib, func, "Selected table:", tableRec);
-										client.getRecords(tableRec.name, "", ["name","sys_id","sys_scope"], true).then((fileRecs) =>{
-											logger.info(lib, func, "Got records from table query:", fileRecs.length);
-											let fileqpItems:Array<vscode.QuickPickItem> = [];
+								if(selected){
+									let tableRec = selected.value;
+									logger.info(lib, func, "Selected table:", tableRec);
+									client.getRecords(tableRec.name, "", ["name","sys_id","sys_scope"], true).then((fileRecs) =>{
+										logger.info(lib, func, "Got records from table query:", fileRecs.length);
+										let fileqpItems:Array<any> = [];
 
-											fileRecs.forEach((record:any) =>{
-												fileqpItems.push({"label":record.name, "detail": record.name + ' - ' + record.sys_scope});
-		
-											});
-											vscode.window.showQuickPick(fileqpItems, <vscode.QuickPickOptions>{"placeHolder":"Select table to retrieve record from.", ignoreFocusOut:true, matchOnDetail:true, matchOnDescription:true}).then((selected) =>{
-												if(selected){
-													fileRecs.forEach((rec:any)=>{
-														if(rec && rec.name === selected.label){
-															client.getRecord(tableRec.name, rec.sys_id).then(function(rec:any){
-																vscode.workspace.openTextDocument();
-																vscode.workspace.openTextDocument({content:rec.script || "Script field not found",language:"javascript"}).then((doc) => {
-																	//var location = vscode.window.activeTextEditor !== undefined ? vscode.window.activeTextEditor + 1 || 0;
-																	vscode.window.showTextDocument(doc, 0, true);
-																});
-															});
-														}
-													});
-												}
-											});
+										fileRecs.forEach((record:any) =>{
+											fileqpItems.push({"label":record.name, "detail": record.name + ' - ' + record.sys_scope, value: record});
 										});
-									}
-								});
+										vscode.window.showQuickPick(fileqpItems, <vscode.QuickPickOptions>{"placeHolder":"Select table to retrieve record from.", ignoreFocusOut:true, matchOnDetail:true, matchOnDescription:true}).then((selected) =>{
+											if(selected){
+												let rec = selected.value;
+												client.getRecord(tableRec.name, rec.sys_id, ['name','sys_id','script']).then(function(rec:any){
+													vscode.workspace.openTextDocument();
+													vscode.workspace.openTextDocument({content:rec.script || "Script field not found",language:"javascript"}).then((doc) => {
+														vscode.window.showTextDocument(doc, vscode.ViewColumn.Beside, false);
+													});
+												});
+											}
+										});
+									});
+								}
 							});
 						}
 					});
