@@ -1,5 +1,6 @@
 {
 	"name": "now-code",
+	"publisher": "integrateNate",
 	"displayName": "NOW Code",
 	"description": "Yansa Labs ServiceNow Sync Tool",
 	"version": "0.1.0",
