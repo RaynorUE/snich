@@ -2,7 +2,7 @@
 	"name": "now-code",
 	"displayName": "NOW Code",
 	"description": "Yansa Labs ServiceNow Sync Tool",
-	"version": "0.0.1",
+	"version": "0.1.0",
 	"engines": {
 		"vscode": "^1.30.0"
 	},
@@ -10,21 +10,21 @@
 		"Other"
 	],
 	"activationEvents": [
-        "onCommand:yansasync.do_nothing",
+		"onCommand:yansasync.do_nothing",
 		"onCommand:yansasync.setup.new_instance",
 		"workspaceContains:**/servicenow.json"
 	],
 	"main": "./out/extension.js",
 	"contributes": {
 		"commands": [
-            {
-                "command":"yansasync.setup.new_instance",
-                "title": "Setup New Instance",
+			{
+				"command": "yansasync.setup.new_instance",
+				"title": "Setup New Instance",
 				"category": "YansaSync"
 			},
-            {
+			{
 				"command": "yansasync.do_nothing",
-				"title":"Do nothing. Just activate",
+				"title": "Do nothing. Just activate",
 				"category": "YansaSync"
 			},
 			{
@@ -34,14 +34,14 @@
 			},
 			{
 				"command": "yansasync.instance.sync_record",
-				"title":"Sync Record",
+				"title": "Sync Record",
 				"category": "YansaSync"
 			}
 		],
-		"menus":{
+		"menus": {
 			"explorer/context": [
 				{
-					"command":"yansasync.instance.sync_record"
+					"command": "yansasync.instance.sync_record"
 				}
 			]
 		},
@@ -49,8 +49,8 @@
 			{
 				"title": "YansaSync",
 				"properties": {
-					"log_level":{
-						"type":"string",
+					"log_level": {
+						"type": "string",
 						"title": "Logging Level",
 						"description": "Enable the level of logging you want. Picking a more detail log option will incldue the less detailed options \"above it\"",
 						"enum": [
@@ -65,7 +65,7 @@
 							"Warn: This is the Default log level. Typically warnings are used for things you should be doing instead, but functionality is not yet broken.",
 							"Error: Least detailed. Use this if you only want to know when major issues occur."
 						],
-						"default":"Error"
+						"default": "Error"
 					}
 				}
 			}
