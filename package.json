@@ -3,7 +3,7 @@
 	"publisher": "integrateNate",
 	"displayName": "NOW Code",
 	"description": "Yansa Labs ServiceNow Sync Tool",
-	"version": "0.2.0",
+	"version": "0.3.0",
 	"engines": {
 		"vscode": "^1.30.0"
 	},
