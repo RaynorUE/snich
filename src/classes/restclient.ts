@@ -1,7 +1,7 @@
 //https://github.com/tomas/needle
 import * as needle from 'needle';
 import * as vscode from 'vscode';
-import { SystemLogHelper } from './loghelper';
+import { SystemLogHelper } from './LogHelper';
 import { InstanceData } from '../myTypes/globals';
 import { OutgoingHttpHeaders } from 'http';
 import * as querystring from "querystring";
@@ -100,23 +100,24 @@ export class RESTClient {
         }
     */
 
-    testConnection() {
+    testConnection():Promise<any> {
         let func = "testConnection";
-        this.logger.debug(this.lib, func, 'START');
-        let baseURL = this.instanceData.connection.url;
-        let url = baseURL + '/api/now/table/sys_user?sysparm_query=' + encodeURIComponent('user_name=' + this.instanceData.connection.auth.username);
-        this.logger.info(this.lib, func, 'Getting url: ' + url);
-        return this.get(url, `Testing connection for ${baseURL}`).then((response) => {
-            this.logger.info(this.lib, func, 'Response body recieved:', response);
-            if(response && response.body && response.body.result.length > 0){
-                vscode.window.showInformationMessage("Connection Successful!");
-                return true;
-            } else {
-                vscode.window.showErrorMessage("Connection failed. See log for details.");
-                return false;
-            }
-        }, (err) =>{
-            console.log('Error occured!', err);
+        return new Promise((resolve,reject) =>{
+            let baseURL = this.instanceData.connection.url;
+            let url = baseURL + '/api/now/table/sys_user?sysparm_query=' + encodeURIComponent('user_name=' + this.instanceData.connection.auth.username);
+            this.logger.info(this.lib, func, 'Getting url: ' + url);
+            this.get(url, `Testing connection for ${baseURL}`).then((response) => {
+                this.logger.info(this.lib, func, 'Response body recieved:', response);
+                if(response && response.body && response.body.result.length > 0){
+                    vscode.window.showInformationMessage("Connection Successful!");
+                    resolve(true);
+                    return;
+                } else {
+                    vscode.window.showErrorMessage("Test Connection failed. View logs for detail.");
+                    resolve(false);
+                    return;
+                }
+            });
         });
     }
 

@@ -5,9 +5,7 @@
 [__Command Flows__]() - This document will contain diagrams that help show the "process flow" for each command. I.e. Setup New Instance, Test connection, etc.
 
 # Planned Feature Roadmap
-This document is intended to indicate and layout the features we are planning to implement. It may be a bit rough and refined over time..
-
-As features are completed here, they will be more "Nicely Worded" and moved to the Change Log release version that is currently planned for release.
+This document is intended to indicate and layout the features we are planning to implement. It may be a bit rough and refined over time.. As features are completed here, they will be more "Nicely Worded" and moved to the Change Log release version that is currently planned for release.
 
 ## State Inidicators
     _Italic_: Not Started
@@ -16,25 +14,30 @@ As features are completed here, they will be more "Nicely Worded" and moved to t
 
 ## [v0.2.0 (Current)]()
 
-
-### Added
-
-#### Extension Functionality
+### Extension Functionality
+#### Added
 - _Table Defaults now read from servicenowTableConfig.json file._
-- _Ability to update the default tables through the command prompt._
+- _Ability to update the default tables through the command pallet._
+    - _Flow 1: New Table 
+        - _Prompt which instance load tables, after select of table load all fields for table_
+        - _Prompt use to pick a field to sync (Field name - (type ?? Maybe limt types)), make first Selection "Sync All - as JSON"_
+
+#### Changed
+- _Sync Record now saves into appropriate application folder tree._
 - _Syncing a record now saves a file for every configured synced field for that record in the servicenowTableConfig._
 
-### Changed
-- Nothing
-### Removed
+#### Removed
 - Nothing
 
-#### Internal Extension Development
+### Internal Extension Development
+
+#### Added
 - Instance Manager Class and API
 
-### Changed
-- Nothing
-### Removed
+#### Changed
+- _Sync Record Functionality has been moved to it's own class and "tidied up"_
+
+#### Removed
 - Nothing
 
 
@@ -45,15 +48,47 @@ Section is intended as a sandbox for taking general notes and feature planning. 
 ## [Definitly going to implement]()
 - ONLY CREATE FOLDER ON RECORD SYNC! Just Store the available "Tables" and their information... not a bad idea... This will help a ton in keeping down the "noise" if you will..
 - Auto File/folder creation?
+    - Idea here is to use/look at the default folder config and create folder for synced file type if it doesn't exist.
     - Determine what files need synced based on the field types of a given record type. Script, "dictionary = xml = true", HTML, XML, ?????
     - Auto create folder based on displayName of field and then auto create files for any of the field types that match where file names are the field names
+    - Ask them to pick app scope? or auto-detect based on synced file?  
+        - if picking app scope, could greatly speed syncing... Would help eliminate some other issues like file names being the same..
+        - Do we just allow picking from current "Synced apps" ... yea, lets...
+- Sync Application
+    - Ask to sync all files. (hook into sync app files code) 
+    - Hook into "file create" code, so that we can borrow the auto-folder creation functionality
+- Sync All Application Files
+    - Prompt for Instance > Application
+    - Show Loading dialog and progress indicator. 
+
+    
 
 ## [Pretty Solid idea]()
+- Annotate Table
+    - Use defaults John has in current SyncTool
+    - Break functionality into it's own file, so we can expand on over time. Right now it's simple but could see this growing. 
 - When saving for a given application, flip to that application for them before saving!
+- Delete All Files
+    - Maybe make this a "Per Application Scope" thing? This can be useful if you're files get out of sync and you want to reload fresh.
+- Set Update Set
+    - Query and set accordingly. Maybe a warning letting them know it'll change it for all logged sessions
+- Set Application
+    - Set application accordingly, indicate via showMessage which update set is currently selected. 
+- Compare With Server
+    - Compare the active text editor with the server. If different, ask to view comparison and load up VSCode file comparer ... in a new column? 
+
+
+
 
 ## [Things to investigate]()
 - sysparm_transaction_scope  ... does this put things in the right places???? also sysparm_record_scope
-
+- On File Save
+    - Actions to take when saving a file
+        - Execute Compare record to server version code. 
+        - If no differences, post record to SN. 
+        - Show success save message with current update set name.
+- Ability to "Get entire record JSON" for direct / manual editing and syncing back to instance. 
+    - Need to think about file/folder structure here... Same naming scheme as tableconfig for table, and just .json extension... Yea!
 
 
 Nates Sh*t show
@@ -64,62 +99,25 @@ Place to store random ideas and notes as i come up with them. To then be organiz
 
 ## [Random Ideas]()
 
--- Major Features
-    - Sync Application
-        - Creates all  for that app and syncs all files. Show Loading dialog and progress indicator. 
-    -Annotate Table
-        - Use defaults John has
-        - Break functionality into it's own file, so we can expand on over time. Right now it's simple but could see this growing. 
-    -Delete Files
-        - Useful for resyncing.
-    -Set Update Set
-        -- Query and set accordingly
-    -Set Application
-        --Set application accordingly, indicate via showMessage which update set is selected. 
-    -Load New App Files
-        -- Allow on a folder as well as full app..?
-    --Compare Record to Server
-        -- Check on Save
-    -- Have option for a given files context mean to "Sync entire Record as JSON" so someone can look at it's entire details... Do we provide option to save back as?
-
-How do we represent apps on a given instance? Should we create "global" app scope? Then folders inside? 
-
-Command Pallet Actions
-    - Sync Application 
-    
-
-
-- current feature set
--- Sync Table  <--- Builds folder struture, allows sycing files   <-- load and Cache? When do we refresh? On command? Do we do a diff? 
--- Test Connection  <--- good to have, also use at "Setup time"
-
-
-General Design
-    How does the explorer menu get the sections? Ideally will create one for every configured instance, and 
-    Use globalState to store as we make changes, so state can be restored next lunch??? Any other way to store this? Ideally would like to get away from .json files...
+## [Sublime Sync Features to Port]()
 
 
 
-## [Core Functionality for Expansion]
-- ServiceNow_Config.json
-    - Contains details for instance
-        - URL and Auth Detail
-        - Contains folder tree hierarchy (Useful if needing to restore and all you have is the configjson..)
+Core Functionality for Expansion
+================================================================================
+## ServiceNow_Config.json
+- Contains details for instance
+    - URL and Auth Detail
+    - Contains folder tree hierarchy (Useful if needing to restore and all you have is the configjson..)
 
-- REST Client
-    - Get Record
-    - Get Records
-    - Post Record
-    - Test Connection
-    - Set Basic Auth
-    - Set oAuth
+## REST Client
+- Get Record
+- Get Records
+- Post Record
+- Test Connection
+- Set Basic Auth
+- Set oAuth
 
-- File Management
-    - Create New File
-    - Compare Contents
-
-- Caching / Storage of "App File Tables" and perform diffs in the background on each load? Or just on demand?
-
-
-
-## [Sublime Sync Features to Port]
+## File Management
+- Create New File
+- Compare Contents

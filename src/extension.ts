@@ -1,11 +1,11 @@
 // The module 'vscode' contains the VS Code extensibility API
 // Import the module and reference it with the alias vscode in your code below
 import * as vscode from 'vscode';
-import { InstanceManager } from './classes/instancemanager';
-import { SystemLogHelper } from './classes/loghelper';
-import { RESTClient } from './classes/restclient';
-import { InstanceData } from './myTypes/globals';
-import { WorkspaceManager } from './classes/workspaceManager';
+import { InstanceConfigManager, InstanceDataObj } from './classes/InstanceConfigManager';
+import { SystemLogHelper } from './classes/LogHelper';
+import { RESTClient } from './classes/RESTClient';
+//import {  } from './myTypes/globals';
+import { WorkspaceManager } from './classes/WorkspaceManager';
 
 
 // this method is called when your extension is activated
@@ -15,7 +15,7 @@ export function activate(context: vscode.ExtensionContext) {
 	let func = 'activate';
 	let logger:SystemLogHelper = new SystemLogHelper();
     logger.info(lib, func, 'START');
-    let instanceList:Array<InstanceData> = [];
+    let instanceList:Array<InstanceDataObj> = [];
     
     var wsFolders = vscode.workspace.workspaceFolders || [];
     logger.info(lib, func, 'Going hunting for SN Instances! Workspace Folders', wsFolders);
@@ -23,7 +23,11 @@ export function activate(context: vscode.ExtensionContext) {
         vscode.window.showErrorMessage('No workspace folder loaded. Please open a folder for this workspace. This is where all SN instance folders will be created.');
         deactivate();
         return;
-    }
+    } else if(wsFolders.length > 1){
+		vscode.window.showErrorMessage('More than one workspace folder loaded. Unpredictable results may occur, de-activating extension. Please use just one workspace folder.');
+		deactivate();
+		return;
+	}
 
     let wsManager = new WorkspaceManager(logger);
 
@@ -41,27 +45,19 @@ export function activate(context: vscode.ExtensionContext) {
 			});
 		logger.info(lib, func, 'END');
 	});
-	/**
-	 * ============ COMMAND PALETE ACTIONS ==================
-	 */
 
-	 //Global Commands
-	 vscode.commands.registerCommand('yansasync.setup.new_instance', () =>{
+	vscode.commands.registerCommand('yansasync.setup.new_instance', () =>{
         let logger = new SystemLogHelper();
         let func = 'setup.new_instance';
         logger.info(lib, func, 'START', );
-        let instanceMgr = new InstanceManager(instanceList,logger);
-        instanceMgr.setup().then((instanceData) =>{
-            if(instanceData){
+        let instanceMgr = new InstanceConfigManager(undefined,logger);
+        instanceMgr.setupNew(instanceList).then((instanceData:InstanceDataObj) =>{
+            if(instanceData && instanceData.setupComplete){
                 instanceList.push(instanceData);
-            }
+			}
+			logger.info(lib, func, 'END');
         });
-        logger.info(lib, func, 'END');
-
 	 });
-
-	
-	//vscode.commands.registerCommand('yansasync.setup.new_instance', (initSetup.configureBase));
 
 	vscode.commands.registerCommand('yansasync.setup.test_connection', (folder) =>{
         logger.info('Activate', 'test_connection', 'START');
@@ -173,12 +169,6 @@ export function activate(context: vscode.ExtensionContext) {
 	vscode.commands.registerCommand('yansasync.folder.application.load.all', () =>{
 
 	});
-    
-    
-    /* === DO WE NEED TO DO THIS???? NOT SO FAR?? WHAT DOES IT ADD???
-	let disposable = vscode.commands.registerCommand('extension.helloWorld', () => {});
-	context.subscriptions.push(disposable);
-    */
     
     logger.info(lib, func, "We have finished registering all commands. Extension fully activated!");
     logger.info(lib, func, "END");

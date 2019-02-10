@@ -1,8 +1,18 @@
 import * as fs from "fs";
 import * as vscode from 'vscode';
-import { InstanceData } from '../myTypes/globals/index';
-import { SystemLogHelper } from './loghelper';
-import { SNDefaultTables } from "../data/SNDefaultTables";
+import { SystemLogHelper } from './LogHelper';
+import { SNDefaultTables } from "./SNDefaultTables";
+import { InstanceDataObj } from "./InstanceConfigManager";
+
+/**
+ * This class is intended to manage the configuration, files, and folders within the workspace. 
+ * Used For
+ *  - Creating, Updating, Deleting files/folders within the workspace.
+ *  - Loading .json data files as objects to be use when needed. 
+ * Not Used For
+ *  - Saving Files to SN
+ *  - Should never be making a REST Call from this class. 
+ */
 
 export class WorkspaceManager{
 
@@ -13,9 +23,12 @@ export class WorkspaceManager{
         this.logger = logger || new SystemLogHelper();
     }
 
-    setupNewInstance(instanceData:InstanceData){
+    /**
+     * Requires an instanceData object and will create the files/folders based on that.
+     * @param instanceData 
+     */
+    setupNewInstance(instanceData:InstanceDataObj){
         let func = "setup";
-        try {
         this.logger.info(this.lib, func, 'START');
         let rootPath = instanceData.path.fsPath;
         if(!fs.existsSync(rootPath)){
@@ -30,13 +43,14 @@ export class WorkspaceManager{
 
         //eventually create standard subfolder set. 
         this.createDefaulFolders(rootPath);
-        } catch(err){
-            this.logger.info(this.lib, func, 'Error occured.', err);
-            
-        }
+
         this.logger.info(this.lib, func, 'END');  
     }
 
+    /**
+     * Will read the default folder config for the instance, or load defaults.
+     * @param instancePath 
+     */
     createDefaulFolders(instancePath:fs.PathLike){
         let func = 'createDefaultFolders';
         this.logger.info(this.lib, func, 'START', );
@@ -61,9 +75,13 @@ export class WorkspaceManager{
         this.logger.info(this.lib, func, 'END');
     }
     
+    /**
+     * Used to load all the instances based on the folder configuration of the workspace. 
+     * @param wsFolders 
+     */
     loadWorkspaceInstances(wsFolders:Array<vscode.WorkspaceFolder>){
         let func = "loadWorkspaceInstances";
-        let instanceList:Array<InstanceData> = [];
+        let instanceList:Array<InstanceDataObj> = [];
         //@todo need to also watch the folder path, to see if it gets delete that we remove from the instanceList
         this.logger.info(this.lib, func, "Testing Statically First folder");
         let rootPath = wsFolders[0].uri.fsPath;

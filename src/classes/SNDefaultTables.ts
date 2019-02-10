@@ -3,13 +3,20 @@ import { snTableConfig, snTableField } from "../myTypes/globals";
 export class SNDefaultTables {
     tables:Array<snTableConfig> = [];
  
-    constructor(){
+    constructor(defaultTables?:Array<snTableConfig>){
+       if(defaultTables){
+           this.tables = defaultTables;
+       } else {
+           this.setupDefaults();
+       }
+    }
 
+    setupDefaults(){
         //==== sys_script ======
         let sys_script = new TableConfig('sys_script');
         sys_script.setDisplayField('name');
         sys_script.addField('script', 'Script', 'js');
-        this.tables.push(sys_script.getTableConfig());
+        this.addTable(sys_script.getTableConfig());
 
         //==== sp_widget ========
         let sp_widget = new TableConfig('sp_widget');
@@ -21,16 +28,25 @@ export class SNDefaultTables {
         sp_widget.addField('link', 'Link', 'js');
         sp_widget.addField('demo_data', 'Demo data', 'json');
         sp_widget.addField('option_schema', 'Option schema', 'json');
-        this.tables.push(sp_widget.getTableConfig());
+        this.addTable(sp_widget.getTableConfig());
 
         let sys_script_include = new TableConfig('sys_script_include');
         sys_script_include.setDisplayField('name');
         sys_script_include.addField('script', 'Script', 'js');
-        this.tables.push(sys_script_include.getTableConfig());
+        this.addTable(sys_script_include.getTableConfig());
+
+    }
+
+    getTables(){
+        return this.tables;
+    }
+
+    addTable(table:snTableConfig){
+        this.tables.push(table);
     }
 }
 
-class TableConfig{
+export class TableConfig{
     tableConfig:snTableConfig = {
         name:"",
         display_field:"",
