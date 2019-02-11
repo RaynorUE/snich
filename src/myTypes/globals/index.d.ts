@@ -1,24 +1,20 @@
 import { Uri } from "vscode";
+import { InstanceDataObj } from "../../classes/InstanceConfigManager";
+
+
+//===============================================
 
 //========== SHARED ==============================
 interface SNApplication {
-    name:String;
-    folderName:String;
-    sys_id:String;
+    prefix:string;
+    label:string;
+    sys_id:string;
 }
 
 //========== SHARED ==============================
 
 
 //========== START servicenow.json ===============
-
-interface InstanceData {
-    applications:Array<SNApplication>;
-    connection:InstanceConnectionData;
-    name:string;
-    path:Uri;
-    tableConfig:snDefaultTables;
-}
 
 interface InstanceConnectionData{
     url:String;
@@ -61,12 +57,12 @@ interface InstanceAppSyncData {
 }
 
 interface SyncedFile {
-    path:Uri,
-    table:string,
-    sys_id:string,
-    field:string,
-    sys_scope:string,
-    sys_package:string
+    path:Uri;
+    table:string;
+    sys_id:string;
+    field:string;
+    sys_scope:string;
+    sys_package:string;
 }
 
 //========== END servicenow_sync_data.json ===============
@@ -86,9 +82,22 @@ interface snTableConfig {
 }
 
 interface snTableField {
+    table:string;
     name:string;
     label:string;
     extention:string;
 }
 
 //========== END ServiceNow Table Config ================
+
+//========== START ServiceNow Record Config =============
+
+interface snRecord {
+    name:string;
+    sys_id:string;
+    sys_scope?:string;
+    sys_package?:string;
+}
+
+
+//============ End ServiceNow Record Config =============

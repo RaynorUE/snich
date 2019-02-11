@@ -21,6 +21,8 @@ This document is intended to indicate and layout the features we are planning to
     - _Flow 1: New Table 
         - _Prompt which instance load tables, after select of table load all fields for table_
         - _Prompt use to pick a field to sync (Field name - (type ?? Maybe limt types)), make first Selection "Sync All - as JSON"_
+- _Configuration option for indicating "Always prompt for app scope" which will be used in filtering, else will "show all files regardless of app scope"._
+    - _Ability to set "per instance" the default / current app scope? Could tie this with "Set my Application"_
 
 #### Changed
 - _Sync Record now saves into appropriate application folder tree._
@@ -98,6 +100,21 @@ Place to store random ideas and notes as i come up with them. To then be organiz
 ## [Less Random Ideas]()
 
 ## [Random Ideas]()
+
+or better yet, since "sync record" isn't going to be on the folder (as of now)
+we can always prompt for instance + app_scope?
+
+if one instance, just auto-select
+
+Give config setting option for "prompt for app scope always or not"
+
+So now we have to think, how do we lookup files? An array of paths really...
+Do we just maintain one master array of files? What's risk of speed concerns? I suppose if we run into speed issues we could always split these out? 
+I've already got architected to split these out, so really it's just on save, crawl the chain until we find that fileslist file... duh... it's only 2-3 levels..
+Then we can loop through the sync files... low odds of having more than a few hundred files, but even then we could always update to break out into "folder level specific"? or ap level specific? shoudl weo 
+we should do app level regardless..
+I wonder if there are some type script things that can help with that?
+
 
 ## [Sublime Sync Features to Port]()
 

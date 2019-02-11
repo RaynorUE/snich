@@ -2,9 +2,9 @@
 import * as needle from 'needle';
 import * as vscode from 'vscode';
 import { SystemLogHelper } from './LogHelper';
-import { InstanceData } from '../myTypes/globals';
 import { OutgoingHttpHeaders } from 'http';
 import * as querystring from "querystring";
+import { InstanceConfig } from './InstanceConfigManager';
 
 
 
@@ -15,23 +15,23 @@ export class RESTClient {
         headers: <OutgoingHttpHeaders>{}
         
     };
-    private instanceData: InstanceData;
+    private instanceConfig: InstanceConfig;
     private logger: SystemLogHelper;
     private apiVersion: string = ''; //can be v1/, preparing for version ups when needed.
     private lib: string = 'RESTClient';
     private authType: String = "basic";
 
-    constructor(instanceData: InstanceData, logger?: SystemLogHelper) {
+    constructor(instanceConfig: InstanceConfig, logger?: SystemLogHelper) {
         let func = 'constructor';
         this.logger = logger || new SystemLogHelper();
-        this.instanceData = instanceData;
-        //this.logger.info(this.lib, func, 'START', {instanceData:instanceData});
+        this.instanceConfig = instanceConfig;
+        this.logger.info(this.lib, func, 'START', {instanceConfig:instanceConfig});
 
 
-        if (this.instanceData.connection.auth.type === 'oauth' && this.instanceData.connection.auth.OAuth) {
-            this.setOAuth(this.instanceData.connection.auth.OAuth.client_id, this.instanceData.connection.auth.OAuth.client_secret);
-        } else if (this.instanceData.connection.auth.type === 'basic') {
-            this.setBasicAuth(this.instanceData.connection.auth.username, this.instanceData.connection.auth.password);
+        if (this.instanceConfig.connection.auth.type === 'oauth' && this.instanceConfig.connection.auth.OAuth) {
+            this.setOAuth(this.instanceConfig.connection.auth.OAuth.client_id, this.instanceConfig.connection.auth.OAuth.client_secret);
+        } else if (this.instanceConfig.connection.auth.type === 'basic') {
+            this.setBasicAuth(this.instanceConfig.connection.auth.username, this.instanceConfig.connection.auth.password);
         }
 
 
@@ -66,7 +66,7 @@ export class RESTClient {
     getRecord(table: string, sys_id: string, fields:Array<String>, displayValue?:boolean, refLinks?:boolean) {
         displayValue = displayValue || false;
         refLinks = refLinks === undefined ? true : refLinks;
-        let url = this.instanceData.connection.url + '/api/now/' + this.apiVersion + 'table/' + table + '/' + sys_id + '?sysparm_fields=' + fields + '&sysparm_exclude_reference_link=' + refLinks + '&sysparm_display_value=' + displayValue;
+        let url = this.instanceConfig.connection.url + '/api/now/' + this.apiVersion + 'table/' + table + '/' + sys_id + '?sysparm_fields=' + fields + '&sysparm_exclude_reference_link=' + refLinks + '&sysparm_display_value=' + displayValue;
         return this.get(url, 'Getting record. ' + table + '_' + sys_id)
             .then((response: any) => {
                 var record: object = {};
@@ -80,7 +80,7 @@ export class RESTClient {
     getRecords(table:string, encodedQuery: string, fields:Array<string>, displayValue?:boolean, refLinks?:boolean) {
         displayValue = displayValue || false;
         refLinks = refLinks === undefined ? true : refLinks;
-        let url = this.instanceData.connection.url + '/api/now/table/' + table + '?sysparm_fields=' + fields.toString() + '&sysparm_exclude_reference_link=' + refLinks + '&sysparm_display_value=' + displayValue +'&sysparm_query=' + encodedQuery;
+        let url = this.instanceConfig.connection.url + '/api/now/table/' + table + '?sysparm_fields=' + fields.toString() + '&sysparm_exclude_reference_link=' + refLinks + '&sysparm_display_value=' + displayValue +'&sysparm_query=' + encodedQuery;
         return this.get(url, "Retrieving records based on url: " + url).then(function(response){
             var recs = [];
             if(response && response.body){
@@ -103,8 +103,8 @@ export class RESTClient {
     testConnection():Promise<any> {
         let func = "testConnection";
         return new Promise((resolve,reject) =>{
-            let baseURL = this.instanceData.connection.url;
-            let url = baseURL + '/api/now/table/sys_user?sysparm_query=' + encodeURIComponent('user_name=' + this.instanceData.connection.auth.username);
+            let baseURL = this.instanceConfig.connection.url;
+            let url = baseURL + '/api/now/table/sys_user?sysparm_query=' + encodeURIComponent('user_name=' + this.instanceConfig.connection.auth.username);
             this.logger.info(this.lib, func, 'Getting url: ' + url);
             this.get(url, `Testing connection for ${baseURL}`).then((response) => {
                 this.logger.info(this.lib, func, 'Response body recieved:', response);
@@ -168,7 +168,7 @@ export class RESTClient {
             let func = 'processOAuth';
             this.logger.info(this.lib, func, 'START', {getNew:getNew});
             
-            let oauthData = this.instanceData.connection.auth.OAuth;
+            let oauthData = this.instanceConfig.connection.auth.OAuth;
             if(!oauthData.token.access_token){
                 //if we don' thave any access token yet, jump straight to getNew!
                 getNew = true;
@@ -187,8 +187,8 @@ export class RESTClient {
                 return resolve();
             } else if(hadTokenFor > expiresIn && oauthData.token.refresh_token && !getNew){
                 this.logger.info(this.lib, func, '//token expired! Attempt to get new access token using refresh token!');
-                var connectionData = this.instanceData.connection;
-                let url = this.instanceData.connection.url + '/oauth_token.do';
+                var connectionData = this.instanceConfig.connection;
+                let url = this.instanceConfig.connection.url + '/oauth_token.do';
                 var formEncodedParams = "grant_type=password&";
                 formEncodedParams += "client_id=" + encodeURIComponent(connectionData.auth.OAuth.client_id) + "&";
                 formEncodedParams += "client_secret=" + encodeURIComponent(connectionData.auth.OAuth.client_secret) + "&";
@@ -200,9 +200,9 @@ export class RESTClient {
                         if(this.needleOpts.headers){
                             this.needleOpts.headers.authorization = authHeader;
                         }
-                        this.instanceData.connection.auth.OAuth.token = tokenData;
-                        this.instanceData.connection.auth.OAuth.lastRetrieved = Date.now();
-                        //new configMgmt().updateInstanceData(this.instancData);
+                        this.instanceConfig.connection.auth.OAuth.token = tokenData;
+                        this.instanceConfig.connection.auth.OAuth.lastRetrieved = Date.now();
+                        //new configMgmt().updateInstanceConfig(this.instanceConfig);
                         this.logger.info(this.lib, func, 'END');
                         return resolve();
                     } else {
@@ -215,13 +215,13 @@ export class RESTClient {
 
             if(getNew){
                 this.logger.info(this.lib, func, 'Attempting to get new Access token.');
-                vscode.window.showInputBox(<vscode.InputBoxOptions>{"placeholder":`Enter password for ${this.instanceData.connection.url}.`,"password":true})
+                vscode.window.showInputBox(<vscode.InputBoxOptions>{"placeholder":`Enter password for ${this.instanceConfig.connection.url}.`,"password":true})
                 .then((value) =>{
                     this.logger.info(this.lib, func, "asked user for password. Proceeding to attempt to auth.", );
                     
 
 
-                    var connectionData = this.instanceData.connection;
+                    var connectionData = this.instanceConfig.connection;
                     var url = connectionData.url + '/oauth_token.do';
 
                     var formData = {
@@ -249,8 +249,8 @@ export class RESTClient {
                         if(authResponse.body && authResponse.body.access_token){
                             var tokenData = authResponse.body;
 
-                            this.instanceData.connection.auth.OAuth.lastRetrieved = Date.now();
-                            this.instanceData.connection.auth.OAuth.token = tokenData;
+                            this.instanceConfig.connection.auth.OAuth.lastRetrieved = Date.now();
+                            this.instanceConfig.connection.auth.OAuth.token = tokenData;
                             
                             if(this.needleOpts.headers){
                                 this.needleOpts.headers.authorization = "Bearer " + tokenData.access_token;
@@ -258,7 +258,7 @@ export class RESTClient {
                             this.logger.info(this.lib, func, 'NeedleOptions have been set.', this.needleOpts);
                             this.logger.info(this.lib, func, 'END');
                             return resolve();
-                            //new configMgmt().updateInstanceData(this.instancData);
+                            //new configMgmt().updateInstanceConfig(this.instancData);
                         }
                     }).catch((err) => {console.log(err);});
                 });

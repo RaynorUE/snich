@@ -1,23 +1,24 @@
 // The module 'vscode' contains the VS Code extensibility API
 // Import the module and reference it with the alias vscode in your code below
 import * as vscode from 'vscode';
-import { InstanceConfigManager, InstanceDataObj } from './classes/InstanceConfigManager';
+import { InstanceConfigManager, InstanceMaster } from './classes/InstanceConfigManager';
 import { SystemLogHelper } from './classes/LogHelper';
 import { RESTClient } from './classes/RESTClient';
 //import {  } from './myTypes/globals';
 import { WorkspaceManager } from './classes/WorkspaceManager';
+import { SNFilePuller } from './classes/SNRecordPuller';
 
 
 // this method is called when your extension is activated
 // your extension is activated the very first time the command is executed
 export function activate(context: vscode.ExtensionContext) {
-	let lib = 'extension.ts';
+	let lib = 'extension';
 	let func = 'activate';
 	let logger:SystemLogHelper = new SystemLogHelper();
     logger.info(lib, func, 'START');
-    let instanceList:Array<InstanceDataObj> = [];
+    let instanceList:Array<InstanceMaster> = [];
     
-    var wsFolders = vscode.workspace.workspaceFolders || [];
+    let wsFolders = vscode.workspace.workspaceFolders || [];
     logger.info(lib, func, 'Going hunting for SN Instances! Workspace Folders', wsFolders);
     if(wsFolders.length === 0){
         vscode.window.showErrorMessage('No workspace folder loaded. Please open a folder for this workspace. This is where all SN instance folders will be created.');
@@ -51,9 +52,9 @@ export function activate(context: vscode.ExtensionContext) {
         let func = 'setup.new_instance';
         logger.info(lib, func, 'START', );
         let instanceMgr = new InstanceConfigManager(undefined,logger);
-        instanceMgr.setupNew(instanceList).then((instanceData:InstanceDataObj) =>{
-            if(instanceData && instanceData.setupComplete){
-                instanceList.push(instanceData);
+        instanceMgr.setupNew(instanceList).then((instanceMaster) =>{
+            if(instanceMaster && instanceMaster.setupComplete){
+                instanceList.push(instanceMaster);
 			}
 			logger.info(lib, func, 'END');
         });
@@ -67,13 +68,13 @@ export function activate(context: vscode.ExtensionContext) {
         if(!folder){
             var qpItems:Array<vscode.QuickPickItem> = [];
             instanceList.forEach((instanceData) => {
-                qpItems.push({"label":instanceData.name, "detail":"Instance URL: " + instanceData.connection.url});
+                qpItems.push({"label":instanceData.config.name, "detail":"Instance URL: " + instanceData.config.connection.url});
             });
             vscode.window.showQuickPick(qpItems, <vscode.QuickPickOptions>{"placeHolder":"Select instance to test connection"}).then((selected) =>{
                 if(selected){
                     instanceList.forEach((instance) => {
-                        if(instance.name === selected.label){
-                            new RESTClient(instance).testConnection();
+                        if(instance.config.name === selected.label){
+                            new RESTClient(instance.config).testConnection();
                         }
                     });
                 }
@@ -102,65 +103,17 @@ export function activate(context: vscode.ExtensionContext) {
 
 	});
 
-	vscode.commands.registerCommand('yansasync.instance.sync_record', (folder) =>{
-		let func = 'folder.sync_record';
-		logger.info(lib, func, "selectedFolder is:", folder);
-		if(folder){
-			logger.info(lib, func, "Folder is:", folder);
-			return;
-		}
+	vscode.commands.registerCommand('yansasync.instance.pull_record', (folder) =>{
+		let logger = new SystemLogHelper();
+		let func = 'instance.pull_record';
+		logger.info(lib, func, 'START', );
+		let filePuller = new SNFilePuller(instanceList, logger);
+		
+		filePuller.pullRecord().then((newFile) =>{
 
-		if(!folder){
-            let qpItems:Array<any> = [];
-            instanceList.forEach((instanceData) => {
-                qpItems.push({"label":instanceData.name, "detail":"Instance URL: " + instanceData.connection.url, value:instanceData });
-            });
-            vscode.window.showQuickPick(qpItems, <vscode.QuickPickOptions>{placeHolder:"Select instance to test connection", ignoreFocusOut:true, matchOnDetail:true, matchOnDescription:true}).then((selected) =>{
-				logger.info(lib, func, 'Selected:', selected);
-				
-				if(selected){
-					let selectedInstance = selected.value;
-					logger.info(lib, func, 'Selected instance:', selectedInstance );
-					
-					let client = new RESTClient(selectedInstance, logger);
-					client.getRecords('sys_db_object', 'super_class.name=sys_metadata', ["sys_id","name","label","sys_scope"], true).then(function(tableRecs){
-						logger.info(lib, func, "records returned:", tableRecs.length);
-						let tableqpItems:Array<any> = [];
-						if(tableRecs.length > 0){
-							tableRecs.forEach((record:any) =>{
-								tableqpItems.push({"label":record.label, "detail": record.name + ' - ' + record.sys_scope, value:record});
-							});
-							logger.info(lib, func, "Built quick pick options based on records returned.");
-							vscode.window.showQuickPick(tableqpItems, <vscode.QuickPickOptions>{"placeHolder":"Select table to retrieve record from.", ignoreFocusOut:true, matchOnDetail:true, matchOnDescription:true}).then((selected) =>{
-								if(selected){
-									let tableRec = selected.value;
-									logger.info(lib, func, "Selected table:", tableRec);
-									client.getRecords(tableRec.name, "", ["name","sys_id","sys_scope"], true).then((fileRecs) =>{
-										logger.info(lib, func, "Got records from table query:", fileRecs.length);
-										let fileqpItems:Array<any> = [];
-
-										fileRecs.forEach((record:any) =>{
-											fileqpItems.push({"label":record.name, "detail": record.name + ' - ' + record.sys_scope, value: record});
-										});
-										vscode.window.showQuickPick(fileqpItems, <vscode.QuickPickOptions>{"placeHolder":"Select table to retrieve record from.", ignoreFocusOut:true, matchOnDetail:true, matchOnDescription:true}).then((selected) =>{
-											if(selected){
-												let rec = selected.value;
-												client.getRecord(tableRec.name, rec.sys_id, ['name','sys_id','script']).then(function(rec:any){
-													vscode.workspace.openTextDocument();
-													vscode.workspace.openTextDocument({content:rec.script || "Script field not found",language:"javascript"}).then((doc) => {
-														vscode.window.showTextDocument(doc, vscode.ViewColumn.Beside, false);
-													});
-												});
-											}
-										});
-									});
-								}
-							});
-						}
-					});
-                }
-            });
-        }
+		}).then(() =>{
+			logger.info(lib, func, 'END');
+		});
 	});
 
 	vscode.commands.registerCommand('yansasync.folder.application.load.new', () =>{

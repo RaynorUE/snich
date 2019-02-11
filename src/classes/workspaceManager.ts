@@ -2,7 +2,6 @@ import * as fs from "fs";
 import * as vscode from 'vscode';
 import { SystemLogHelper } from './LogHelper';
 import { SNDefaultTables } from "./SNDefaultTables";
-import { InstanceDataObj } from "./InstanceConfigManager";
 
 /**
  * This class is intended to manage the configuration, files, and folders within the workspace. 
@@ -27,7 +26,7 @@ export class WorkspaceManager{
      * Requires an instanceData object and will create the files/folders based on that.
      * @param instanceData 
      */
-    setupNewInstance(instanceData:InstanceDataObj){
+    setupNewInstance(instanceMaster:InstanceMaster){
         let func = "setup";
         this.logger.info(this.lib, func, 'START');
         let rootPath = instanceData.path.fsPath;
@@ -41,40 +40,10 @@ export class WorkspaceManager{
         
         fs.writeFileSync(rootPath + '\\servicenow.json', servicenowJSON,'utf8');
 
-        //eventually create standard subfolder set. 
-        this.createDefaulFolders(rootPath);
-
         this.logger.info(this.lib, func, 'END');  
     }
 
-    /**
-     * Will read the default folder config for the instance, or load defaults.
-     * @param instancePath 
-     */
-    createDefaulFolders(instancePath:fs.PathLike){
-        let func = 'createDefaultFolders';
-        this.logger.info(this.lib, func, 'START', );
-        //need a way to read this file..? 
-        let defaultTables = new SNDefaultTables();
-        
-        //write the defaultTables as JSON so user can edit and we will re-refrence for all file syncs
-        let defaultTablesJSON = JSON.stringify(defaultTables, null, 4);
-        this.logger.debug(this.lib, func, 'JSON Stringified. Writing file with data:', defaultTables);
-        
-        fs.writeFileSync(instancePath + '\\servicenowTableConfig.json', defaultTablesJSON,'utf8');
-
-        //global scope
-        let globalScopePath = instancePath + '\\global';
-        fs.mkdirSync(globalScopePath);
-        defaultTables.tables.forEach((tableConfig) =>{
-            this.logger.debug(this.lib, func, 'Processing table:', tableConfig);
-            let globalTablePath = globalScopePath + '\\' + tableConfig.name;
-            fs.mkdirSync(globalTablePath);
-        });
-
-        this.logger.info(this.lib, func, 'END');
-    }
-    
+  
     /**
      * Used to load all the instances based on the folder configuration of the workspace. 
      * @param wsFolders 
@@ -93,7 +62,7 @@ export class WorkspaceManager{
             this.logger.info(this.lib, func, "Seeing if JSON file exists at:", snJSONPath);
             if(fs.existsSync(snJSONPath)){
                 this.logger.debug(this.lib, func, "Found servicenow.json!", snJSONPath);
-                let instanceData = JSON.parse(fs.readFileSync(snJSONPath).toString());
+                let instanceData = this.loadJSONFromFile(snJSONPath);
                 var tableConfigPath = rootPath + '\\' + entry +'\\servicenowTableConfig.json';
                 if(fs.existsSync(tableConfigPath)){
                     let tableConfig = JSON.parse(fs.readFileSync(tableConfigPath).toString());
@@ -108,7 +77,11 @@ export class WorkspaceManager{
     }
     
     loadJSONFromFile(filePath:string){
-        
+        if(fs.existsSync(filePath)){
+            return JSON.parse(fs.readFileSync(filePath).toString());
+        } else {
+            return {};
+        }
     }
 
     writeJSON(objToJSON:object, filePath:string){
