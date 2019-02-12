@@ -7,6 +7,10 @@
 	"engines": {
 		"vscode": "^1.30.0"
 	},
+	"repository": {
+		"type": "none",
+		"url": "#"
+	},
 	"categories": [
 		"Other"
 	],
