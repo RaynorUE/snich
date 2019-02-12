@@ -1,9 +1,10 @@
-import { snTableField, snRecord, snTableConfig, SNApplication } from "../myTypes/globals";
+import { snRecord, SNApplication, snTableConfig, SNQPItem } from "../myTypes/globals";
 import { SystemLogHelper } from "./LogHelper";
-import { Uri } from "vscode";
 import { InstanceMaster } from "./InstanceConfigManager";
-import { RESTClient} from "./RESTClient"
+import { RESTClient} from "./RESTClient";
 import * as vscode from 'vscode';
+import { WorkspaceManager } from "./WorkspaceManager";
+
 
 
 export class SNFilePuller{
@@ -12,7 +13,6 @@ export class SNFilePuller{
     logger:SystemLogHelper;
     appScope?:SNApplication;
     activeInstanceData:InstanceMaster;
-    client:RESTClient;
     lib:string = "SNFilePuller";
 
     constructor(instanceList:Array<InstanceMaster>, logger?:SystemLogHelper){
@@ -21,80 +21,99 @@ export class SNFilePuller{
         this.logger.info(this.lib, func, 'START', );
         this.instanceList = instanceList;
         this.activeInstanceData = new InstanceMaster();
-        this.client = new RESTClient(this.activeInstanceData.config, this.logger);
         this.logger.info(this.lib, func, 'END');
-
     }
 
     pullRecord(){
         let func = 'pullRecord';
+        let client = new RESTClient(this.activeInstanceData.config);
+        let fileRec = <snRecord>{};
+        let tableConfig = <snTableConfig>{};
+
         return new Promise((resolve, reject) =>{
-            let qpItems:Array<any> = [];
+            let qpItems:Array<SNQPItem> = [];
             this.instanceList.forEach((instance) => {
                 qpItems.push({"label":instance.config.name, "detail":"Instance URL: " + instance.config.connection.url, value:instance });
             });
             vscode.window.showQuickPick(qpItems, <vscode.QuickPickOptions>{placeHolder:"Select instance to test connection", ignoreFocusOut:true, matchOnDetail:true, matchOnDescription:true})
-            .then((selectedInstance) =>{
-				this.logger.info(this.lib, func, 'Selected:', selectedInstance);
+            .then((selectedInstance):any =>{
+                this.logger.info(this.lib, func, 'Selected:', selectedInstance);
 				if(selectedInstance){
-					this.activeInstanceData = selectedInstance.value;
-					this.logger.info(this.lib, func, 'Selected instance:', this.activeInstanceData );
-					
-					this.client = new RESTClient(this.activeInstanceData.config, this.logger);
-                    return this.client.getRecords('sys_db_object', 'super_class.name=sys_metadata', ["sys_id","name","label","sys_scope"], true);
+                    this.activeInstanceData = selectedInstance.value;
+					client = new RESTClient(this.activeInstanceData.config, this.logger);
+                    return client.getRecords('sys_db_object', 'super_class.name=sys_metadata', ["name","label"], true);
                 } else {
                     return false;
                 }
-            }).then((tableRecs) =>{
-                this.logger.info(this.lib, func, "records returned:", tableRecs.length);
-                let tableqpItems:Array<any> = [];
+            }).then((tableRecs):any =>{
+                this.logger.info(this.lib, func, "table records returned:", tableRecs.length);
+                let tableqpItems:Array<SNQPItem> = [];
                 if(tableRecs.length > 0){
-                    tableRecs.forEach((record:any) =>{
+                    tableRecs.forEach((record:snRecord) =>{
                         tableqpItems.push({"label":record.label, "detail": record.name + ' - ' + record.sys_scope, value:record});
                     });
-                    this.logger.info(this.lib, func, "Built quick pick options based on records returned.");
+                    this.logger.info(this.lib, func, "Built quick pick options based on table records returned.");
                     return vscode.window.showQuickPick(tableqpItems, <vscode.QuickPickOptions>{"placeHolder":"Select table to retrieve record from.", ignoreFocusOut:true, matchOnDetail:true, matchOnDescription:true});
                 } else {
                     return false;
                 }
-            }).then((selectedTable) =>{
+            }).then((selectedTable):any =>{
                 if(selectedTable){
+                   
                     let tableRec = selectedTable.value;
                     this.logger.info(this.lib, func, "Selected table:", tableRec);
-                    return this.client.getRecords(tableRec.name, "", ["name","sys_id","sys_scope"], true);
+                    this.activeInstanceData.tableConfig.tables.forEach((table) => {
+                        if(table.name === tableRec.name){
+                            this.logger.info(this.lib, func, 'Found table config.', table);
+                            tableConfig = table;
+                        }
+                    });
+
+                    let fields = ["name"];
+                    fields.push(tableConfig.display_field);
+                    return client.getRecords(tableRec.name, "", fields, true);
+                } else {
+                    return false;
                 }
-            }).then((fileRecs) =>{
+            }).then((fileRecs):any =>{
                 this.logger.info(this.lib, func, "Got records from table query:", fileRecs.length);
                 if(fileRecs){
-                    let fileqpItems:Array<any> = [];
-                    fileRecs.forEach((record:any) =>{
+                    let fileqpItems:Array<SNQPItem> = [];
+                    fileRecs.forEach((record:snRecord) =>{
                         fileqpItems.push({"label":record.name, "detail": record.name + ' - ' + record.sys_scope, value: record});
                     });
-                    return vscode.window.showQuickPick(fileqpItems, <vscode.QuickPickOptions>{"placeHolder":"Select table to retrieve record from.", ignoreFocusOut:true, matchOnDetail:true, matchOnDescription:true});
+                    return vscode.window.showQuickPick(fileqpItems, <vscode.QuickPickOptions>{"placeHolder":"Record to retrieved.", ignoreFocusOut:true, matchOnDetail:true, matchOnDescription:true});
                 } else {
                     return false;
                 }
-            }).then((selectedFileRec) =>{
+            }).then((selectedFileRec):any =>{
+                this.logger.info(this.lib, func, 'Selected file record:', selectedFileRec);
+                
                 if(selectedFileRec){
-                    let fileRec:snRecord = selectedFileRec.value;
-                    return this.client.getRecord(fileRec.name, fileRec.sys_id, ['name','sys_id','script']);
+                    fileRec = selectedFileRec.value;
+                    this.logger.info(this.lib, func, 'selected file', fileRec);
+                    let fieldsList = [];
+                    fieldsList.push(tableConfig.display_field);
+                    tableConfig.fields.forEach((field) =>{
+                        fieldsList.push(field.name);
+                    });
+
+                    return client.getRecord(tableConfig.name, fileRec.sys_id, fieldsList);
                 } else {
                     return false;
                 }
-            }).then(function(rec:any){
-                return vscode.workspace.openTextDocument({content:rec.script || "Script field not found",language:"javascript"});
-            }).then((doc) => {
-                return vscode.window.showTextDocument(doc, vscode.ViewColumn.Beside, false);
-            }).then((result) =>{
-                resolve(true);
+            }).then((recordToSave) => {
+                this.logger.info(this.lib, func, 'Record to save', recordToSave);
+                let wsMgr = new WorkspaceManager(this.logger);
+                return new Promise((resolve,reject) =>{
+                    let result = wsMgr.createSyncedFile(this.activeInstanceData, tableConfig, recordToSave);
+                    resolve(result);
+                });
+            }).then((result:any) =>{
+                resolve(result);
             });
         });
     }
-
-    /*createFileFromSNRecord(snTableConfig:snTableConfig, snTableField:snTableField, record:snRecord){
-        let sycnedFile = new SyncedFile(this.instanceData.name, snTableField, record);
-    }
-    */
 
     updateSNRecord(){
         
@@ -105,26 +124,10 @@ export class SNFilePuller{
         this.appScope = app;
     }
 
-    setActiveInstance(instance:InstanceDataObj){
+    setActiveInstance(instance:InstanceMaster){
         this.activeInstanceData = instance;
     }
 }
 
 
 
-export class SyncedFile {
-    uri:Uri = Uri.parse('./');
-    table:string = "";
-    sys_id:string = "";
-    content_field:string = "";
-    sys_scope:string = "";
-    sys_package:string = "";
-    
-    constructor(instanceName:string, snTableField:snTableField, snRecordObj:snRecord){
-        this.table = snTableField.table;
-        this.sys_id = snRecordObj.sys_id;
-        this.content_field = snTableField.name;
-        this.sys_scope = snRecordObj.sys_scope || "global";
-        this.sys_package = snRecordObj.sys_package || "";
-    }
-}

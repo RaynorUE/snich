@@ -1,5 +1,5 @@
-import { Uri } from "vscode";
-import { InstanceDataObj } from "../../classes/InstanceConfigManager";
+import { Uri, QuickPickItem } from "vscode";
+import { InstanceMaster } from "../../classes/InstanceConfigManager";
 
 
 //===============================================
@@ -94,10 +94,15 @@ interface snTableField {
 
 interface snRecord {
     name:string;
+    label:string;
     sys_id:string;
     sys_scope?:string;
     sys_package?:string;
+    "sys_scope.name":string;
 }
 
+interface SNQPItem extends QuickPickItem {
+    value:any;
+}
 
 //============ End ServiceNow Record Config =============

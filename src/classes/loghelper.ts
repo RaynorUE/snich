@@ -65,7 +65,7 @@ export class SystemLogHelper {
 
     private setLogLevel = () =>{
         let settings = workspace.getConfiguration();
-        var level = settings.get('log_level') || 0;
+        var level = settings.get('nowCoder.logLevel') || 0;
         if(level === 'Debug'){
             this.logLevel = this._DEBUG;
         }

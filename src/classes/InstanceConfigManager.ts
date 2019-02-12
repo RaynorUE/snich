@@ -1,8 +1,9 @@
 import { RESTClient } from './RESTClient';
 import { SystemLogHelper } from './LogHelper';
 import { SNApplication, InstanceConnectionData, snDefaultTables } from '../myTypes/globals';
-import { WorkspaceManager } from './workspaceManager';
+import { WorkspaceManager, SNSyncedFile } from './WorkspaceManager';
 import * as vscode from 'vscode';
+import { SNDefaultTables } from './SNDefaultTables';
 
 /**
 * The InstanceManager class is intended for managing and updating information regarding Instance Configuration.
@@ -99,7 +100,7 @@ export class InstanceConfigManager {
                 let instanceFSPath =  wsFolderRoot + '/' +  this.instance.config.name;
                  this.instance.config.path = vscode.Uri.parse(instanceFSPath);
                 this.logger.info(this.lib, func, 'Setting up new config on filesystem', );
-                this.wsManager.setupNewInstance( this.instance.config);
+                this.wsManager.setupNewInstance( this.instance);
                  this.instance.setupComplete = true;
                 return true;
             } else {
@@ -138,13 +139,18 @@ export class InstanceConfigManager {
                 }
                 return vscode.window.showInputBox(<vscode.InputBoxOptions>{prompt:"Enter Password",password:true,ignoreFocusOut:true});
             }).then((password) =>{
-                 this.instance.config.connection.auth.password = password || "";
-                if(!password){
+
+                if(password){
+                    let buff = Buffer.from(password);
+                    let base64data = buff.toString('base64');
+                     this.instance.config.connection.auth.password = base64data || "";
+                    resolve(true);
+
+                } else {
                     this.logger.info(this.lib, func, 'No password provided. Resolving false', );
                     resolve(false);
                     return;
                 }
-                resolve(true);
             });
         });
     }
@@ -188,20 +194,22 @@ export class InstanceConfigManager {
 }
 
 export class InstanceMaster {
-    config:InstanceConfig;
+
     applications:Array<SNApplication>;
     tableConfig:snDefaultTables;
+    syncedFiles:Array<SNSyncedFile>;
+    config:InstanceConfig;
     setupComplete = false;
+
     
     constructor(){
         this.applications = [];
-        this.tableConfig = {
-            tables: []
-        };
+        this.tableConfig = new SNDefaultTables();
+        this.syncedFiles = [];
 
         this.config = {
             name: "",
-            path: vscode.Uri.parse(""),
+            path: vscode.Uri.file("./"),
             connection : {
                 url:"",
                 auth: {
@@ -222,7 +230,7 @@ export class InstanceMaster {
                     }
                 }
             }
-        }
+        };
     }
 }
 

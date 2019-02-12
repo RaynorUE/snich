@@ -36,18 +36,7 @@ export function activate(context: vscode.ExtensionContext) {
         instanceList = wsManager.loadWorkspaceInstances(wsFolders);
     }
 
-	vscode.commands.registerCommand('yansasync.do_nothing', (item1, item2) =>{
-		let func = 'openTextDocument';
-		logger.info(lib, func, 'START', );
-			vscode.workspace.openTextDocument();
-			vscode.workspace.openTextDocument({content:'hello world'}).then((doc) => {
-				//var location = vscode.window.activeTextEditor !== undefined ? vscode.window.activeTextEditor + 1 || 0;
-				vscode.window.showTextDocument(doc, 0, true);
-			});
-		logger.info(lib, func, 'END');
-	});
-
-	vscode.commands.registerCommand('yansasync.setup.new_instance', () =>{
+	vscode.commands.registerCommand('now-coder.setup.new_instance', () =>{
         let logger = new SystemLogHelper();
         let func = 'setup.new_instance';
         logger.info(lib, func, 'START', );
@@ -60,7 +49,7 @@ export function activate(context: vscode.ExtensionContext) {
         });
 	 });
 
-	vscode.commands.registerCommand('yansasync.setup.test_connection', (folder) =>{
+	vscode.commands.registerCommand('now-coder.setup.test_connection', (folder) =>{
         logger.info('Activate', 'test_connection', 'START');
         if(!folder && instanceList.length === 0){
             vscode.window.showErrorMessage("Unable to test connection, no instance specified or no instances available in workspace.");
@@ -84,42 +73,40 @@ export function activate(context: vscode.ExtensionContext) {
 	});
 
 	//instance specific commands
-	vscode.commands.registerCommand('yansasync.instance.refresh_meta', () =>{
+	vscode.commands.registerCommand('now-coder.instance.refresh_meta', () =>{
 		//this command will crawl dictionary entries matching the various "development" criteria and store locally the fields/tables/etc. 
 		//also executed on first instance setup.
 	});
 
-	vscode.commands.registerCommand('yansasync.instance.configure_authentication', () =>{
+	vscode.commands.registerCommand('now-coder.instance.configure_authentication', () =>{
 		//flow ...
 		//Pick instance, pick auth type, if oAuth enter key and secret, then prompt ID and PW
 		//if auth already exists, prompt to modify or reset if modify, take them through showing current saved values.
 	});
 
-	vscode.commands.registerCommand('yansasync.application.load.all', () => {
+	vscode.commands.registerCommand('now-coder.application.load.all', () => {
 
 	});
 
-	vscode.commands.registerCommand('yansasync.application.load.new', () => {
+	vscode.commands.registerCommand('now-coder.application.load.new', () => {
 
 	});
 
-	vscode.commands.registerCommand('yansasync.instance.pull_record', (folder) =>{
+	vscode.commands.registerCommand('now-coder.instance.pull_record', (folder) =>{
 		let logger = new SystemLogHelper();
 		let func = 'instance.pull_record';
 		logger.info(lib, func, 'START', );
 		let filePuller = new SNFilePuller(instanceList, logger);
 		
-		filePuller.pullRecord().then((newFile) =>{
-
-		}).then(() =>{
-			logger.info(lib, func, 'END');
+		filePuller.pullRecord().then((result) =>{
+			logger.info(lib, func, 'END', result);
 		});
 	});
 
-	vscode.commands.registerCommand('yansasync.folder.application.load.new', () =>{
+	vscode.commands.registerCommand('now-coder.folder.application.load.new', () =>{
 		//if we can't do this from the application load new call
 	});
-	vscode.commands.registerCommand('yansasync.folder.application.load.all', () =>{
+	vscode.commands.registerCommand('now-coder.folder.application.load.all', () =>{
 
 	});
     

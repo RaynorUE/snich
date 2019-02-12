@@ -5,6 +5,7 @@ import { SystemLogHelper } from './LogHelper';
 import { OutgoingHttpHeaders } from 'http';
 import * as querystring from "querystring";
 import { InstanceConfig } from './InstanceConfigManager';
+import { snRecord } from '../myTypes/globals';
 
 
 
@@ -20,6 +21,7 @@ export class RESTClient {
     private apiVersion: string = ''; //can be v1/, preparing for version ups when needed.
     private lib: string = 'RESTClient';
     private authType: String = "basic";
+    private alwaysFields: Array<string> = ["sys_scope","sys_scope.scope","sys_package","sys_id"];
 
     constructor(instanceConfig: InstanceConfig, logger?: SystemLogHelper) {
         let func = 'constructor';
@@ -46,8 +48,10 @@ export class RESTClient {
             password: password ? 'not logged' : password
         });
 
+        let buff = Buffer.from(password, "base64");
+        let text = buff.toString('ascii');
         this.needleOpts.username = username || "";
-        this.needleOpts.password = password || "";
+        this.needleOpts.password = text || "";
         this.authType = 'basic';
 
         this.logger.info(this.lib, func, 'END');
@@ -63,13 +67,17 @@ export class RESTClient {
         this.logger.info(this.lib, func, "END");
     }
 
-    getRecord(table: string, sys_id: string, fields:Array<String>, displayValue?:boolean, refLinks?:boolean) {
+    getRecord(table: string, sys_id: string, fields:Array<string>, displayValue?:boolean, refLinks?:boolean) {
         displayValue = displayValue || false;
         refLinks = refLinks === undefined ? true : refLinks;
+
+        fields = fields.concat(this.alwaysFields);
+
+        //setup URL
         let url = this.instanceConfig.connection.url + '/api/now/' + this.apiVersion + 'table/' + table + '/' + sys_id + '?sysparm_fields=' + fields + '&sysparm_exclude_reference_link=' + refLinks + '&sysparm_display_value=' + displayValue;
         return this.get(url, 'Getting record. ' + table + '_' + sys_id)
             .then((response: any) => {
-                var record: object = {};
+                var record:snRecord = {name:"",label:"",sys_id:"",sys_package:"",sys_scope:"","sys_scope.name":""};
                 if (response.body.result) {
                     record = response.body.result;
                 }
@@ -80,9 +88,10 @@ export class RESTClient {
     getRecords(table:string, encodedQuery: string, fields:Array<string>, displayValue?:boolean, refLinks?:boolean) {
         displayValue = displayValue || false;
         refLinks = refLinks === undefined ? true : refLinks;
+        fields = fields.concat(this.alwaysFields);
         let url = this.instanceConfig.connection.url + '/api/now/table/' + table + '?sysparm_fields=' + fields.toString() + '&sysparm_exclude_reference_link=' + refLinks + '&sysparm_display_value=' + displayValue +'&sysparm_query=' + encodedQuery;
-        return this.get(url, "Retrieving records based on url: " + url).then(function(response){
-            var recs = [];
+        return this.get(url, "Retrieving records based on url: " + url).then((response) =>{
+            var recs:Array<snRecord> = [];
             if(response && response.body){
                 recs = response.body.result;
             }
@@ -91,7 +100,8 @@ export class RESTClient {
     }
 
     updateRecord(table: string, sys_id: string, body: object) {
-        this.post('', '');
+        let url = this.instanceConfig.connection.url + '/api/now/table/' + sys_id;
+        return this.post(url, body, "Updating record at url:" + url);
     }
 
     /*
@@ -145,9 +155,27 @@ export class RESTClient {
         });
     }
 
-    private post(url: string, body: any) {
-        return needle('post', url, body, this.needleOpts).then((response) => {
-            return response;
+    private post(url: string, body: any, progressMessage: string) {
+        let func = "post";
+        return vscode.window.withProgress( < vscode.ProgressOptions > {
+            location: vscode.ProgressLocation.Notification,
+            title: progressMessage,
+            cancellable: false
+        }, (progress, token) => {
+
+            return this.handleAuth().then(() => {
+                this.logger.info(this.lib, func, 'Auth handled. Needleopts:', this.needleOpts );
+                this.logger.info(this.lib, func, "Posting url:" + url);
+                return needle('post', url, body, this.needleOpts).then((response) => {
+                    progress.report({
+                        increment: 100
+                    });
+                    this.logger.info(this.lib, func, "response received.", response);
+                    return response;
+                });
+            }).catch((err) =>{
+                console.log("error occured:", err);
+            });
         });
     }
 
