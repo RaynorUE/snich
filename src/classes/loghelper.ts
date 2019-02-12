@@ -51,14 +51,14 @@ export class SystemLogHelper {
     private _NONE:number = 0;
 
     // entry we're on and padding to provide.
-    private entry:number;
-    private padding:string;
+    //private entry:number;
+    //private padding:string;
     private logLevel:number = this._NONE;
 
 
     constructor(){
-        this.entry = 0;
-        this.padding = "0000000";
+        //this.entry = 0;
+        //this.padding = "0000000";
 
         this.setLogLevel();
     }
@@ -94,9 +94,11 @@ export class SystemLogHelper {
         if (this.logLevel === this._NONE) {
             return;
         }
+        /*
         var entryNumPadded = this.padding.substring(0, this.padding.length - ("" + this.entry).length) + this.entry;
         var fullMsg = `[${entryNumPadded}] - {${library} : ${func}} - ${msg}`;
-
+        */
+       var fullMsg = `{${library} : ${func}} - ${msg}`;
         if (level <= this.logLevel) {
             if (obj) {
                 console.log(fullMsg, obj);
@@ -104,7 +106,7 @@ export class SystemLogHelper {
                 console.log(fullMsg);
             }
         }
-        this.entry++;
+        //this.entry++;
     }
 
     debug(library:string, func:string, msg:string, obj?:any){

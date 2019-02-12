@@ -93,7 +93,7 @@ export class WorkspaceManager{
     writeSyncedFiles(appPath:string, syncedFiles:Array<SNSyncedFile>){
         let func = 'writesyncedFiles';
         this.logger.info(this.lib, func, 'START', );
-            this.writeJSON(syncedFiles, appPath + "\\servicenow_synced_files.json");
+        this.writeJSON(syncedFiles, appPath + "\\servicenow_synced_files.json");
         this.logger.info(this.lib, func, 'END');
     }
 
@@ -200,12 +200,31 @@ export class WorkspaceManager{
 
 
     loadObservers(){
+        let func = 'funcName';
+        this.logger.info(this.lib, func, 'START', );
+        
+        
+        
+        //======= START Save Document =============
         vscode.workspace.onDidSaveTextDocument((document) =>{
             let func = 'textDocumentSaved';
             this.logger.info(this.lib, func, 'START', document);
             
+            let reservedFiles = ['servicenow_config.json', 'servicenow_synced_files.json', 'servicenow_table_config.json'];
+            let isReservedFile = false;
+            reservedFiles.forEach((fileName) => {
+                if(document.fileName.indexOf(fileName) >-1){
+                    isReservedFile = true;
+                }
+            });
+
+            if(isReservedFile){
+                this.logger.info(this.lib, func, 'File saved was not one to be transmitted', document);
+                this.logger.info(this.lib, func, 'END');
+                return;
+            }
+
             let fileParts = document.fileName.split('\\');
-            
 
             let syncedFiles:Array<SNSyncedFile> = [];
             let instanceConfig = <InstanceConfig>{};
@@ -224,32 +243,41 @@ export class WorkspaceManager{
                 }
             });
 
-            
-            
-            let filePath = '/' + document.fileName;
+            let filePath = vscode.Uri.file(document.fileName);
             if(syncedFiles.length > 0){
                 this.logger.info(this.lib, func, 'We have synced files! Attempting to post back update!');
                 syncedFiles.forEach((syncedFile) => {
-                    if(syncedFile.uri.path === filePath){
+                    this.logger.info(this.lib, func, 'Seeing if sycned file is same as path of saved file', {synced:syncedFile, file:filePath} );
+                    if(syncedFile.uri.path === filePath.path){
                         this.logger.info(this.lib, func, 'Found synced file that is a match.', syncedFile);
-                        let content = fs.readFileSync(filePath).toString();
+                        let content = fs.readFileSync((filePath.path.replace('/', ''))).toString();
                         let client = new RESTClient(instanceConfig);
                         let body = <any>{};
                         body[syncedFile.content_field] = content;
                         this.logger.info(this.lib, func, 'Posting record back to SN!');
                         client.updateRecord(syncedFile.table, syncedFile.sys_id, body).then((response:any) =>{
                             this.logger.info(this.lib, func, 'Response from file save:', response);
+                            this.logger.info(this.lib, func, 'END');
                         });
                     }
                 });
+            } else {
+                this.logger.info(this.lib, func, 'END');
             }
-            this.logger.info(this.lib, func, 'END');
         });
+        //======= END Save Document =============
+        
+        
+        this.logger.info(this.lib, func, 'END');
     }
+    
+    
 }
 
+
+
 export class SNSyncedFile {
-    uri:vscode.Uri = vscode.Uri.file('.\\');
+    uri:vscode.Uri = vscode.Uri.file('./');
     table:string = "";
     sys_id:string = "";
     content_field:string = "";

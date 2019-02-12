@@ -71,7 +71,8 @@ interface SyncedFile {
 //========== START ServiceNow Table Config ================
 
 interface snDefaultTables {
-    tables:Array<snTableConfig>
+    configured_tables:Array<String>;
+    tables:Array<snTableConfig>;
 }
 
 interface snTableConfig {

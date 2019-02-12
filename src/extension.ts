@@ -34,6 +34,7 @@ export function activate(context: vscode.ExtensionContext) {
 
     if(wsFolders.length > 0){
         instanceList = wsManager.loadWorkspaceInstances(wsFolders);
+        wsManager.loadObservers();
     }
 
 	vscode.commands.registerCommand('now-coder.setup.new_instance', () =>{

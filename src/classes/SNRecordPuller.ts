@@ -40,8 +40,10 @@ export class SNFilePuller{
                 this.logger.info(this.lib, func, 'Selected:', selectedInstance);
 				if(selectedInstance){
                     this.activeInstanceData = selectedInstance.value;
-					client = new RESTClient(this.activeInstanceData.config, this.logger);
-                    return client.getRecords('sys_db_object', 'super_class.name=sys_metadata', ["name","label"], true);
+                    client = new RESTClient(this.activeInstanceData.config, this.logger);
+                    let encodedQuery = 'super_class.name=sys_metadata^nameIN' + this.activeInstanceData.tableConfig.configured_tables;
+
+                    return client.getRecords('sys_db_object', encodedQuery, ["name","label"], true);
                 } else {
                     return false;
                 }
@@ -53,7 +55,7 @@ export class SNFilePuller{
                         tableqpItems.push({"label":record.label, "detail": record.name + ' - ' + record.sys_scope, value:record});
                     });
                     this.logger.info(this.lib, func, "Built quick pick options based on table records returned.");
-                    return vscode.window.showQuickPick(tableqpItems, <vscode.QuickPickOptions>{"placeHolder":"Select table to retrieve record from.", ignoreFocusOut:true, matchOnDetail:true, matchOnDescription:true});
+                    return vscode.window.showQuickPick(tableqpItems, <vscode.QuickPickOptions>{"placeHolder":"Select table to retrieve record from. Table Not found? Make sure it's in the table_config. Or configure table using command pallete.", ignoreFocusOut:true, matchOnDetail:true, matchOnDescription:true});
                 } else {
                     return false;
                 }
@@ -114,11 +116,6 @@ export class SNFilePuller{
             });
         });
     }
-
-    updateSNRecord(){
-        
-    }
-
 
     setAppScope(app:SNApplication){
         this.appScope = app;

@@ -100,15 +100,14 @@ export class RESTClient {
     }
 
     updateRecord(table: string, sys_id: string, body: object) {
-        let url = this.instanceConfig.connection.url + '/api/now/table/' + sys_id;
-        return this.post(url, body, "Updating record at url:" + url);
+        let url = this.instanceConfig.connection.url + '/api/now/table/' + table +'/' + sys_id;
+        return this.put(url, body, "Updating record at url:" + url);
     }
 
-    /*
-        insertRecord(fileData: SyncedFile) {
-
-        }
-    */
+    //unused...
+    createRecord(table: string, sys_id: string, body:object){
+        this.post('', body, 'Creating new record!');
+    }
 
     testConnection():Promise<any> {
         let func = "testConnection";
@@ -167,6 +166,30 @@ export class RESTClient {
                 this.logger.info(this.lib, func, 'Auth handled. Needleopts:', this.needleOpts );
                 this.logger.info(this.lib, func, "Posting url:" + url);
                 return needle('post', url, body, this.needleOpts).then((response) => {
+                    progress.report({
+                        increment: 100
+                    });
+                    this.logger.info(this.lib, func, "response received.", response);
+                    return response;
+                });
+            }).catch((err) =>{
+                console.log("error occured:", err);
+            });
+        });
+    }
+
+    private put(url: string, body: any, progressMessage: string) {
+        let func = "post";
+        return vscode.window.withProgress( < vscode.ProgressOptions > {
+            location: vscode.ProgressLocation.Notification,
+            title: progressMessage,
+            cancellable: false
+        }, (progress, token) => {
+
+            return this.handleAuth().then(() => {
+                this.logger.info(this.lib, func, 'Auth handled. Needleopts:', this.needleOpts );
+                this.logger.info(this.lib, func, "Posting url:" + url);
+                return needle('put', url, body, this.needleOpts).then((response) => {
                     progress.report({
                         increment: 100
                     });

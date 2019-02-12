@@ -12,21 +12,18 @@ This document is intended to indicate and layout the features we are planning to
     __Bold__: Work in progress
      Nothing: Feature complete
 
-## [v0.2.0 (Current)]()
+## [v0.4.0 (Current)]()
 
 ### Extension Functionality
 #### Added
-- _Table Defaults now read from servicenowTableConfig.json file._
+
 - _Ability to update the default tables through the command pallet._
     - _Flow 1: New Table 
         - _Prompt which instance load tables, after select of table load all fields for table_
         - _Prompt use to pick a field to sync (Field name - (type ?? Maybe limt types)), make first Selection "Sync All - as JSON"_
-- _Configuration option for indicating "Always prompt for app scope" which will be used in filtering, else will "show all files regardless of app scope"._
-    - _Ability to set "per instance" the default / current app scope? Could tie this with "Set my Application"_
 
 #### Changed
-- _Sync Record now saves into appropriate application folder tree._
-- _Syncing a record now saves a file for every configured synced field for that record in the servicenowTableConfig._
+
 
 #### Removed
 - Nothing
@@ -34,13 +31,10 @@ This document is intended to indicate and layout the features we are planning to
 ### Internal Extension Development
 
 #### Added
-- Instance Manager Class and API
 
 #### Changed
-- _Sync Record Functionality has been moved to it's own class and "tidied up"_
 
 #### Removed
-- Nothing
 
 
 Organized Upcoming Ideas
@@ -48,11 +42,13 @@ Organized Upcoming Ideas
 Section is intended as a sandbox for taking general notes and feature planning. Will eventually be organized into future versions (above)
 
 ## [Definitly going to implement]()
-- ONLY CREATE FOLDER ON RECORD SYNC! Just Store the available "Tables" and their information... not a bad idea... This will help a ton in keeping down the "noise" if you will..
-- Auto File/folder creation?
-    - Idea here is to use/look at the default folder config and create folder for synced file type if it doesn't exist.
-    - Determine what files need synced based on the field types of a given record type. Script, "dictionary = xml = true", HTML, XML, ?????
-    - Auto create folder based on displayName of field and then auto create files for any of the field types that match where file names are the field names
+- SN Default Tables
+    - Convert johns list to get people started. 
+- Sync Record
+    - Table Selection: Limit list based on "Configured tables for syncing"
+        - This may seem like a pain at first, but it will GREATLY speed up the efficiency. 
+        - Will need to test URL Length limitations, and when we get over that just load all tables. (Instead of trying to recursively call and break it up, that's going to take longer anyway);
+        - Update placeholder / descriptive text to indicate what they need to do to add tables for records they don't see. 
     - Ask them to pick app scope? or auto-detect based on synced file?  
         - if picking app scope, could greatly speed syncing... Would help eliminate some other issues like file names being the same..
         - Do we just allow picking from current "Synced apps" ... yea, lets...
@@ -61,7 +57,9 @@ Section is intended as a sandbox for taking general notes and feature planning. 
     - Hook into "file create" code, so that we can borrow the auto-folder creation functionality
 - Sync All Application Files
     - Prompt for Instance > Application
-    - Show Loading dialog and progress indicator. 
+    - Show Loading dialog and progress indicator. Need to test with big app if this will let us edit...
+    - Also need to make sure we filter the files loaded based on the synced records... 
+    - Will be hard to get counts first, so maybe we just show / update the total number of tables to sync and how many tables we've processed? 
 
     
 
@@ -76,9 +74,13 @@ Section is intended as a sandbox for taking general notes and feature planning. 
     - Query and set accordingly. Maybe a warning letting them know it'll change it for all logged sessions
 - Set Application
     - Set application accordingly, indicate via showMessage which update set is currently selected. 
+    - Ability to set "per instance" the default / current app scope? This would coinside with the "Prompt App Scope" setting... To alleviate the asking all the time? Low priority...
 - Compare With Server
     - Compare the active text editor with the server. If different, ask to view comparison and load up VSCode file comparer ... in a new column? 
-
+- During Sync Record Ask them to pick app scope? or auto-detect based on synced file?  
+        - if picking app scope, could greatly speed syncing... Would help eliminate some other issues like file names being the same..
+        - Do we just allow picking from current "Synced apps" ... yea, lets...
+        - Also, provide configuraiton setting to disable/enable this feature globally. 
 
 
 
@@ -87,8 +89,8 @@ Section is intended as a sandbox for taking general notes and feature planning. 
 - On File Save
     - Actions to take when saving a file
         - Execute Compare record to server version code. 
-        - If no differences, post record to SN. 
-        - Show success save message with current update set name.
+        - If differences abort save
+        - Update success save message with current update set name.
 - Ability to "Get entire record JSON" for direct / manual editing and syncing back to instance. 
     - Need to think about file/folder structure here... Same naming scheme as tableconfig for table, and just .json extension... Yea!
 
@@ -100,21 +102,6 @@ Place to store random ideas and notes as i come up with them. To then be organiz
 ## [Less Random Ideas]()
 
 ## [Random Ideas]()
-
-or better yet, since "sync record" isn't going to be on the folder (as of now)
-we can always prompt for instance + app_scope?
-
-if one instance, just auto-select
-
-Give config setting option for "prompt for app scope always or not"
-
-So now we have to think, how do we lookup files? An array of paths really...
-Do we just maintain one master array of files? What's risk of speed concerns? I suppose if we run into speed issues we could always split these out? 
-I've already got architected to split these out, so really it's just on save, crawl the chain until we find that fileslist file... duh... it's only 2-3 levels..
-Then we can loop through the sync files... low odds of having more than a few hundred files, but even then we could always update to break out into "folder level specific"? or ap level specific? shoudl weo 
-we should do app level regardless..
-I wonder if there are some type script things that can help with that?
-
 
 ## [Sublime Sync Features to Port]()
 

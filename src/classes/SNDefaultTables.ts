@@ -2,6 +2,7 @@ import { snTableConfig, snTableField } from "../myTypes/globals";
 
 export class SNDefaultTables {
     tables:Array<snTableConfig> = [];
+    configured_tables:Array<string> = [];
  
     constructor(defaultTables?:Array<snTableConfig>){
        if(defaultTables){
@@ -42,6 +43,7 @@ export class SNDefaultTables {
     }
 
     addTable(table:snTableConfig){
+        this.configured_tables.push(table.name);
         this.tables.push(table);
     }
 }
@@ -63,6 +65,7 @@ export class TableConfig{
 
     addField(name:string, label:string, extension:string){
         this.tableConfig.fields.push(<snTableField>{
+            table:this.tableConfig.name,
             name: name,
             label: label,
             extention: extension
