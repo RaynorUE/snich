@@ -12,10 +12,11 @@ import { SNFilePuller } from './classes/SNRecordPuller';
 // this method is called when your extension is activated
 // your extension is activated the very first time the command is executed
 export function activate(context: vscode.ExtensionContext) {
-	let lib = 'extension';
+    let lib = 'extension.ts';
 	let func = 'activate';
 	let logger:SystemLogHelper = new SystemLogHelper();
     logger.info(lib, func, 'START');
+    
     let instanceList:Array<InstanceMaster> = [];
     
     let wsFolders = vscode.workspace.workspaceFolders || [];

@@ -5,8 +5,6 @@ import { RESTClient} from "./RESTClient";
 import * as vscode from 'vscode';
 import { WorkspaceManager } from "./WorkspaceManager";
 
-
-
 export class SNFilePuller{
     
     instanceList:Array<InstanceMaster>;

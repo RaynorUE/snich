@@ -12,7 +12,7 @@ This document is intended to indicate and layout the features we are planning to
     __Bold__: Work in progress
      Nothing: Feature complete
 
-## [v0.4.0 (Current)]()
+## [v0.5.0 (Current)]()
 
 ### Extension Functionality
 #### Added
@@ -102,7 +102,7 @@ Place to store random ideas and notes as i come up with them. To then be organiz
 ## [Less Random Ideas]()
 
 ## [Random Ideas]()
-
+it'd be great if this would make me a salad on demand
 ## [Sublime Sync Features to Port]()
 
 
