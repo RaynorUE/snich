@@ -123,6 +123,3 @@ export class SNFilePuller{
         this.activeInstanceData = instance;
     }
 }
-
-
-
