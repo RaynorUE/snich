@@ -1,6 +1,6 @@
 import { RESTClient } from './RESTClient';
 import { SystemLogHelper } from './LogHelper';
-import { SNApplication, InstanceConnectionData, snDefaultTables } from '../myTypes/globals';
+import { SNApplication, InstanceConnectionData } from '../myTypes/globals';
 import { WorkspaceManager, SNSyncedFile } from './WorkspaceManager';
 import * as vscode from 'vscode';
 import { SNDefaultTables } from './SNDefaultTables';
@@ -190,7 +190,7 @@ export class InstanceConfigManager {
 export class InstanceMaster {
 
     applications:Array<SNApplication>;
-    tableConfig:snDefaultTables;
+    tableConfig:SNDefaultTables;
     syncedFiles:Array<SNSyncedFile>;
     config:InstanceConfig;
     setupComplete = false;

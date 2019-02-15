@@ -21,7 +21,7 @@ export class RESTClient {
     private apiVersion: string = ''; //can be v1/, preparing for version ups when needed.
     private lib: string = 'RESTClient';
     private authType: String = "basic";
-    private alwaysFields: Array<string> = ["sys_scope","sys_scope.scope","sys_package","sys_id"];
+    private alwaysFields: Array<string> = ["sys_scope","sys_scope.scope","sys_scope.name","sys_package","sys_id"];
 
     constructor(instanceConfig: InstanceConfig, logger?: SystemLogHelper) {
         let func = 'constructor';
@@ -86,6 +86,8 @@ export class RESTClient {
     }
 
     getRecords(table:string, encodedQuery: string, fields:Array<string>, displayValue?:boolean, refLinks?:boolean) {
+        let func = 'getRecords';
+        this.logger.info(this.lib, func, 'START');
         displayValue = displayValue || false;
         refLinks = refLinks === undefined ? true : refLinks;
         fields = fields.concat(this.alwaysFields);
@@ -95,6 +97,7 @@ export class RESTClient {
             if(response && response.body){
                 recs = response.body.result;
             }
+            this.logger.info(this.lib, func, 'END');
             return recs;
         });
     }
@@ -132,6 +135,7 @@ export class RESTClient {
 
     private get(url: string, progressMessage: string) {
         let func = "get";
+        this.logger.info(this.lib, func, 'START');
         return vscode.window.withProgress( < vscode.ProgressOptions > {
             location: vscode.ProgressLocation.Notification,
             title: progressMessage,
@@ -146,6 +150,7 @@ export class RESTClient {
                         increment: 100
                     });
                     this.logger.info(this.lib, func, "response received.", response);
+                    this.logger.info(this.lib, func, 'END');
                     return response;
                 });
             }).catch((err) =>{

@@ -6,6 +6,8 @@ import { SystemLogHelper } from './classes/LogHelper';
 import { RESTClient } from './classes/RESTClient';
 import { WorkspaceManager } from './classes/WorkspaceManager';
 import { SNFilePuller } from './classes/SNRecordPuller';
+import * as path from 'path';
+import { SyncedTableManager } from './classes/SNDefaultTables';
 
 // this method is called when your extension is activated
 // your extension is activated the very first time the command is executed
@@ -16,19 +18,19 @@ export function activate(context: vscode.ExtensionContext) {
     logger.info(lib, func, 'START');
     
     let instanceList:Array<InstanceMaster> = [];
-
+    
     if(!workspaceValid(logger, lib)){
         deactivate();
         return false;
     }
-
+    
     let wsManager = new WorkspaceManager(logger);
     let wsFolders = vscode.workspace.workspaceFolders || [];
     if(wsFolders.length > 0){
         instanceList = wsManager.loadWorkspaceInstances(wsFolders);
         wsManager.loadObservers();
     }
-
+    
 	vscode.commands.registerCommand('now-coder.setup.new_instance', () =>{
         let logger = new SystemLogHelper();
         let func = 'setup.new_instance';
@@ -40,68 +42,100 @@ export function activate(context: vscode.ExtensionContext) {
 			}
 			logger.info(lib, func, 'END');
         });
-	 });
-
-	vscode.commands.registerCommand('now-coder.setup.test_connection', (folder) =>{
+    });
+    
+	vscode.commands.registerCommand('now-coder.setup.test_connection', () =>{
         logger.info('Activate', 'test_connection', 'START');
-        if(!folder && instanceList.length === 0){
-            vscode.window.showErrorMessage("Unable to test connection, no instance specified or no instances available in workspace.");
+        if(!anyInstancesLoaded(instanceList, logger, lib)){
+            return;
         }
-        if(!folder){
-            var qpItems:Array<vscode.QuickPickItem> = [];
-            instanceList.forEach((instanceData) => {
-                qpItems.push({"label":instanceData.config.name, "detail":"Instance URL: " + instanceData.config.connection.url});
-            });
-            vscode.window.showQuickPick(qpItems, <vscode.QuickPickOptions>{"placeHolder":"Select instance to test connection"}).then((selected) =>{
-                if(selected){
-                    instanceList.forEach((instance) => {
-                        if(instance.config.name === selected.label){
-                            new RESTClient(instance.config).testConnection();
-                        }
-                    });
-                }
-            });
-        }
-		logger.info('Activate', 'test_connection', 'END');
+        var qpItems:Array<vscode.QuickPickItem> = [];
+        instanceList.forEach((instanceData) => {
+            qpItems.push({"label":instanceData.config.name, "detail":"Instance URL: " + instanceData.config.connection.url});
+        });
+        vscode.window.showQuickPick(qpItems, <vscode.QuickPickOptions>{"placeHolder":"Select instance to test connection"}).then((selected) =>{
+            if(selected){
+                instanceList.forEach((instance) => {
+                    if(instance.config.name === selected.label){
+                        new RESTClient(instance.config).testConnection();
+                    }
+                });
+            }
+        });
+        logger.info('Activate', 'test_connection', 'END');
 	});
+    
+    vscode.commands.registerCommand('now-coder.instance.setup.new_table', () => {
+        let logger = new SystemLogHelper();
+        let func = 'now-coder.instance.setup.new_table';
+        logger.info(lib, func, 'START');
 
-	//instance specific commands
-	vscode.commands.registerCommand('now-coder.instance.refresh_meta', () =>{
-		//this command will crawl dictionary entries matching the various "development" criteria and store locally the fields/tables/etc. 
-		//also executed on first instance setup.
-	});
+        let tableMgr = new SyncedTableManager(instanceList, logger);
+        tableMgr.syncNew().then((result) =>{
+            logger.info(lib, func, 'Result from new setup:', result);
+            if(result){
+                let updatedInstance = <InstanceMaster>result;
+                instanceList.forEach((instance, index) =>{
+                    if(instance.config.name === updatedInstance.config.name){
+                        instanceList[index] = updatedInstance;
+                    }
+                });
+            }
+            logger.info(lib, func, 'END');
+        });
 
-	vscode.commands.registerCommand('now-coder.instance.configure_authentication', () =>{
-		//flow ...
-		//Pick instance, pick auth type, if oAuth enter key and secret, then prompt ID and PW
-		//if auth already exists, prompt to modify or reset if modify, take them through showing current saved values.
+        
 	});
 
 	vscode.commands.registerCommand('now-coder.application.load.all', () => {
-
+        
 	});
-
+    
 	vscode.commands.registerCommand('now-coder.application.load.new', () => {
-
+        
 	});
-
+    
 	vscode.commands.registerCommand('now-coder.instance.pull_record', (folder) =>{
 		let logger = new SystemLogHelper();
 		let func = 'instance.pull_record';
-		logger.info(lib, func, 'START', );
+        logger.info(lib, func, 'START', );
+        if(!anyInstancesLoaded(instanceList, logger, lib)){
+            return;
+        }
 		let filePuller = new SNFilePuller(instanceList, logger);
 		
 		filePuller.pullRecord().then((result) =>{
 			logger.info(lib, func, 'END', result);
 		});
 	});
-
+    
 	vscode.commands.registerCommand('now-coder.folder.application.load.new', () =>{
 		//if we can't do this from the application load new call
 	});
 	vscode.commands.registerCommand('now-coder.folder.application.load.all', () =>{
-
-	});
+        
+    });
+    
+    //** INSTANCE REMOVAL WATCHER!! */
+    let watchPath = path.resolve(wsFolders[0].uri.fsPath, '*');
+    let fsWatcher = vscode.workspace.createFileSystemWatcher(watchPath);
+    fsWatcher.onDidDelete((uri) =>{
+        let func = 'InstanceDeleteWatcher';
+        logger.info(lib, func, 'File deleted:', uri);
+        let instanceLocation = -1;
+        instanceList.forEach((instance, index) =>{
+            logger.debug(lib, func, "Testing if instance matches.", {instanceListPath:instance.config.fsPath, loadedFromFile:uri.fsPath});
+            if(instance.config.fsPath === uri.fsPath){
+                logger.info(lib, func, `Found instance in instance list at position ${index}`);
+                instanceLocation = index;
+            }
+        });
+        
+        if(instanceLocation > -1){
+            instanceList.splice(instanceLocation, 1);
+            logger.info(lib, func, "Removed instance from instanceList.", instanceList);
+        }
+    });
     
     logger.info(lib, func, "We have finished registering all commands. Extension fully activated!");
     logger.info(lib, func, "END");
@@ -124,4 +158,13 @@ function workspaceValid(logger:SystemLogHelper, lib:string) {
         return false;
     }
     return true;
+}
+
+function anyInstancesLoaded(instanceList:Array<InstanceMaster>, logger:SystemLogHelper, lib:string){
+    if(instanceList.length === 0){
+        vscode.window.showErrorMessage('No instances configured. Please execute Setup New Instance command.');
+        return false;
+    } else {
+        return true;
+    }
 }

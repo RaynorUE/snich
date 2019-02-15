@@ -7,16 +7,51 @@ Features and Functionality that have been completed but not yet released. See [F
 
 ### Extension Functionality
 #### Added
-- _Ability to update the default tables through the command pallet._
-    - _Flow 1: New Table 
-        - _Prompt which instance load tables, after select of table load all fields for table_
-        - _Prompt use to pick a field to sync (Field name - (type ?? Maybe limt types)), make first Selection "Sync All - as JSON"_
+    - Will update this during next planning session
 ### Changed
-
+    
 ### Removed
 
+## [v0.5.0 (Current)]()
 
-## [v0.4.0 (Current)]()
+### Extension Functionality
+#### Added
+
+- Ability to update the default tables through the command pallet.
+    - Flow 1: New Table 
+        - Prompt which instance load tables, after select of instance load all sys_metadata tables. 
+        - After selecting a table, prompt use with multi-select which fields they want to sync from that table. 
+        - AFter selecting fields, for each field, ask what the extension for each field. 
+        - Add to table config and make available for syncing records. 
+        - Update local table configuration file with new config.
+- When deleting an instance folder, it is now removed from the stored InstanceList. You can now resync an instance without reloading vscode!
+
+#### Changed
+- Fix bug for MAC OS Devices in reading/writing files and folders
+- Fixed bug where if you deleted an instance folder it would not unload from the instance list, making it hard to re-sync
+- Synced files folder paths updated so it is "App Name (app_scope)" for a bit easier readability. 
+
+#### Removed
+- Nothing
+
+### Internal Extension Development
+
+#### Added
+- Added function to easily check if instances are loaded at all within the extension.ts file. Can be used as part of commands to show error messages when no instances loaded and are required for a given command.
+- Added new class to SNDefaultTabls.ts : SyncedTableManager, used for managing the configured tables for a given instance. 
+    - syncNew() - Handles the proccess for setting up a new table to be synced. 
+
+#### Changed
+- WorkspaceManager functions have been updated with general improvements such as storing the file names in readonly properties so i can update in one place if they ever change
+    - Added functions for specific file wrting such as configJSON and configuredTablesJSON files. 
+- SNDefaultTables re-arranged interface definitions so they were properly referring to the new Class definitions for "TableConfig" that have been around for a while. 
+    - This was to resolve internal issues when trying to associate items and making sure methods were available when loading JSON file data. 
+
+#### Removed
+- Removed unused or no longer going to implement command registrations that were stubbed in for future planning.
+
+
+## [v0.4.0]()
 Added some good nuggest here. Lots of baseline functionality added and more to come!
 ### Extension Functionality
 #### Added

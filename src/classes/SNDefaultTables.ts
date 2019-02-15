@@ -1,4 +1,128 @@
-import { snTableConfig, snTableField } from "../myTypes/globals";
+import { snTableConfig, snTableField, SNQPItem, snRecord } from "../myTypes/globals";
+import { InstanceMaster} from "./InstanceConfigManager";
+import { RESTClient } from "./RESTClient";
+import * as vscode from "vscode";
+import { SystemLogHelper } from "./LogHelper";
+import { WorkspaceManager } from "./WorkspaceManager";
+
+
+export class SyncedTableManager {
+    instanceList:Array<InstanceMaster>;
+    instance:InstanceMaster;
+    logger:SystemLogHelper;
+    lib:string = 'SyncedTableManager';
+
+    constructor(instanceList:Array<InstanceMaster>, logger?:SystemLogHelper){
+        this.logger = logger || new SystemLogHelper();
+        let func = 'constructor';
+        this.logger.info(this.lib, func, 'START');
+        this.instanceList = instanceList;
+        this.instance = <InstanceMaster>{};
+        this.logger.info(this.lib, func, 'END');
+    }
+
+    syncNew(){
+        let func = 'syncNew';
+        this.logger.info(this.lib, func, 'START');
+        let client = <RESTClient>{};
+        let qpItems:Array<SNQPItem> = [];
+        let tableConfig = <TableConfig>{};
+        
+        this.logger.info(this.lib, func, 'About to build QP Items from instanceList', this.instanceList);
+        this.instanceList.forEach((instance) => {
+            qpItems.push({"label":instance.config.name, "detail":"Instance URL: " + instance.config.connection.url, value:instance });
+        });
+        this.logger.info(this.lib, func, 'About to show quick pick.');
+        return vscode.window.showQuickPick(qpItems, <vscode.QuickPickOptions>{placeHolder:"Select instance to test connection", ignoreFocusOut:true, matchOnDetail:true, matchOnDescription:true})
+        .then((selectedInstance):any =>{
+            if(selectedInstance){
+                this.instance = selectedInstance.value;
+                client = new RESTClient(this.instance.config);
+                let encodedQuery = 'super_class.name=sys_metadata^nameNOT IN' + this.instance.tableConfig.configured_tables;
+                return client.getRecords('sys_db_object', encodedQuery, ['name', 'label']);
+            } else {
+                return false;
+            }
+        })
+        .then((tableRecs):any =>{
+            if(tableRecs){
+                let tableQPItems = <Array<SNQPItem>>[];
+                tableRecs.forEach((table:snRecord) =>{
+                    tableQPItems.push({"label":table.label, "detail": table.name + ' - ' + table.sys_scope, value:table});
+                });
+                return vscode.window.showQuickPick(tableQPItems, {placeHolder:"Select a table to configure for syncing", ignoreFocusOut:true, matchOnDetail:true, matchOnDescription:true});
+            } else {
+                return false;
+            }
+        }).then((selectedTable):any => {
+            if(selectedTable){
+                let tableObj = <snRecord>selectedTable.value;
+                tableConfig = new TableConfig(tableObj.name);
+                let dicQuery = 'name=' + tableObj.name + '^elementISNOTEMPTY';
+                return client.getRecords('sys_dictionary', dicQuery, ['element', 'column_label', 'internal_type']);
+            } else {
+                return false;
+            }
+        }).then((dicRecs):any =>{
+            
+            if(dicRecs){
+                this.logger.info(this.lib, func, "Dictionary records received. Building QPItems");
+                let dicQPItems = <Array<SNQPItem>>[];
+                dicRecs.forEach((dic:snRecord) => {
+                    dicQPItems.push({"label":dic.column_label || "", "detail": dic.element + ' - ' + dic.internal_type, value:dic});
+                });
+                return vscode.window.showQuickPick(dicQPItems, <vscode.QuickPickOptions>{placeHolder:"Select all fields you want to sync.", ignoreFocusOut:true, matchOnDetail:true, matchOnDescription:true, canPickMany:true});
+            } else {
+                return false;
+            }
+        }).then((selectedFields) => {
+            this.logger.info(this.lib, func, "Selected fields:", selectedFields);
+            if(selectedFields.length > 0){
+                let extensionAsker = (selectedPosition:number) => {
+                    let func = 'extensionAsker';
+                    this.logger.info(this.lib,func, 'START', {position:selectedPosition, fieldsLength:selectedFields.length});
+                    return new Promise((resolve, reject) =>{
+                        if(selectedPosition < selectedFields.length){
+                            let selectedField = selectedFields[selectedPosition].value;
+                            this.logger.info(this.lib, func, "Selected Field:", selectedField);
+                            return vscode.window.showInputBox(<vscode.InputBoxOptions>{placeHolder:"Do not include the . symmbol. Suggestions: js, html, css, txt", prompt:"Enter the file extension for field: " + selectedField.column_label + ' [' + selectedField.internal_type + ']', ignoreFocusOut:true}).then((extension) => {
+                                if(extension){
+                                    tableConfig.addField(selectedField.element, selectedField.column_label, extension);
+                                    this.logger.info(this.lib, func, 'Added field to table config.', tableConfig);
+                                }
+                                selectedPosition++;
+                                this.logger.info(this.lib, func, 'Going to ask next field.');
+                                resolve(extensionAsker(selectedPosition));
+                            });
+                        } else {
+                            this.logger.info(this.lib, func, 'No more fields to get extensions for!');
+                            this.logger.info(this.lib, func, 'END');
+                            resolve(true);
+                        }
+                    });
+                };
+
+                return extensionAsker(0);
+            } else {
+                vscode.window.showWarningMessage('No fields selected. Please be sure to checkbox, using mouse or space bar on item to select it. Then click okay or press enter to capture.');
+                return false;
+            }
+        }).then((completed) =>{
+            this.logger.info(this.lib, func, 'Performing final steps.');
+            if(completed){
+                this.logger.info(this.lib, func, 'Adding table config to instance tableConfig. Saving file using WorkspaceManaget');
+                this.instance.tableConfig.addTable(tableConfig);
+                let wsMgr = new WorkspaceManager(this.logger);
+                wsMgr.writeTableConfig(this.instance);
+                this.logger.info(this.lib, func, 'END');
+                return this.instance;
+            } else {
+                this.logger.info(this.lib, func, 'END');
+                return false;
+            }
+        });
+    }
+}
 
 export class SNDefaultTables {
     tables:Array<snTableConfig> = [];
@@ -17,10 +141,11 @@ export class SNDefaultTables {
         let sys_script = new TableConfig('sys_script');
         sys_script.setDisplayField('name');
         sys_script.addField('script', 'Script', 'js');
-        this.addTable(sys_script.getTableConfig());
+        this.addTable(sys_script);
 
         //==== sp_widget ========
         let sp_widget = new TableConfig('sp_widget');
+        sp_widget.setLabel('Widget');
         sp_widget.setDisplayField("name");
         sp_widget.addField('template', 'Body HTML template', 'html');
         sp_widget.addField('css', 'CSS', 'css');
@@ -29,12 +154,12 @@ export class SNDefaultTables {
         sp_widget.addField('link', 'Link', 'js');
         sp_widget.addField('demo_data', 'Demo data', 'json');
         sp_widget.addField('option_schema', 'Option schema', 'json');
-        this.addTable(sp_widget.getTableConfig());
+        this.addTable(sp_widget);
 
         let sys_script_include = new TableConfig('sys_script_include');
         sys_script_include.setDisplayField('name');
         sys_script_include.addField('script', 'Script', 'js');
-        this.addTable(sys_script_include.getTableConfig());
+        this.addTable(sys_script_include);
 
     }
 
@@ -42,41 +167,40 @@ export class SNDefaultTables {
         return this.tables;
     }
 
-    addTable(table:snTableConfig){
+    addTable(table:TableConfig){
         this.configured_tables.push(table.name);
         this.tables.push(table);
     }
 }
 
 export class TableConfig{
-    tableConfig:snTableConfig = {
-        name:"",
-        display_field:"",
-        fields:[],
-        children: []
-    };
+        name:string = "";
+        label:string = "";
+        display_field:string = "name";
+        fields:Array<snTableField> = [];
+        children:Array<TableConfig> = [];
+    
     constructor(name:string){
-        this.tableConfig.name = name;
+        this.name = name;
     }
 
+    setLabel(label:string){
+        this.label = label;
+    }
     setDisplayField(fieldName:string){
-        this.tableConfig.display_field = fieldName;
+        this.display_field = fieldName;
     }
 
     addField(name:string, label:string, extension:string){
-        this.tableConfig.fields.push(<snTableField>{
-            table:this.tableConfig.name,
+        this.fields.push(<snTableField>{
+            table:this.name,
             name: name,
             label: label,
             extention: extension
         });
     }
 
-    addChildTable(tableConfig:snTableConfig){
-        this.tableConfig.children.push(tableConfig);
-    }
-
-    getTableConfig(){
-        return this.tableConfig;
+    addChildTable(tableConfig:TableConfig){
+        this.children.push(tableConfig);
     }
 }

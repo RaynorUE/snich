@@ -91,6 +91,9 @@ interface snRecord {
     sys_id:string;
     sys_scope?:string;
     sys_package?:string;
+    internal_type?:string;
+    element?:string;
+    column_label?:string;
     "sys_scope.name":string;
 }
 

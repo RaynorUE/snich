@@ -12,21 +12,15 @@ This document is intended to indicate and layout the features we are planning to
     __Bold__: Work in progress
      Nothing: Feature complete
 
-## [v0.5.0 (Current)]()
+## [v0.6.0 (Current)]()
 
 ### Extension Functionality
 #### Added
 
-- _Ability to update the default tables through the command pallet._
-    - _Flow 1: New Table 
-        - _Prompt which instance load tables, after select of table load all fields for table_
-        - _Prompt use to pick a field to sync (Field name - (type ?? Maybe limt types)), make first Selection "Sync All - as JSON"_
-
 #### Changed
-- _Fix bug for MAC OS Devices in reading/writing files and folders_
 
 #### Removed
-- Nothing
+
 
 ### Internal Extension Development
 
@@ -37,6 +31,7 @@ This document is intended to indicate and layout the features we are planning to
 #### Removed
 
 
+
 Organized Upcoming Ideas
 ==================================================================================
 Section is intended as a sandbox for taking general notes and feature planning. Will eventually be organized into future versions (above)
@@ -44,14 +39,6 @@ Section is intended as a sandbox for taking general notes and feature planning. 
 ## [Definitly going to implement]()
 - SN Default Tables
     - Convert johns list to get people started. 
-- Sync Record
-    - Table Selection: Limit list based on "Configured tables for syncing"
-        - This may seem like a pain at first, but it will GREATLY speed up the efficiency. 
-        - Will need to test URL Length limitations, and when we get over that just load all tables. (Instead of trying to recursively call and break it up, that's going to take longer anyway);
-        - Update placeholder / descriptive text to indicate what they need to do to add tables for records they don't see. 
-    - Ask them to pick app scope? or auto-detect based on synced file?  
-        - if picking app scope, could greatly speed syncing... Would help eliminate some other issues like file names being the same..
-        - Do we just allow picking from current "Synced apps" ... yea, lets...
 - Sync Application
     - Ask to sync all files. (hook into sync app files code) 
     - Hook into "file create" code, so that we can borrow the auto-folder creation functionality
