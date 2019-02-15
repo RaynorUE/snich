@@ -95,7 +95,7 @@ export class InstanceConfigManager {
             if(testSuccess){
                 this.logger.info(this.lib, func, 'Setting up new config on filesystem', );
                 this.instance = this.wsManager.setupNewInstance(this.instance);
-                 this.instance.setupComplete = true;
+                this.instance.setupComplete = true;
                 return true;
             } else {
                 return false;
@@ -108,7 +108,7 @@ export class InstanceConfigManager {
         
     }
     
-    setURL(url:string){
+    private setURL(url:string){
         if(url.indexOf('http') > -1){
             //we were given a full url path, use it. 
              this.instance.config.connection.url = url.replace(/\/$/, ''); //replace trailing slash if it exists..
@@ -121,7 +121,7 @@ export class InstanceConfigManager {
         }
     }
     
-    gatherBasicAuth():Promise<any>{
+    private gatherBasicAuth():Promise<any>{
         let func = 'gatherBasicAuth';
         return new Promise((resolve, reject) =>{
             vscode.window.showInputBox(<vscode.InputBoxOptions>{prompt:"Enter User Name",ignoreFocusOut:true}).then((username) =>{
@@ -149,7 +149,7 @@ export class InstanceConfigManager {
         });
     }
     
-    gatherOAuth():Promise<any>{
+    private gatherOAuth():Promise<any>{
         return new Promise((resolve, reject) =>{
             vscode.window.showInputBox(<vscode.InputBoxOptions>{prompt:"Enter Client ID",ignoreFocusOut:true}).then((clientID) =>{
                  this.instance.config.connection.auth.OAuth.client_id = clientID || "";
@@ -174,7 +174,7 @@ export class InstanceConfigManager {
         });
     }
     
-    checkInstanceLoaded(instanceName:string, instanceList:Array<InstanceMaster>){
+    private checkInstanceLoaded(instanceName:string, instanceList:Array<InstanceMaster>){
         var instanceExists = false;
         if(instanceList.length > 0){
             instanceList.forEach((instance) =>{

@@ -23,7 +23,7 @@ This document is intended to indicate and layout the features we are planning to
         - _Prompt use to pick a field to sync (Field name - (type ?? Maybe limt types)), make first Selection "Sync All - as JSON"_
 
 #### Changed
-
+- _Fix bug for MAC OS Devices in reading/writing files and folders_
 
 #### Removed
 - Nothing

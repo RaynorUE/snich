@@ -4,10 +4,8 @@ import * as vscode from 'vscode';
 import { InstanceConfigManager, InstanceMaster } from './classes/InstanceConfigManager';
 import { SystemLogHelper } from './classes/LogHelper';
 import { RESTClient } from './classes/RESTClient';
-import { WorkspaceManager } from './classes/workspaceManager';
+import { WorkspaceManager } from './classes/WorkspaceManager';
 import { SNFilePuller } from './classes/SNRecordPuller';
-import * as path from 'path';
-import * as fs from 'fs';
 
 // this method is called when your extension is activated
 // your extension is activated the very first time the command is executed
@@ -18,28 +16,17 @@ export function activate(context: vscode.ExtensionContext) {
     logger.info(lib, func, 'START');
     
     let instanceList:Array<InstanceMaster> = [];
-    
-    let wsFolders = vscode.workspace.workspaceFolders || [];
-    logger.info(lib, func, 'Going hunting for SN Instances! Workspace Folders', wsFolders);
-    if(wsFolders.length === 0){
-        vscode.window.showErrorMessage('No workspace folder loaded. Please open a folder for this workspace. This is where all SN instance folders will be created.');
+
+    if(!workspaceValid(logger, lib)){
         deactivate();
-        return;
-    } else if(wsFolders.length > 1){
-		vscode.window.showErrorMessage('More than one workspace folder loaded. Unpredictable results may occur, de-activating extension. Please use just one workspace folder.');
-		deactivate();
-		return;
-	}
+        return false;
+    }
 
     let wsManager = new WorkspaceManager(logger);
-
+    let wsFolders = vscode.workspace.workspaceFolders || [];
     if(wsFolders.length > 0){
         instanceList = wsManager.loadWorkspaceInstances(wsFolders);
         wsManager.loadObservers();
-        let folderPath = path.resolve(wsFolders[0].uri.fsPath, 'path1', 'path2');
-        logger.info(lib, func, 'Resolve multi-part path:', folderPath);
-        
-        fs.mkdirSync(folderPath, );
     }
 
 	vscode.commands.registerCommand('now-coder.setup.new_instance', () =>{
@@ -122,3 +109,19 @@ export function activate(context: vscode.ExtensionContext) {
 
 // this method is called when your extension is deactivated
 export function deactivate() {}
+
+
+
+function workspaceValid(logger:SystemLogHelper, lib:string) {
+    let wsFolders = vscode.workspace.workspaceFolders || [];
+    let func = "workspaceValid";
+    logger.info(lib, func, 'Going hunting for SN Instances! Workspace Folders', wsFolders);
+    if(wsFolders.length === 0){
+        vscode.window.showErrorMessage('No workspace folder loaded. Please open a folder for this workspace. This is where all SN instance folders will be created.');
+        return false;
+    } else if(wsFolders.length > 1){
+		vscode.window.showErrorMessage('More than one workspace folder loaded. Unpredictable results may occur, de-activating extension. Please use just one workspace folder.');
+        return false;
+    }
+    return true;
+}

@@ -1,5 +1,6 @@
 import { Uri, QuickPickItem } from "vscode";
 import { InstanceMaster } from "../../classes/InstanceConfigManager";
+import { SNSyncedFile } from "../../classes/WorkspaceManager";
 
 
 //===============================================
@@ -52,17 +53,8 @@ interface SNOAuthToken {
 
 
 interface InstanceAppSyncData {
-    files:Array<SyncedFile>;
+    files:Array<SNSyncedFile>;
     application:SNApplication;
-}
-
-interface SyncedFile {
-    path:Uri;
-    table:string;
-    sys_id:string;
-    field:string;
-    sys_scope:string;
-    sys_package:string;
 }
 
 //========== END servicenow_sync_data.json ===============
