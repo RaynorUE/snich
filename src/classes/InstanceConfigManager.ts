@@ -22,15 +22,13 @@ export class InstanceConfigManager {
     private logger:SystemLogHelper;
     private lib:string = "InstanceManager";
     private wsManager:WorkspaceManager;
-    private wsFolders:Array<vscode.WorkspaceFolder>;
-    
+        
     constructor(instance?:InstanceMaster, logger?:SystemLogHelper){
         this.logger = logger || new SystemLogHelper();
         let func = 'constructor';
         this.logger.info(this.lib, func, 'START', );
         
         this.wsManager = new WorkspaceManager(logger);
-        this.wsFolders = vscode.workspace.workspaceFolders || [];
         this.instance = instance || new InstanceMaster(); 
         
         this.logger.info(this.lib, func, 'END');
@@ -94,13 +92,9 @@ export class InstanceConfigManager {
         }).then((testSuccess) =>{
             this.logger.info(this.lib, func, 'Test connection result: ', testSuccess);
             
-            var wsFolderRoot = this.wsFolders[0].uri;
-            
             if(testSuccess){
-                let instanceFSPath =  wsFolderRoot + '/' +  this.instance.config.name;
-                 this.instance.config.path = vscode.Uri.parse(instanceFSPath);
                 this.logger.info(this.lib, func, 'Setting up new config on filesystem', );
-                this.wsManager.setupNewInstance( this.instance);
+                this.instance = this.wsManager.setupNewInstance(this.instance);
                  this.instance.setupComplete = true;
                 return true;
             } else {
@@ -209,7 +203,7 @@ export class InstanceMaster {
 
         this.config = {
             name: "",
-            path: vscode.Uri.file("./"),
+            fsPath: "",
             connection : {
                 url:"",
                 auth: {
@@ -236,6 +230,6 @@ export class InstanceMaster {
 
 export interface InstanceConfig {
     name:string;
-    path:vscode.Uri;
+    fsPath:string;
     connection:InstanceConnectionData;
 }

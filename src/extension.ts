@@ -4,10 +4,10 @@ import * as vscode from 'vscode';
 import { InstanceConfigManager, InstanceMaster } from './classes/InstanceConfigManager';
 import { SystemLogHelper } from './classes/LogHelper';
 import { RESTClient } from './classes/RESTClient';
-//import {  } from './myTypes/globals';
-import { WorkspaceManager } from './classes/WorkspaceManager';
+import { WorkspaceManager } from './classes/workspaceManager';
 import { SNFilePuller } from './classes/SNRecordPuller';
-
+import * as path from 'path';
+import * as fs from 'fs';
 
 // this method is called when your extension is activated
 // your extension is activated the very first time the command is executed
@@ -36,6 +36,10 @@ export function activate(context: vscode.ExtensionContext) {
     if(wsFolders.length > 0){
         instanceList = wsManager.loadWorkspaceInstances(wsFolders);
         wsManager.loadObservers();
+        let folderPath = path.resolve(wsFolders[0].uri.fsPath, 'path1', 'path2');
+        logger.info(lib, func, 'Resolve multi-part path:', folderPath);
+        
+        fs.mkdirSync(folderPath, );
     }
 
 	vscode.commands.registerCommand('now-coder.setup.new_instance', () =>{
