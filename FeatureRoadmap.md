@@ -53,7 +53,8 @@ Section is intended as a sandbox for taking general notes and feature planning. 
     - Also need to make sure we filter the files loaded based on the synced records... 
     - Will be hard to get counts first, so maybe we just show / update the total number of tables to sync and how many tables we've processed? 
     - Show warning if files existed for tables not configured. Give button to open list of tables?
-
+- Open in Browser 
+    - Opens record in web browser to do anything you can't do in here. 
     
 
 ## [Pretty Solid idea]()
@@ -71,6 +72,7 @@ Section is intended as a sandbox for taking general notes and feature planning. 
 
 ## [Things to investigate]()
 - sysparm_transaction_scope  ... does this put things in the right places???? also sysparm_record_scope
+- Compare File to server, used in "on save" functionality. 
 - On File Save
     - Actions to take when saving a file
         - Execute Compare record to server version code. 
@@ -87,5 +89,9 @@ Place to store random ideas and notes as i come up with them. To then be organiz
 ## [Less Random Ideas]()
 
 ## [Random Ideas]()
-it'd be great if this would make me a salad on demand
+Ability to view record within vscode and not have to leave? 
+Do we just use the JSON ability for non-configured tables when syncing an entire app??? Probably not... 
+Though, an ability to pull down an 
+
+
 ## [Sublime Sync Features to Port]()
