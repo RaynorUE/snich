@@ -47,7 +47,7 @@ export class SyncedTableManager {
             if(selectedInstance){
                 this.instance = selectedInstance.value;
                 client = new RESTClient(this.instance.config);
-                let encodedQuery = 'super_class.name=sys_metadata^nameNOT IN' + this.instance.tableConfig.configured_tables;
+                let encodedQuery = 'super_class.name=sys_metadata';
                 return client.getRecords('sys_db_object', encodedQuery, ['name', 'label']);
             } else {
                 return false;
@@ -57,7 +57,11 @@ export class SyncedTableManager {
             if(tableRecs){
                 let tableQPItems = <Array<SNQPItem>>[];
                 tableRecs.forEach((table:snRecord) =>{
-                    tableQPItems.push({"label":table.label, "detail": table.name + ' - ' + table.sys_scope, value:table});
+                    let label = table.label;
+                    if(this.instance.tableConfig.configured_tables.indexOf(table.name) > -1){
+                        label = table.label + ' !! Table Exists. Continuing Will Update Existing Configuration !!';
+                    }
+                    tableQPItems.push({"label":label, "detail": table.name + ' - ' + table.sys_scope, value:table});
                 });
                 return vscode.window.showQuickPick(tableQPItems, {placeHolder:"Select a table to configure for syncing", ignoreFocusOut:true, matchOnDetail:true, matchOnDescription:true});
             } else {
@@ -179,6 +183,8 @@ export class SNDefaultTables {
         sys_script_include.setDisplayField('name');
         sys_script_include.addField('script', 'Script', 'js');
         this.addTable(sys_script_include);
+
+
         
     }
     /**@todo Remove this and subsequent calls to this function. This will likely come when re-structing this class to be the master tables config class. */
@@ -193,6 +199,60 @@ export class SNDefaultTables {
     
 }
 
+export class InstanceTableConfig {
+    tableNameList:Array<string> = [];
+    tables:Array<TableConfig> = [];
+    
+    setupCommon(){
+        //==== sys_script ======
+        let sys_script = new TableConfig('sys_script');
+        sys_script.setDisplayField('name');
+        sys_script.addField('script', 'Script', 'js');
+        this.addTable(sys_script);
+        
+        //==== sp_widget ========
+        let sp_widget = new TableConfig('sp_widget');
+        sp_widget.setLabel('Widget');
+        sp_widget.setDisplayField("name");
+        sp_widget.addField('template', 'Body HTML template', 'html');
+        sp_widget.addField('css', 'CSS', 'css');
+        sp_widget.addField('script', 'Server Script', 'js');
+        sp_widget.addField('client_script', 'Client script', 'js');
+        sp_widget.addField('link', 'Link', 'js');
+        sp_widget.addField('demo_data', 'Demo data', 'json');
+        sp_widget.addField('option_schema', 'Option schema', 'json');
+        this.addTable(sp_widget);
+        
+        let sys_script_include = new TableConfig('sys_script_include');
+        sys_script_include.setDisplayField('name');
+        sys_script_include.addField('script', 'Script', 'js');
+        this.addTable(sys_script_include);
+
+        let ui_page = new TableConfig('sys_ui_page');
+        ui_page.setDisplayField('name');
+        ui_page.addField('html', 'HTML', 'xml');
+        ui_page.addField('client_script', 'Client Script', 'js');
+        ui_page.addField('processing_script', 'Processing Script', 'js');
+        this.addTable(ui_page);
+    }
+    
+    addTable(table:TableConfig){
+        this.tableNameList.push(table.name);
+        let existingIndex = -1;
+        this.tables.forEach((existingTable, index) =>{
+            if(existingTable.name === table.name){
+                existingIndex = index;
+            }
+        });
+        if(existingIndex > -1){
+            this.tables[existingIndex] = table;
+        } else {
+            this.tables.push(table);
+        }
+        
+    }
+
+}
 
 
 

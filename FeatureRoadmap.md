@@ -16,7 +16,13 @@ This document is intended to indicate and layout the features we are planning to
 
 ### Extension Functionality
 #### Added
-
+- _SN Default Tables_
+    - _Added John Andersen's list of default tables and fields. Also enhanced any tables where needed._
+- _Compare With Server_
+    - _Compare the active text editor with the server. If different, ask to view comparison and load up VSCode file comparer ... in a new column?_
+    - _Compare on save. <-- This seems heavy every save, maybe start with comparing modified dates, and then if diff compare text?_
+        - Ideally this will start to be best solved by implementing useage of Source Control... but non git? Is that even possible?
+        
 #### Changed
 
 #### Removed
@@ -37,8 +43,7 @@ Organized Upcoming Ideas
 Section is intended as a sandbox for taking general notes and feature planning. Will eventually be organized into future versions (above)
 
 ## [Definitly going to implement]()
-- SN Default Tables
-    - Convert johns list to get people started. 
+
 - Sync Application
     - Ask to sync all files. (hook into sync app files code) 
     - Hook into "file create" code, so that we can borrow the auto-folder creation functionality
@@ -47,6 +52,7 @@ Section is intended as a sandbox for taking general notes and feature planning. 
     - Show Loading dialog and progress indicator. Need to test with big app if this will let us edit...
     - Also need to make sure we filter the files loaded based on the synced records... 
     - Will be hard to get counts first, so maybe we just show / update the total number of tables to sync and how many tables we've processed? 
+    - Show warning if files existed for tables not configured. Give button to open list of tables?
 
     
 
@@ -54,7 +60,6 @@ Section is intended as a sandbox for taking general notes and feature planning. 
 - Annotate Table
     - Use defaults John has in current SyncTool
     - Break functionality into it's own file, so we can expand on over time. Right now it's simple but could see this growing. 
-- When saving for a given application, flip to that application for them before saving!
 - Delete All Files
     - Maybe make this a "Per Application Scope" thing? This can be useful if you're files get out of sync and you want to reload fresh.
 - Set Update Set
@@ -62,13 +67,6 @@ Section is intended as a sandbox for taking general notes and feature planning. 
 - Set Application
     - Set application accordingly, indicate via showMessage which update set is currently selected. 
     - Ability to set "per instance" the default / current app scope? This would coinside with the "Prompt App Scope" setting... To alleviate the asking all the time? Low priority...
-- Compare With Server
-    - Compare the active text editor with the server. If different, ask to view comparison and load up VSCode file comparer ... in a new column? 
-- During Sync Record Ask them to pick app scope? or auto-detect based on synced file?  
-        - if picking app scope, could greatly speed syncing... Would help eliminate some other issues like file names being the same..
-        - Do we just allow picking from current "Synced apps" ... yea, lets...
-        - Also, provide configuraiton setting to disable/enable this feature globally. 
-
 
 
 ## [Things to investigate]()
@@ -91,24 +89,3 @@ Place to store random ideas and notes as i come up with them. To then be organiz
 ## [Random Ideas]()
 it'd be great if this would make me a salad on demand
 ## [Sublime Sync Features to Port]()
-
-
-
-Core Functionality for Expansion
-================================================================================
-## ServiceNow_Config.json
-- Contains details for instance
-    - URL and Auth Detail
-    - Contains folder tree hierarchy (Useful if needing to restore and all you have is the configjson..)
-
-## REST Client
-- Get Record
-- Get Records
-- Post Record
-- Test Connection
-- Set Basic Auth
-- Set oAuth
-
-## File Management
-- Create New File
-- Compare Contents
