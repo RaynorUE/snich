@@ -57,9 +57,9 @@ export class SyncedTableManager {
             if(tableRecs){
                 let tableQPItems = <Array<SNQPItem>>[];
                 tableRecs.forEach((table:snRecord) =>{
-                    let label = table.label;
+                    let label = table.label;                    
                     if(this.instance.tableConfig.configured_tables.indexOf(table.name) > -1){
-                        label = table.label + ' !! Table Exists. Continuing Will Update Existing Configuration !!';
+                        label = table.label + '  ::Table Exists. Continuing Will Update Existing Configuration::';
                     }
                     tableQPItems.push({"label":label, "detail": table.name + ' - ' + table.sys_scope, value:table});
                 });

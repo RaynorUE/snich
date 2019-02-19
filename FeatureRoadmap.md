@@ -71,6 +71,7 @@ Section is intended as a sandbox for taking general notes and feature planning. 
 
 
 ## [Things to investigate]()
+- Ability to search a table for scripts? Like, searching sys_scripts, script field for particular text? are sys_metadata indexed..? Could help for text searching..
 - sysparm_transaction_scope  ... does this put things in the right places???? also sysparm_record_scope
 - Compare File to server, used in "on save" functionality. 
 - On File Save
@@ -92,6 +93,8 @@ Place to store random ideas and notes as i come up with them. To then be organiz
 Ability to view record within vscode and not have to leave? 
 Do we just use the JSON ability for non-configured tables when syncing an entire app??? Probably not... 
 Though, an ability to pull down an 
+
+Icons for folders? There are some for vscode that are just totally random icons for folders... 
 
 
 ## [Sublime Sync Features to Port]()

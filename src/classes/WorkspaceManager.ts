@@ -4,7 +4,7 @@ import { SystemLogHelper } from './LogHelper';
 import {InstanceMaster, InstanceConfig} from './InstanceConfigManager';
 import { snTableConfig, snTableField } from "../myTypes/globals";
 import { RESTClient } from "./RESTClient";
-import { SNDefaultTables } from "./SNDefaultTables";
+import { SNDefaultTables, TableConfig } from "./SNDefaultTables";
 import * as path from 'path';
 
 /**
@@ -84,11 +84,11 @@ export class WorkspaceManager{
                 
                 //load table config from stored value.
                 
-                var tableConfigPath = path.resolve(rootPath, folder, this.configFileName);
+                var tableConfigPath = path.resolve(rootPath, folder, this.tableConfigFileName);
                 this.logger.info(this.lib, func, "Checking for table config at path:", tableConfigPath);
                 if(fs.existsSync(tableConfigPath)){
-                    let tableConfig = <SNDefaultTables>this.loadJSONFromFile(tableConfigPath);
-                    instance.tableConfig = tableConfig;
+                let tableConfig = <SNDefaultTables>this.loadJSONFromFile(tableConfigPath);
+                    instance.tableConfig = new SNDefaultTables(<Array<TableConfig>>tableConfig.tables);
                 }
                 instanceList.push(instance);
             }
