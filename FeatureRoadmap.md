@@ -20,8 +20,12 @@ This document is intended to indicate and layout the features we are planning to
     - _Added John Andersen's list of default tables and fields. Also enhanced any tables where needed._
 - _Compare With Server_
     - _Compare the active text editor with the server. If different, ask to view comparison and load up VSCode file comparer ... in a new column?_
+    - _If we are comparing dates, we need to take into account when multiple files for a single record are saved_ 
+        - _Will require re-adjusting the sycnedFiles storage so the ones shared in a folder know of each other_. 
     - _Compare on save. <-- This seems heavy every save, maybe start with comparing modified dates, and then if diff compare text?_
         - Ideally this will start to be best solved by implementing useage of Source Control... but non git? Is that even possible?
+- _Compare on save_
+- _ 
         
 #### Changed
 
