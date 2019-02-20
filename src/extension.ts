@@ -6,7 +6,6 @@ import { SystemLogHelper } from './classes/LogHelper';
 import { RESTClient } from './classes/RESTClient';
 import { WorkspaceManager } from './classes/WorkspaceManager';
 import { SNFilePuller } from './classes/SNRecordPuller';
-import * as path from 'path';
 import { SyncedTableManager } from './classes/SNDefaultTables';
 
 // this method is called when your extension is activated
@@ -32,7 +31,7 @@ export function activate(context: vscode.ExtensionContext) {
         wsManager.loadObservers();
     }
     
-	vscode.commands.registerCommand('now-coder.setup.new_instance', () =>{
+	vscode.commands.registerCommand('snich.setup.new_instance', () =>{
         let logger = new SystemLogHelper();
         let func = 'setup.new_instance';
         logger.info(lib, func, 'START', );
@@ -45,7 +44,7 @@ export function activate(context: vscode.ExtensionContext) {
         });
     });
     
-	vscode.commands.registerCommand('now-coder.setup.test_connection', () =>{
+	vscode.commands.registerCommand('snich.setup.test_connection', () =>{
         logger.info('Activate', 'test_connection', 'START');
         if(!anyInstancesLoaded(instanceList, logger, lib)){
             return;
@@ -66,9 +65,9 @@ export function activate(context: vscode.ExtensionContext) {
         logger.info('Activate', 'test_connection', 'END');
 	});
     
-    vscode.commands.registerCommand('now-coder.instance.setup.new_table', () => {
+    vscode.commands.registerCommand('snich.instance.setup.new_table', () => {
         let logger = new SystemLogHelper();
-        let func = 'now-coder.instance.setup.new_table';
+        let func = 'snich.instance.setup.new_table';
         logger.info(lib, func, 'START');
 
         let tableMgr = new SyncedTableManager(instanceList, logger);
@@ -88,15 +87,15 @@ export function activate(context: vscode.ExtensionContext) {
         
 	});
 
-	vscode.commands.registerCommand('now-coder.application.load.all', () => {
+	vscode.commands.registerCommand('snich.application.load.all', () => {
         
 	});
     
-	vscode.commands.registerCommand('now-coder.application.load.new', () => {
+	vscode.commands.registerCommand('snich.application.load.new', () => {
         
 	});
     
-	vscode.commands.registerCommand('now-coder.instance.pull_record', (folder) =>{
+	vscode.commands.registerCommand('snich.instance.pull_record', (folder) =>{
 		let logger = new SystemLogHelper();
 		let func = 'instance.pull_record';
         logger.info(lib, func, 'START', );
@@ -110,10 +109,10 @@ export function activate(context: vscode.ExtensionContext) {
 		});
 	});
     
-	vscode.commands.registerCommand('now-coder.folder.application.load.new', () =>{
+	vscode.commands.registerCommand('snich.folder.application.load.new', () =>{
 		//if we can't do this from the application load new call
 	});
-	vscode.commands.registerCommand('now-coder.folder.application.load.all', () =>{
+	vscode.commands.registerCommand('snich.folder.application.load.all', () =>{
         
     });
     

@@ -1,8 +1,8 @@
 {
-	"name": "now-coder",
+	"name": "snich",
 	"publisher": "integrateNate",
-	"displayName": "NOW Coder",
-	"description": "Yansa Labs ServiceNow Sync Tool",
+	"displayName": "S.N.I.C.H",
+	"description": "Service Now Integrated Code Helper. Connects to any ServiceNow instance and allows remote editing and storage of records from the Application File (and extended) tables.",
 	"version": "0.5.0",
 	"engines": {
 		"vscode": "^1.30.0"
@@ -15,38 +15,38 @@
 		"Other"
 	],
 	"activationEvents": [
-		"onCommand:now-coder.setup.new_instance",
+		"onCommand:snich.setup.new_instance",
 		"workspaceContains:**/servicenow_config.json"
 	],
 	"main": "./out/extension.js",
 	"contributes": {
 		"commands": [
 			{
-				"command": "now-coder.setup.new_instance",
+				"command": "snich.setup.new_instance",
 				"title": "Setup New Instance",
-				"category": "NOWCoder"
+				"category": "SNICH"
 			},
 			{
-				"command": "now-coder.setup.test_connection",
+				"command": "snich.setup.test_connection",
 				"title": "Test Connection",
-				"category": "NOWCoder"
+				"category": "SNICH"
 			},
 			{
-				"command": "now-coder.instance.pull_record",
+				"command": "snich.instance.pull_record",
 				"title": "Sync Record (Pull)",
-				"category": "NOWCoder"
+				"category": "SNICH"
 			},
 			{
-				"command": "now-coder.instance.setup.new_table",
-				"title": "Add Synced Table",
-				"category": "NOWCoder"
+				"command": "snich.instance.setup.new_table",
+				"title": "Configure Table (New and Update)",
+				"category": "SNICH"
 			}
 		],
 		"configuration": [
 			{
-				"title": "NOWCoder",
+				"title": "SNICH",
 				"properties": {
-					"nowCoder.logLevel": {
+					"snich.logLevel": {
 						"type": "string",
 						"title": "Logging Level",
 						"description": "Enable the level of logging you want. Picking a more detail log option will incldue the less detailed options \"above it\"",
@@ -64,13 +64,13 @@
 						],
 						"default": "Error"
 					},
-					"nowCoder.alwaysAskScope": {
+					"snich.alwaysAskScope": {
 						"type": "boolean",
 						"title": "Always Ask for Application Scope (Future Planning, not yet implemented)",
 						"description": "When syncing / pulling a record from ServiceNow do we always ask for the app scope? This will be used for filtering the record list when selecting a table to sync from. If false, we will show all files from all application scopes, always.",
 						"default": false
 					},
-					"nowCoder.createEmptyFiles": {
+					"snich.createEmptyFiles": {
 						"type": "string",
 						"title": "Should we create files when the field data is empty?",
 						"description": "If choosing not to sync empty files, a warning will be generated letting you know it was empty.",

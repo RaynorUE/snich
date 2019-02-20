@@ -6,6 +6,7 @@ import { snTableConfig, snTableField } from "../myTypes/globals";
 import { RESTClient } from "./RESTClient";
 import { InstanceTableConfig } from "./SNDefaultTables";
 import * as path from 'path';
+import * as crypto from 'crypto'
 
 /**
 * This class is intended to manage the configuration, files, and folders within the workspace. 
@@ -200,7 +201,7 @@ export class WorkspaceManager{
             let file = fileName + '.' + field.extention;
             let content = record[field.name];
             let settings = vscode.workspace.getConfiguration();
-            var createEmptyFiles = settings.get('nowCoder.createEmptyFiles') || "Yes";
+            var createEmptyFiles = settings.get('snich.createEmptyFiles') || "Yes";
             
             if((createEmptyFiles === 'Yes' && !content) || content){
                 let fullPath = path.resolve(rootPath, file);
@@ -296,11 +297,24 @@ export class WorkspaceManager{
                         let client = new RESTClient(instanceConfig);
                         let body = <any>{};
                         body[syncedFile.content_field] = content;
-                        this.logger.info(this.lib, func, 'Posting record back to SN!');
-                        client.updateRecord(syncedFile.table, syncedFile.sys_id, body).then((response:any) =>{
-                            this.logger.info(this.lib, func, 'Response from file save:', response);
-                            this.logger.info(this.lib, func, 'END');
+                        return client.getRecord(syncedFile.table, syncedFile.sys_id, ['sys_id', syncedFile.content_field]).then((serverVersion:any):any =>{
+                            let serverContent = JSON.stringify(serverVersion[syncedFile.content_field]);
+                            let currentContent = JSON.stringify(content);
+                            let serverHash = crypto.createHash('md5').update(serverContent).digest("hex");
+                            let currentHash = crypto.createHash('md5').update(currentContent).digest("hex");
+                            if(serverHash !== currentHash){
+                                this.logger.info(this.lib, func, "Content was different on server!", {server: serverHash, current:currentHash});
+                                vscode.commands.executeCommand('vscode.diff', filePath, serverContent, "Local File <--> Server File");
+                              
+                            } 
+                            this.logger.info(this.lib, func, 'Posting record back to SN!');
+                                return client.updateRecord(syncedFile.table, syncedFile.sys_id, body).then((response:any) =>{
+                                    this.logger.info(this.lib, func, 'Response from file save:', response);
+                                    this.logger.info(this.lib, func, 'END');
+                                });
+                            
                         });
+                        
                     }
                 });
             } else {

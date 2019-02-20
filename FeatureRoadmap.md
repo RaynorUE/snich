@@ -25,9 +25,11 @@ This document is intended to indicate and layout the features we are planning to
     - _Compare on save. <-- This seems heavy every save, maybe start with comparing modified dates, and then if diff compare text?_
         - Ideally this will start to be best solved by implementing useage of Source Control... but non git? Is that even possible?
 - _Compare on save_
-- _ 
+- _Move the config files into a .vscode folder inside their instance folder, this seems to be what some extensions do to store things and keep the files out of the root_
+
         
 #### Changed
+- _Any commands asking for instance first, will move the last used instance to the top._
 
 #### Removed
 
