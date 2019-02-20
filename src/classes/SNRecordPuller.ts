@@ -39,7 +39,7 @@ export class SNFilePuller{
 				if(selectedInstance){
                     this.activeInstanceData = selectedInstance.value;
                     client = new RESTClient(this.activeInstanceData.config, this.logger);
-                    let encodedQuery = 'super_class.name=sys_metadata^nameIN' + this.activeInstanceData.tableConfig.configured_tables;
+                    let encodedQuery = 'super_class.name=sys_metadata^nameIN' + this.activeInstanceData.tableConfig.tableNameList;
 
                     return client.getRecords('sys_db_object', encodedQuery, ["name","label"], true);
                 } else {

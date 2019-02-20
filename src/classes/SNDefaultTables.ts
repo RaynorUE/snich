@@ -58,8 +58,8 @@ export class SyncedTableManager {
                 let tableQPItems = <Array<SNQPItem>>[];
                 tableRecs.forEach((table:snRecord) =>{
                     let label = table.label;
-                    if(this.instance.tableConfig.configured_tables.indexOf(table.name) > -1){
-                        label = table.label + ' !! Table Exists. Continuing Will Update Existing Configuration !!';
+                    if(this.instance.tableConfig.tableNameList.indexOf(table.name) > -1){
+                        label = table.label + ' |=> Table Config Exists. Continuing Will Overwrite Existing Configuration.';
                     }
                     tableQPItems.push({"label":label, "detail": table.name + ' - ' + table.sys_scope, value:table});
                 });
@@ -144,64 +144,24 @@ export class SyncedTableManager {
             }
         });
     }
-    
-}
-
-export class SNDefaultTables {
-    tables:Array<TableConfig> = [];
-    configured_tables:Array<string> = [];
-    
-    constructor(defaultTables?:Array<TableConfig>){
-        if(defaultTables){
-            this.tables = defaultTables;
-        } else {
-            this.setupDefaults();
-        }
-    }
-    
-    setupDefaults(){
-        //==== sys_script ======
-        let sys_script = new TableConfig('sys_script');
-        sys_script.setDisplayField('name');
-        sys_script.addField('script', 'Script', 'js');
-        this.addTable(sys_script);
-        
-        //==== sp_widget ========
-        let sp_widget = new TableConfig('sp_widget');
-        sp_widget.setLabel('Widget');
-        sp_widget.setDisplayField("name");
-        sp_widget.addField('template', 'Body HTML template', 'html');
-        sp_widget.addField('css', 'CSS', 'css');
-        sp_widget.addField('script', 'Server Script', 'js');
-        sp_widget.addField('client_script', 'Client script', 'js');
-        sp_widget.addField('link', 'Link', 'js');
-        sp_widget.addField('demo_data', 'Demo data', 'json');
-        sp_widget.addField('option_schema', 'Option schema', 'json');
-        this.addTable(sp_widget);
-        
-        let sys_script_include = new TableConfig('sys_script_include');
-        sys_script_include.setDisplayField('name');
-        sys_script_include.addField('script', 'Script', 'js');
-        this.addTable(sys_script_include);
-
-
-        
-    }
-    /**@todo Remove this and subsequent calls to this function. This will likely come when re-structing this class to be the master tables config class. */
-    getTables(){
-        return this.tables;
-    }
-    
-    addTable(table:TableConfig){
-        this.configured_tables.push(table.name);
-        this.tables.push(table);
-    }
-    
 }
 
 export class InstanceTableConfig {
     tableNameList:Array<string> = [];
     tables:Array<TableConfig> = [];
+
+    constructor(tableData?:InstanceTableConfig){
+        if(tableData){
+            this.setFromConfigFile(tableData);
+        } else {
+            this.setupCommon();
+        }
+    }
+
+    setFromConfigFile(tableData:InstanceTableConfig){
+        this.tables = tableData.tables;
+        this.tableNameList = tableData.tableNameList;
+    }
     
     setupCommon(){
         //==== sys_script ======
@@ -253,7 +213,6 @@ export class InstanceTableConfig {
     }
 
 }
-
 
 
 export class TableConfig{

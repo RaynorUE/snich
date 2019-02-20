@@ -118,8 +118,7 @@ export function activate(context: vscode.ExtensionContext) {
     });
     
     //** INSTANCE REMOVAL WATCHER!! */
-    let watchPath = path.resolve(wsFolders[0].uri.fsPath, '*');
-    let fsWatcher = vscode.workspace.createFileSystemWatcher(watchPath);
+    let fsWatcher = vscode.workspace.createFileSystemWatcher('**/*');
     fsWatcher.onDidDelete((uri) =>{
         let func = 'InstanceDeleteWatcher';
         logger.info(lib, func, 'File deleted:', uri);
