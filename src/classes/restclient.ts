@@ -22,6 +22,8 @@ export class RESTClient {
     private lib: string = 'RESTClient';
     private authType: String = "basic";
     private alwaysFields: Array<string> = ["sys_scope","sys_scope.scope","sys_scope.name","sys_package","sys_id"];
+    private useProgress: Boolean = true;
+    private progressMessage: string = "";
 
     constructor(instanceConfig: InstanceConfig, logger?: SystemLogHelper) {
         let func = 'constructor';
@@ -65,6 +67,15 @@ export class RESTClient {
         this.needleOpts.password = "";
         this.authType = 'oauth';
         this.logger.info(this.lib, func, "END");
+    }
+
+    showProgress(message?:string){
+        this.progressMessage = message || "";
+        this.useProgress = true;
+    }
+
+    hideProgress(){
+        this.useProgress = false;
     }
 
     getRecord(table: string, sys_id: string, fields:Array<string>, displayValue?:boolean, refLinks?:boolean) {
@@ -136,19 +147,37 @@ export class RESTClient {
     private get(url: string, progressMessage: string) {
         let func = "get";
         this.logger.info(this.lib, func, 'START');
-        return vscode.window.withProgress( < vscode.ProgressOptions > {
-            location: vscode.ProgressLocation.Notification,
-            title: progressMessage,
-            cancellable: false
-        }, (progress, token) => {
-
+        if(this.progressMessage){
+            progressMessage = this.progressMessage.toString();
+            this.progressMessage = '';//clear it for next usage.
+        }
+        if(this.useProgress){
+            return vscode.window.withProgress( < vscode.ProgressOptions > {
+                location: vscode.ProgressLocation.Notification,
+                title: progressMessage,
+                cancellable: false
+            }, (progress, token) => {
+    
+                return this.handleAuth().then(() => {
+                    this.logger.info(this.lib, func, 'Auth handled. Needleopts:', this.needleOpts );
+                    this.logger.info(this.lib, func, "Getting url:" + url);
+                    return needle('get', url, this.needleOpts).then((response) => {
+                        progress.report({
+                            increment: 100
+                        });
+                        this.logger.info(this.lib, func, "response received.", response);
+                        this.logger.info(this.lib, func, 'END');
+                        return response;
+                    });
+                }).catch((err) =>{
+                    console.log("error occured:", err);
+                });
+            });
+        } else {
             return this.handleAuth().then(() => {
                 this.logger.info(this.lib, func, 'Auth handled. Needleopts:', this.needleOpts );
                 this.logger.info(this.lib, func, "Getting url:" + url);
                 return needle('get', url, this.needleOpts).then((response) => {
-                    progress.report({
-                        increment: 100
-                    });
                     this.logger.info(this.lib, func, "response received.", response);
                     this.logger.info(this.lib, func, 'END');
                     return response;
@@ -156,7 +185,8 @@ export class RESTClient {
             }).catch((err) =>{
                 console.log("error occured:", err);
             });
-        });
+        }
+        
     }
 
     private post(url: string, body: any, progressMessage: string) {
