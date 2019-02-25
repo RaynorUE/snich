@@ -94,7 +94,9 @@ interface snRecord {
     internal_type?:string;
     element?:string;
     column_label?:string;
-    "sys_scope.name":string;
+    "sys_scope.name"?:string;
+    scope?:string
+    short_description?:string;
 }
 
 interface SNQPItem extends QuickPickItem {

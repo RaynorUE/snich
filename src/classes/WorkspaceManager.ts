@@ -4,8 +4,9 @@ import { SystemLogHelper } from './LogHelper';
 import {InstanceMaster, InstanceConfig} from './InstanceConfigManager';
 import { snTableConfig, snTableField } from "../myTypes/globals";
 import { RESTClient } from "./RESTClient";
-import { SNDefaultTables } from "./SNDefaultTables";
+import { InstanceTableConfig } from "./SNDefaultTables";
 import * as path from 'path';
+import * as crypto from 'crypto';
 
 /**
 * This class is intended to manage the configuration, files, and folders within the workspace. 
@@ -19,8 +20,9 @@ import * as path from 'path';
 
 export class WorkspaceManager{
     
-    readonly configFileName:string = "servicenow_config.json";
-    readonly tableConfigFileName:string = "servicenow_table_config.json";
+    readonly configFileName:string = "snich_config.json";
+    readonly tableConfigFileName:string = "snich_table_config.json";
+    readonly syncedFilesName:string = "snich_synced_files.json";
     logger:SystemLogHelper;
     lib:string = 'ConfigMgr';
     
@@ -28,7 +30,7 @@ export class WorkspaceManager{
         let func = 'constructor';
         this.logger = logger || new SystemLogHelper();
         this.logger.info(this.lib, func, 'START');
-
+        
         
         this.logger.info(this.lib, func, 'END');
     }
@@ -46,13 +48,20 @@ export class WorkspaceManager{
             
             
             let rootPath = path.resolve(wsFolder.uri.fsPath, instance.config.name);
-            instance.config.fsPath = rootPath;
-            this.logger.info(this.lib, func, 'Resolved path is: ', rootPath);
+            instance.config.rootPath = rootPath;
+
+            let configPath = path.resolve(rootPath, '.vscode');
+            instance.config.configPath = configPath;
+
+            this.logger.debug(this.lib, func, 'Resolved path is: ', configPath);
             if(!fs.existsSync(rootPath)){
                 fs.mkdirSync(rootPath);
             }
+            if(!fs.existsSync(configPath)){
+                fs.mkdirSync(configPath);
+            }
             this.logger.info(this.lib, func, 'Folder created. Converting Instance Data to JSON');
-
+            
             this.writeInstanceConfig(instance);
             this.writeTableConfig(instance);
             
@@ -74,7 +83,7 @@ export class WorkspaceManager{
         let rootPath = wsFolders[0].uri.fsPath;
         var subFolders = fs.readdirSync(rootPath);
         subFolders.forEach((folder) =>{
-            var snJSONPath = path.resolve(rootPath, folder, this.configFileName);
+            var snJSONPath = path.resolve(rootPath, folder, '.vscode', this.configFileName);
             this.logger.info(this.lib, func, "Seeing if JSON file exists at:", snJSONPath);
             if(fs.existsSync(snJSONPath)){
                 //setup InstanceMaster class.
@@ -84,10 +93,10 @@ export class WorkspaceManager{
                 
                 //load table config from stored value.
                 
-                var tableConfigPath = path.resolve(rootPath, folder, this.configFileName);
+                var tableConfigPath = path.resolve(rootPath, folder, this.tableConfigFileName);
                 this.logger.info(this.lib, func, "Checking for table config at path:", tableConfigPath);
                 if(fs.existsSync(tableConfigPath)){
-                    let tableConfig = <SNDefaultTables>this.loadJSONFromFile(tableConfigPath);
+                    let tableConfig = new InstanceTableConfig(<InstanceTableConfig>this.loadJSONFromFile(tableConfigPath));
                     instance.tableConfig = tableConfig;
                 }
                 instanceList.push(instance);
@@ -106,7 +115,7 @@ export class WorkspaceManager{
         let func = 'writeInstanceConfig';
         this.logger.info(this.lib, func, "START");
         
-        let configJSONPath = path.resolve(instance.config.fsPath, this.configFileName);
+        let configJSONPath = path.resolve(instance.config.configPath, this.configFileName);
         this.writeJSON(instance.config, configJSONPath);
         this.logger.debug(this.lib, func, 'Saved instance config:', instance.config);
         
@@ -117,17 +126,17 @@ export class WorkspaceManager{
         let func = 'writeTableConfig';
         this.logger.info(this.lib, func, "START");
         
-        let filePath = path.resolve(instance.config.fsPath, this.tableConfigFileName);
+        let filePath = path.resolve(instance.config.configPath, this.tableConfigFileName);
         this.writeJSON(instance.tableConfig, filePath);
         this.logger.debug(this.lib, func, "Saved table config.", instance.tableConfig);
         
         this.logger.info(this.lib, func, 'END');
     }
     
-    writeSyncedFiles(appPath:string, syncedFiles:Array<SNSyncedFile>){
+    writeSyncedFiles(instance:InstanceMaster, syncedFiles:Array<SNSyncedFile>){
         let func = 'writesyncedFiles';
         this.logger.info(this.lib, func, 'START', );
-        let filePath = path.resolve(appPath, 'servicenow_synced_files.json') ;
+        let filePath = path.resolve(instance.config.configPath, this.syncedFilesName) ;
         this.writeJSON(syncedFiles, filePath);
         this.logger.info(this.lib, func, 'END');
     }
@@ -136,9 +145,8 @@ export class WorkspaceManager{
         let func = 'loadSyncedFiles';
         this.logger.info(this.lib, func, 'START', );
         
-        let rootPath = instance.config.fsPath;
-        let syncedFilesPath = path.resolve(rootPath, appScope, "servicenow_synced_files.json");
-        this.logger.info(this.lib, func, `Checking for synced Files at path: ${syncedFilesPath}` );
+        let syncedFilesPath = path.resolve(instance.config.configPath, this.syncedFilesName);
+        this.logger.info(this.lib, func, `Checking for synced Files at path: ${syncedFilesPath}`);
         let syncedFiles:Array<SNSyncedFile> = [];
         
         if(fs.existsSync(syncedFilesPath)){
@@ -162,7 +170,7 @@ export class WorkspaceManager{
         
         let syncedFiles = this.loadSyncedFiles(instance, appName);
         
-        let appPath = path.resolve(instance.config.fsPath, appName);
+        let appPath = path.resolve(instance.config.rootPath, appName);
         let rootPath = appPath.toString();
         
         if(!fs.existsSync(appPath)){
@@ -200,7 +208,7 @@ export class WorkspaceManager{
             let file = fileName + '.' + field.extention;
             let content = record[field.name];
             let settings = vscode.workspace.getConfiguration();
-            var createEmptyFiles = settings.get('nowCoder.createEmptyFiles') || "Yes";
+            var createEmptyFiles = settings.get('snich.createEmptyFiles') || "Yes";
             
             if((createEmptyFiles === 'Yes' && !content) || content){
                 let fullPath = path.resolve(rootPath, file);
@@ -216,7 +224,7 @@ export class WorkspaceManager{
             }
         });
         
-        this.writeSyncedFiles(appPath, syncedFiles);
+        this.writeSyncedFiles(instance, syncedFiles);
         
         this.logger.info(this.lib, func, 'END');
         return true;
@@ -224,7 +232,7 @@ export class WorkspaceManager{
     
     loadJSONFromFile(filePath:string){
         let func = 'loadJSONFromFile';
-        this.logger.info(this.lib, func, 'START');
+        this.logger.info(this.lib, func, 'START', {filePah:filePath});
         let returnData = {};
         if(fs.existsSync(filePath)){
             this.logger.info(this.lib, func, `Loading json from path: ${filePath}`);
@@ -242,76 +250,165 @@ export class WorkspaceManager{
     
     
     loadObservers(){
-        let func = 'funcName';
-        this.logger.info(this.lib, func, 'START', );
+        let func = 'loadObservers';
+        this.logger.info(this.lib, func, 'START');
+        this.watchAppFileSave();
+    }
+
+    watchAppFileSave(){
+        let func = "watchAppFileSave";
+        this.logger.info(this.lib, func, 'START');
         
-        
-        
-        //======= START Save Document =============
-        vscode.workspace.onDidSaveTextDocument((document:vscode.TextDocument) =>{
-            let func = 'textDocumentSaved';
-            this.logger.info(this.lib, func, 'START', document);
+        vscode.workspace.onWillSaveTextDocument((willSaveEvent) =>{
+            let func = "WillSaveTextDocument";
+            this.logger.info(this.lib, func, 'Will save event started. About to step into waitUntil. WillSaveEvent currently:', willSaveEvent);
+            let document = willSaveEvent.document;
             
-            let reservedFiles = ['servicenow_config.json', 'servicenow_synced_files.json', 'servicenow_table_config.json'];
-            let isReservedFile = false;
-            reservedFiles.forEach((fileName) => {
-                if(document.fileName.indexOf(fileName) >-1){
-                    isReservedFile = true;
-                }
-            });
-            
-            if(isReservedFile){
-                this.logger.info(this.lib, func, 'File saved was not one to be transmitted', document);
-                this.logger.info(this.lib, func, 'END');
-                return;
-            }
-            
-            
-            let fileParts = document.fileName.split(path.sep);
-            
-            let syncedFiles:Array<SNSyncedFile> = [];
-            let instanceConfig = <InstanceConfig>{};
-            fileParts.forEach((part) =>{
-                let syncedFilesPath = path.resolve(fileParts.slice(0, fileParts.indexOf(part)).join(path.sep), "servicenow_synced_files.json");
-                if(fs.existsSync(syncedFilesPath)){
-                    this.logger.info(this.lib, func, 'Found syncedFiles at path:', syncedFilesPath);
-                    syncedFiles = <Array<SNSyncedFile>>this.loadJSONFromFile(syncedFilesPath);
-                }
+            willSaveEvent.waitUntil( new Promise((resolve, reject) =>{
+                let func = 'waitUntilPromise';
+                this.logger.info(this.lib, func, 'START', document);
                 
-                let instanceConfigPath = path.resolve(fileParts.slice(0, fileParts.indexOf(part)).join(path.sep), "servicenow_config.json");
-                if(fs.existsSync(instanceConfigPath)){
-                    this.logger.info(this.lib, func, 'Found instance config at path:', instanceConfigPath);
-                    instanceConfig = <InstanceConfig>this.loadJSONFromFile(instanceConfigPath);
-                }
-            });
-            
-            let filePath = document.uri.fsPath;
-            if(syncedFiles.length > 0){
-                this.logger.info(this.lib, func, 'We have synced files! Attempting to post back update!');
-                syncedFiles.forEach((syncedFile) => {
-                    this.logger.info(this.lib, func, 'Seeing if sycned file is same as path of saved file', {synced:syncedFile, file:filePath} );
-                    if(syncedFile.fsPath === filePath){
-                        this.logger.info(this.lib, func, 'Found synced file that is a match.', syncedFile);
-                        let content = fs.readFileSync(filePath).toString();
-                        let client = new RESTClient(instanceConfig);
-                        let body = <any>{};
-                        body[syncedFile.content_field] = content;
-                        this.logger.info(this.lib, func, 'Posting record back to SN!');
-                        client.updateRecord(syncedFile.table, syncedFile.sys_id, body).then((response:any) =>{
-                            this.logger.info(this.lib, func, 'Response from file save:', response);
-                            this.logger.info(this.lib, func, 'END');
-                        });
+                let reservedFiles = [this.configFileName, this.syncedFilesName, this.tableConfigFileName];
+                let isReservedFile = false;
+                reservedFiles.forEach((fileName) => {
+                    if(document.fileName.indexOf(fileName) >-1){
+                        isReservedFile = true;
                     }
                 });
-            } else {
-                this.logger.info(this.lib, func, 'END');
-            }
+                
+                if(isReservedFile){
+                    this.logger.info(this.lib, func, 'File saved was not one to be transmitted', document);
+                    this.logger.info(this.lib, func, 'END');
+                    resolve();
+                    return;
+                }
+                //@todo --- Need to figure out how to find the .vscode folder... i think if we take the file path down to the WSfolder, then get the next
+                //position will give us this instance, and then the .vscode from there... I think we will be able to use some regex to get this. 
+                
+                let wsFolder = <vscode.WorkspaceFolder>{};
+                if(vscode.workspace.workspaceFolders){
+                    wsFolder = vscode.workspace.workspaceFolders[0];
+                }
+                //escace path components...
+                let replaceWithPath = "/";
+                if(path.sep === "\\"){
+                    replaceWithPath = "\\\\";
+                }
+
+                let regexPreparedPath = wsFolder.uri.fsPath.replace(new RegExp("\\" + path.sep, 'g'), replaceWithPath) + replaceWithPath + "(\\w*)" + replaceWithPath + "(\\w*)"; 
+                this.logger.debug(this.lib, func, 'RegexPreparedPath', regexPreparedPath);
+                
+                let InstanceAppComponents = new RegExp(regexPreparedPath);
+                this.logger.debug(this.lib, func, 'InstanceAppComponents', InstanceAppComponents.toString());
+                
+                let matches = document.fileName.match(InstanceAppComponents);
+                this.logger.debug(this.lib, func, 'Matches:', matches);
+                
+                if(!matches || matches.length === 0 || !matches[1]){
+                    this.logger.error(this.lib, func, `Couldn't determine instance on save. Matched values:`, matches);
+                    vscode.window.showErrorMessage('Unable to save file, could not determine instance.');
+                    resolve();
+                    return;
+                }
+
+                let instanceName = matches[1]; //2nd grouping will be instance name;
+                let syncedFilesPath = path.resolve(wsFolder.uri.fsPath, instanceName, '.vscode', this.syncedFilesName);
+                let configFilePath = path.resolve(wsFolder.uri.fsPath, instanceName, '.vscode', this.configFileName);
+
+                let syncedFiles = <Array<SNSyncedFile>>this.loadJSONFromFile(syncedFilesPath);
+                let instanceConfig = <InstanceConfig>this.loadJSONFromFile(configFilePath);
+                
+                this.logger.info(this.lib, func, 'Loaded synced files and instance config.', {instanceConfig:instanceConfig, syncedFiles:syncedFiles});
+               
+                if(syncedFiles.length > 0){
+                    let filePath = document.uri.fsPath;
+                    this.logger.info(this.lib, func, 'We have synced files!');
+                    let fileConfig = <SNSyncedFile>{};
+                    syncedFiles.forEach((syncedFile, index) => {
+                        this.logger.debug(this.lib, func, 'Seeing if sycned file is same as path of saved file', {synced:syncedFile, file:filePath} );
+                        if(syncedFile.fsPath === filePath){
+                            this.logger.info(this.lib, func, 'Found synced file that is a match.', syncedFile);
+                            fileConfig = syncedFile;
+                            index = syncedFiles.length; //should break loop?
+                        }
+                    });
+                    
+                    if(fileConfig.fsPath){
+                        //read what we have currently on disk so we can compare what's on server to see if server has a newer version.
+                        let localContent = fs.readFileSync(fileConfig.fsPath).toString();
+                        let localContentHash = crypto.createHash('md5').update(localContent).digest("hex");
+                        let serverContent = "";
+                        let serverContentHash = "";
+                        let newContent = document.getText();
+                        
+                        let client = new RESTClient(instanceConfig);
+                        let contentField = fileConfig.content_field;
+                        let action = 'Overwrite'; //default to overwriting on server.
+                        return client.getRecord(fileConfig.table, fileConfig.sys_id, [contentField]).then((serverRecord:any) => {
+                            serverContent = serverRecord[contentField];
+                            serverContentHash = crypto.createHash('md5').update(serverContent).digest("hex");
+                            this.logger.info(this.lib, func, 'Comparing Server to Local MD5 Hash:', {serverHash: serverContentHash, localHash: localContentHash});
+                            
+                            if(localContentHash !== serverContentHash){
+                                this.logger.warn(this.lib, func, "Server has is different than current copy on disk.");
+                                return vscode.window.showWarningMessage('Server version is newer. If saving from compare window, choose overwrite to update.', 'Overwrite', 'Compare', 'Cancel').then((choice) =>{
+                                    this.logger.info(this.lib, func, 'Choice:', choice);
+                                    action = choice || "Cancel"; //default to cancel in the event they don't respond.
+                                    if(action === "Overwrite"){
+                                        return true;
+                                    } else {
+                                        return false;
+                                    }
+                                });
+                            } else {
+                                action = "Overwrite";
+                                return true;
+                            }
+                            
+                        }).then((okayToCommit) =>{
+                            if(!okayToCommit){
+                                //not okay to commit.
+                                if(action === "Compare"){
+                                    this.logger.info(this.lib, func, 'Not Okay to commit and action is Compare');
+                                    //launch files for comparison. 
+                                    let extensionMatch = fileConfig.fsPath.match(/\.[a-zA-Z]*$/);
+                                    let extension = '.txt';
+                                    if(extensionMatch){
+                                        extension = extensionMatch[0];
+                                    }
+                                    let serverTempFilePath = path.resolve(".", "server_version" + extension);
+                                    fs.writeFileSync(serverTempFilePath, serverContent);
+                                    return vscode.commands.executeCommand('vscode.diff', vscode.Uri.file(serverTempFilePath),vscode.Uri.file(fileConfig.fsPath), "Server File <--> Local File").then(() => {
+                                        this.logger.info(this.lib, func, 'END');
+                                        resolve();
+                                    });
+                                } else {
+                                    resolve(); //just end.
+                                    this.logger.info(this.lib, func, 'END');
+                                    return;
+                                }
+                            }
+                            
+                            if(okayToCommit){
+                                let body:any = {};
+                                body[contentField] = newContent;
+                                this.logger.info(this.lib, func, 'Posting record back to SN!');
+                                return client.updateRecord(fileConfig.table, fileConfig.sys_id, body).then((response:any) =>{
+                                    this.logger.info(this.lib, func, 'Response from file save:', response);
+                                    resolve();
+                                    this.logger.info(this.lib, func, 'END');
+                                });
+                            }
+                        });
+                    }     
+                }
+            }));
+            //end of Wait Until
+            this.logger.info(this.lib, func, 'END');
         });
-        //======= END Save Document =============
+
         this.logger.info(this.lib, func, 'END');
     }
-    
-    
 }
 
 export class SNSyncedFile {
