@@ -100,10 +100,18 @@ export class SystemLogHelper {
         */
        var fullMsg = `{${library} : ${func}} - ${msg}`;
         if (level <= this.logLevel) {
+            let log = console.log;
+            
+            if(level === this._WARN){
+                log = console.warn;
+            } else if (level === this._ERROR){
+                log = console.error;
+            }
+
             if (obj) {
-                console.log(fullMsg, obj);
+                log(fullMsg, obj);
             } else {
-                console.log(fullMsg);
+                log(fullMsg);
             }
         }
         //this.entry++;

@@ -16,18 +16,22 @@ This document is intended to indicate and layout the features we are planning to
 
 ### Extension Functionality
 #### Added
+- New Name! Welcoem to SNICH! The Service Now Integrated Code Helper!
 - _SN Default Tables_
     - _Added John Andersen's list of default tables and fields. Also enhanced any tables where needed._
 - _Compare With Server_
-    - _Compare the active text editor with the server. If different, ask to view comparison and load up VSCode file comparer ... in a new column?_
-    - _Compare on save. <-- This seems heavy every save, maybe start with comparing modified dates, and then if diff compare text?_
-        - Have this working, however need to make it it's own function/method so we can call on save, and also call on demand (Command pallet > compare record to server);
-- _Compare on save_
-- _Move the config files into a .vscode folder inside their instance folder, this seems to be what some extensions do to store things and keep the files out of the root_
+    - _Compare the active text editor with the server. If different, ask to view comparison and load up VSCode file comparer_
+- Compare on save
+    - Files will now compare their contents against the server version upon save. If different, you will be prompted to compare or overwrite!
+- Sync All Application Files
+    - If doing scoped app dev work, you can now choose a scoped app and have it sync every file.
+    - Will only sync files for configured tables. If you see missing records, verify table is configured for syncing. 
 
         
 #### Changed
-- _Any commands asking for instance first, will move the last used instance to the top._
+- Any commands asking for instance first, will move the last used instance to the top.
+- Move the config files into a .vscode folder inside their instance folder, this seems to be what some extensions do to store things and keep the files out of the root
+- Rename config / settings / etc files in new .vscode folder to be prefixed with SNICH, making it unique, and also in line with new name. 
 
 #### Removed
 
@@ -51,14 +55,9 @@ Section is intended as a sandbox for taking general notes and feature planning. 
 - Sync Application
     - Ask to sync all files. (hook into sync app files code) 
     - Hook into "file create" code, so that we can borrow the auto-folder creation functionality
-- Sync All Application Files
-    - Prompt for Instance > Application
-    - Show Loading dialog and progress indicator. Need to test with big app if this will let us edit...
-    - Also need to make sure we filter the files loaded based on the synced records... 
-    - Will be hard to get counts first, so maybe we just show / update the total number of tables to sync and how many tables we've processed? 
-    - Show warning if files existed for tables not configured. Give button to open list of tables?
 - Open in Browser 
     - Opens record in web browser to do anything you can't do in here. 
+- Updated the "Show last selected instance at top of list, so that code is a bit cleaner and calling a singular function
     
 
 ## [Pretty Solid idea]()
@@ -76,11 +75,6 @@ Section is intended as a sandbox for taking general notes and feature planning. 
 
 ## [Things to investigate]()
 - sysparm_transaction_scope  ... does this put things in the right places???? also sysparm_record_scope
-- Compare File to server, used in "on save" functionality. 
-- On File Save
-    - Actions to take when saving a file
-        - Execute Compare record to server version code. 
-        - If differences abort save
         - Update success save message with current update set name.
 - Ability to "Get entire record JSON" for direct / manual editing and syncing back to instance. 
     - Need to think about file/folder structure here... Same naming scheme as tableconfig for table, and just .json extension... Yea!

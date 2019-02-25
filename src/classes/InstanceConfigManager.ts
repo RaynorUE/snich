@@ -1,6 +1,6 @@
 import { RESTClient } from './RESTClient';
 import { SystemLogHelper } from './LogHelper';
-import { SNApplication, InstanceConnectionData } from '../myTypes/globals';
+import { SNApplication, InstanceConnectionData, SNQPItem } from '../myTypes/globals';
 import { WorkspaceManager, SNSyncedFile } from './WorkspaceManager';
 import * as vscode from 'vscode';
 import { InstanceTableConfig } from './SNDefaultTables';
@@ -187,13 +187,39 @@ export class InstanceConfigManager {
     }
 }
 
+export class InstanceChooser {
+    instanceList:Array<InstanceMaster>;
+
+    constructor(instanceList:Array<InstanceMaster>){
+        this.instanceList = instanceList;
+    }
+
+    getInstance(){
+        let instance:InstanceMaster = new InstanceMaster();
+        return new Promise((resolve, reject) => {
+            let qpItems = <Array<SNQPItem>>[];
+            this.instanceList.forEach((instance) => {
+                qpItems.push({"label":instance.config.name, "detail":"Instance URL: " + instance.config.connection.url, value:instance });
+            });
+            return vscode.window.showQuickPick(qpItems, <vscode.QuickPickOptions>{placeHolder:"Select instance to test connection", ignoreFocusOut:true, matchOnDetail:true, matchOnDescription:true})
+            .then((selectedInstance) =>{
+                if(selectedInstance){
+                    instance = selectedInstance.value;
+                }
+                resolve(instance);
+            });
+        });
+    }
+}
+
 export class InstanceMaster {
 
     applications:Array<SNApplication>;
     tableConfig:InstanceTableConfig;
     syncedFiles:Array<SNSyncedFile>;
     config:InstanceConfig;
-    setupComplete = false;
+    setupComplete:boolean = false;
+    lastSelected:boolean = false;
 
     
     constructor(){
@@ -203,7 +229,8 @@ export class InstanceMaster {
 
         this.config = {
             name: "",
-            fsPath: "",
+            configPath: "",
+            rootPath: "",
             connection : {
                 url:"",
                 auth: {
@@ -230,6 +257,7 @@ export class InstanceMaster {
 
 export interface InstanceConfig {
     name:string;
-    fsPath:string;
+    configPath:string;
     connection:InstanceConnectionData;
+    rootPath:string;
 }

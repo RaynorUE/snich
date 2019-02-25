@@ -16,7 +16,7 @@
 	],
 	"activationEvents": [
 		"onCommand:snich.setup.new_instance",
-		"workspaceContains:**/servicenow_config.json"
+		"workspaceContains:**/snich_config.json"
 	],
 	"main": "./out/extension.js",
 	"contributes": {
@@ -40,7 +40,12 @@
 				"command": "snich.instance.setup.new_table",
 				"title": "Configure Table (New and Update)",
 				"category": "SNICH"
-			}
+            },
+            {
+                "command":"snich.application.load.all",
+                "title":"Load all app files (Pull)",
+                "category": "SNICH"
+            }
 		],
 		"configuration": [
 			{
@@ -83,7 +88,13 @@
 							"No: I like warning messages instead."
 						],
 						"default": "Yes"
-					}
+                    },
+                    "snich.showSNApps": {
+                        "type":"boolean",
+                        "title": "When using a command that asks for Application selection, do we show SN apps in the list?",
+                        "default":"false"
+                    }
+                    
 				}
 			}
 		]
