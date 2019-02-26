@@ -36,7 +36,7 @@ export class SNFilePuller {
                 }
             });
             this.instanceList.forEach((instance) => {
-                if(instance.lastSelected == false){
+                if(instance.lastSelected === false){
                     qpItems.push({ "label": instance.config.name, "detail": "Instance URL: " + instance.config.connection.url, value: instance });
                 }
             });
@@ -125,15 +125,13 @@ export class SNFilePuller {
         });
     }
     
-    pullAllAppFiles() {
+    async pullAllAppFiles() {
         let func = 'pullAllAppFiles';
         var client: RESTClient;
         this.logger.info(this.lib, func, 'START');
         
         let wsManager = new WorkspaceManager();
-        let recordRecursor = function (instanceData: InstanceMaster, tableConfigIndex: number, appScope: string) {
-            return new Promise((resolve, reject) => {
-                
+        let recordRecursor = async function (instanceData: InstanceMaster, tableConfigIndex: number, appScope: string) {
                 let tables = instanceData.tableConfig.tables;
                 let tablePromises = <Array<Promise<any>>>[];
                 console.log('Table count:', tables.length);
@@ -145,27 +143,31 @@ export class SNFilePuller {
                     });
                     let encodedQuery = 'sys_scope.scope=' + appScope;
                     console.log('Processing table.', tableConfig);                    
-                    let tableProm = new Promise((resolve,reject) => {
+                    let tableProm = new Promise( (resolve,reject) => {
                         return client.getRecords(tableConfig.name, encodedQuery, fields)
                         .then((tableRecs) => {
                             if (tableRecs) {
                                 tableRecs.forEach((record) => {
                                     wsManager.createSyncedFile(instanceData, tableConfig, record);
                                 });
-                                resolve();
+                                return true;
+                            } else {
+                                return false;
                             }
                         });
                     });
-                    
-                    
+
                     console.log('Table prom is:', tableProm);
-                    tablePromises.push(tableProm)
+                    tablePromises.push(tableProm);
                 });
-                Promise.all(tablePromises).then(() =>{
-                    console.log('all fulfilled');
-                    resolve(true);
+                
+                let result = await Promise.all(tablePromises).then((allResult) =>{
+                    return true;
+                }).catch((err) => {
+                    return false;
                 });
-            });
+
+                return result;
         };
         
         let qpItems: Array<SNQPItem> = [];
@@ -175,7 +177,7 @@ export class SNFilePuller {
             }
         });
         this.instanceList.forEach((instance) => {
-            if(instance.lastSelected == false){
+            if(instance.lastSelected === false){
                 qpItems.push({ "label": instance.config.name, "detail": "Instance URL: " + instance.config.connection.url, value: instance });
             }
         });

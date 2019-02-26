@@ -93,7 +93,7 @@ export class WorkspaceManager{
                 
                 //load table config from stored value.
                 
-                var tableConfigPath = path.resolve(rootPath, folder, this.tableConfigFileName);
+                var tableConfigPath = path.resolve(rootPath, folder, '.vscode', this.tableConfigFileName);
                 this.logger.info(this.lib, func, "Checking for table config at path:", tableConfigPath);
                 if(fs.existsSync(tableConfigPath)){
                     let tableConfig = new InstanceTableConfig(<InstanceTableConfig>this.loadJSONFromFile(tableConfigPath));
@@ -366,17 +366,32 @@ export class WorkspaceManager{
                             }
                             
                         }).then((okayToCommit) =>{
+                            let regEx = new RegExp(path.sep.replace('\\', '\\\\') + '([a-zA-Z\.]*)$')
+                            let fileNameMatch = fileConfig.fsPath.match(regEx);
+                            
+                            let fileName = 'server_version.txt';
+                            if(fileNameMatch && fileNameMatch.length > 1){
+                                fileName = 'server_version_' + fileNameMatch[1];
+                            }
+                            let wsFolder = vscode.workspace.workspaceFolders ? vscode.workspace.workspaceFolders[0].uri.fsPath : "";
+                            let wsFolderCode = path.resolve(wsFolder, instanceName, ".vscode");
+                            let wsFolderTemp = path.resolve(wsFolderCode, 'compare_files_temp');
+                            let serverTempFilePath = path.resolve(wsFolderTemp, fileName);
+
                             if(!okayToCommit){
                                 //not okay to commit.
                                 if(action === "Compare"){
                                     this.logger.info(this.lib, func, 'Not Okay to commit and action is Compare');
                                     //launch files for comparison. 
-                                    let extensionMatch = fileConfig.fsPath.match(/\.[a-zA-Z]*$/);
-                                    let extension = '.txt';
-                                    if(extensionMatch){
-                                        extension = extensionMatch[0];
+
+                                    if(!fs.existsSync(wsFolderCode)){
+                                        fs.mkdirSync(wsFolderCode);
                                     }
-                                    let serverTempFilePath = path.resolve(".", "server_version" + extension);
+                                    if(!fs.existsSync(wsFolderTemp)){
+                                        fs.mkdirSync(wsFolderTemp);
+                                    }
+
+                                    
                                     fs.writeFileSync(serverTempFilePath, serverContent);
                                     return vscode.commands.executeCommand('vscode.diff', vscode.Uri.file(serverTempFilePath),vscode.Uri.file(fileConfig.fsPath), "Server File <--> Local File").then(() => {
                                         this.logger.info(this.lib, func, 'END');
@@ -393,6 +408,9 @@ export class WorkspaceManager{
                                 let body:any = {};
                                 body[contentField] = newContent;
                                 this.logger.info(this.lib, func, 'Posting record back to SN!');
+                                if(fs.existsSync(serverTempFilePath)){
+                                    fs.unlinkSync(serverTempFilePath);
+                                }
                                 return client.updateRecord(fileConfig.table, fileConfig.sys_id, body).then((response:any) =>{
                                     this.logger.info(this.lib, func, 'Response from file save:', response);
                                     resolve();

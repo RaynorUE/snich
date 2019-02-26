@@ -32,6 +32,9 @@ This document is intended to indicate and layout the features we are planning to
 - Any commands asking for instance first, will move the last used instance to the top.
 - Move the config files into a .vscode folder inside their instance folder, this seems to be what some extensions do to store things and keep the files out of the root
 - Rename config / settings / etc files in new .vscode folder to be prefixed with SNICH, making it unique, and also in line with new name. 
+- _Mac OS Writing the server file for temp storage on compare no working cause it's trying to savein "root"_
+- _Configure New Table - Need to be able to select display field if name is not present_
+- _Set label field for configured tables when configuring new table_
 
 #### Removed
 
