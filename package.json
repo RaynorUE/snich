@@ -2,7 +2,8 @@
 	"name": "snich",
 	"publisher": "integrateNate",
 	"displayName": "SN.I.C.H",
-	"description": "Service Now Integrated Code Helper. Connects to any ServiceNow instance and allows remote editing and storage of records from the Application File (and extended) tables.",
+    "description": "Service Now Integrated Code Helper. Connects to any ServiceNow instance and allows remote editing and storage of records from the Application File (and extended) tables.",
+    "icon": "images/icon-shrunk.png",
 	"version": "0.5.21",
 	"engines": {
 		"vscode": "^1.30.0"
