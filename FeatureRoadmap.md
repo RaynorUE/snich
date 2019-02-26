@@ -12,29 +12,19 @@ This document is intended to indicate and layout the features we are planning to
     __Bold__: Work in progress
      Nothing: Feature complete
 
-## [v0.6.0 (Current)]()
+## [v0.5.6 (Current)]()
 
 ### Extension Functionality
 #### Added
-- New Name! Welcoem to SNICH! The Service Now Integrated Code Helper!
-- _SN Default Tables_
-    - _Added John Andersen's list of default tables and fields. Also enhanced any tables where needed._
 - _Compare With Server_
     - _Compare the active text editor with the server. If different, ask to view comparison and load up VSCode file comparer_
-- Compare on save
-    - Files will now compare their contents against the server version upon save. If different, you will be prompted to compare or overwrite!
-- Sync All Application Files
-    - If doing scoped app dev work, you can now choose a scoped app and have it sync every file.
-    - Will only sync files for configured tables. If you see missing records, verify table is configured for syncing. 
 
-        
+
 #### Changed
-- Any commands asking for instance first, will move the last used instance to the top.
-- Move the config files into a .vscode folder inside their instance folder, this seems to be what some extensions do to store things and keep the files out of the root
-- Rename config / settings / etc files in new .vscode folder to be prefixed with SNICH, making it unique, and also in line with new name. 
-- _Mac OS Writing the server file for temp storage on compare no working cause it's trying to savein "root"_
-- _Configure New Table - Need to be able to select display field if name is not present_
-- _Set label field for configured tables when configuring new table_
+- Configure New Synced Table
+    - _Set label field for configured tables when configuring new table_
+    - _Need to be able to select display field if name is not present. Idea here is to not always be asking for it... since name should be there most of the time_
+        - Could do this check just before we "Pick what fields to sync" since we will be getting all the dictionary entries anyway
 
 #### Removed
 
@@ -42,9 +32,16 @@ This document is intended to indicate and layout the features we are planning to
 ### Internal Extension Development
 
 #### Added
+- _Impelement a "CreateFileAsync" option for creatSyncedFile" function. Or wrap in a promise. Biggest thing, is performance when loading a lot of app files at once"_
+- _Moved compare file functionality into it's own function, so it can be called from command pallet and also from onSave call. Unifying this code._
+- _Need to consider converting the "InstanceList" into it's own class like "InstanceManager" or something... so that we can add helper mthoerds
+    - Like being able to "Set as last selected", etc and managing that internally. 
 
 #### Changed
-
+- updated onWillSave observer so it calles the new compare function.
+- Updated the "Show last selected instance at top of list, so that code is a bit cleaner and calling a singular function
+    - Goal here is to start consolidating some of the "Show Quick Picks" that i'm doing... so when i update in one place it updates everywhere
+    - Might add a method on InstanceMaster 
 #### Removed
 
 
@@ -55,12 +52,8 @@ Section is intended as a sandbox for taking general notes and feature planning. 
 
 ## [Definitly going to implement]()
 
-- Sync Application
-    - Ask to sync all files. (hook into sync app files code) 
-    - Hook into "file create" code, so that we can borrow the auto-folder creation functionality
 - Open in Browser 
     - Opens record in web browser to do anything you can't do in here. 
-- Updated the "Show last selected instance at top of list, so that code is a bit cleaner and calling a singular function
     
 
 ## [Pretty Solid idea]()
