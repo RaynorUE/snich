@@ -1,9 +1,9 @@
 import { RESTClient } from './RESTClient';
 import { SystemLogHelper } from './LogHelper';
-import { SNApplication, InstanceConnectionData } from '../myTypes/globals';
+import { SNApplication, InstanceConnectionData, SNQPItem } from '../myTypes/globals';
 import { WorkspaceManager, SNSyncedFile } from './WorkspaceManager';
 import * as vscode from 'vscode';
-import { SNDefaultTables } from './SNDefaultTables';
+import { InstanceTableConfig } from './SNDefaultTables';
 
 /**
 * The InstanceManager class is intended for managing and updating information regarding Instance Configuration.
@@ -44,11 +44,11 @@ export class InstanceConfigManager {
         
         this.logger.info(this.lib, func, 'Asking for instance name.');
         return vscode.window.showInputBox(<vscode.InputBoxOptions>{prompt:"Instance Name",ignoreFocusOut:false})
-        .then((enteredValue) =>{
-            this.logger.info(this.lib, func, 'Value entered:', {enteredValue:enteredValue});
+        .then((enteredInstanceValue) =>{
+            this.logger.info(this.lib, func, 'Value entered:', {enteredValue:enteredInstanceValue});
             //if we get a url, strip down to instance name..
-            if(enteredValue){
-                this.instance.config.name = enteredValue.replace(/https:\/\/|http:\/\/|.service-now.com|\//g, '');
+            if(enteredInstanceValue){
+                this.instance.config.name = enteredInstanceValue.replace(/https:\/\/|http:\/\/|.service-now.com|\//g, '');
             } else {
                 this.instance.config.name = "";
                 return false;
@@ -59,7 +59,7 @@ export class InstanceConfigManager {
                 return false;
             }
 
-            this.setURL(enteredValue || "");
+            this.setURL(enteredInstanceValue || "");
             this.logger.info(this.lib, func, 'Name and URL Set.',  this.instance.config);
             var quickPickItems = <Array<any>>[
                 {label:"Basic",description:"Use basic authentication.", value:"basic"}, 
@@ -187,23 +187,50 @@ export class InstanceConfigManager {
     }
 }
 
+export class InstanceChooser {
+    instanceList:Array<InstanceMaster>;
+
+    constructor(instanceList:Array<InstanceMaster>){
+        this.instanceList = instanceList;
+    }
+
+    getInstance(){
+        let instance:InstanceMaster = new InstanceMaster();
+        return new Promise((resolve, reject) => {
+            let qpItems = <Array<SNQPItem>>[];
+            this.instanceList.forEach((instance) => {
+                qpItems.push({"label":instance.config.name, "detail":"Instance URL: " + instance.config.connection.url, value:instance });
+            });
+            return vscode.window.showQuickPick(qpItems, <vscode.QuickPickOptions>{placeHolder:"Select instance to test connection", ignoreFocusOut:true, matchOnDetail:true, matchOnDescription:true})
+            .then((selectedInstance) =>{
+                if(selectedInstance){
+                    instance = selectedInstance.value;
+                }
+                resolve(instance);
+            });
+        });
+    }
+}
+
 export class InstanceMaster {
 
     applications:Array<SNApplication>;
-    tableConfig:SNDefaultTables;
+    tableConfig:InstanceTableConfig;
     syncedFiles:Array<SNSyncedFile>;
     config:InstanceConfig;
-    setupComplete = false;
+    setupComplete:boolean = false;
+    lastSelected:boolean = false;
 
     
     constructor(){
         this.applications = [];
-        this.tableConfig = new SNDefaultTables();
+        this.tableConfig = new InstanceTableConfig();
         this.syncedFiles = [];
 
         this.config = {
             name: "",
-            fsPath: "",
+            configPath: "",
+            rootPath: "",
             connection : {
                 url:"",
                 auth: {
@@ -230,6 +257,7 @@ export class InstanceMaster {
 
 export interface InstanceConfig {
     name:string;
-    fsPath:string;
+    configPath:string;
     connection:InstanceConnectionData;
+    rootPath:string;
 }

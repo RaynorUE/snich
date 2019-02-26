@@ -65,7 +65,7 @@ export class SystemLogHelper {
 
     private setLogLevel = () =>{
         let settings = workspace.getConfiguration();
-        var level = settings.get('nowCoder.logLevel') || 0;
+        var level = settings.get('snich.logLevel') || 0;
         if(level === 'Debug'){
             this.logLevel = this._DEBUG;
         }
@@ -100,10 +100,18 @@ export class SystemLogHelper {
         */
        var fullMsg = `{${library} : ${func}} - ${msg}`;
         if (level <= this.logLevel) {
+            let log = console.log;
+            
+            if(level === this._WARN){
+                log = console.warn;
+            } else if (level === this._ERROR){
+                log = console.error;
+            }
+
             if (obj) {
-                console.log(fullMsg, obj);
+                log(fullMsg, obj);
             } else {
-                console.log(fullMsg);
+                log(fullMsg);
             }
         }
         //this.entry++;

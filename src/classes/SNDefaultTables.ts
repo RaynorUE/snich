@@ -1,4 +1,4 @@
-import { snTableConfig, snTableField, SNQPItem, snRecord } from "../myTypes/globals";
+import { snTableField, SNQPItem, snRecord } from "../myTypes/globals";
 import { InstanceMaster} from "./InstanceConfigManager";
 import { RESTClient } from "./RESTClient";
 import * as vscode from "vscode";
@@ -11,16 +11,22 @@ export class SyncedTableManager {
     instance:InstanceMaster;
     logger:SystemLogHelper;
     lib:string = 'SyncedTableManager';
-
-    constructor(instanceList:Array<InstanceMaster>, logger?:SystemLogHelper){
+    
+    constructor(instanceList?:Array<InstanceMaster>, logger?:SystemLogHelper){
         this.logger = logger || new SystemLogHelper();
         let func = 'constructor';
         this.logger.info(this.lib, func, 'START');
-        this.instanceList = instanceList;
-        this.instance = <InstanceMaster>{};
+        
+        this.instanceList = instanceList || [];
+        this.instance = new InstanceMaster();
+        
         this.logger.info(this.lib, func, 'END');
     }
-
+    
+    /**
+    * Configure a new Table to be synced for a given instance.
+    * @return Returns modified instance that was selected. 
+    */
     syncNew(){
         let func = 'syncNew';
         this.logger.info(this.lib, func, 'START');
@@ -29,16 +35,19 @@ export class SyncedTableManager {
         let tableConfig = <TableConfig>{};
         
         this.logger.info(this.lib, func, 'About to build QP Items from instanceList', this.instanceList);
+        
         this.instanceList.forEach((instance) => {
             qpItems.push({"label":instance.config.name, "detail":"Instance URL: " + instance.config.connection.url, value:instance });
         });
+        
         this.logger.info(this.lib, func, 'About to show quick pick.');
+        
         return vscode.window.showQuickPick(qpItems, <vscode.QuickPickOptions>{placeHolder:"Select instance to test connection", ignoreFocusOut:true, matchOnDetail:true, matchOnDescription:true})
         .then((selectedInstance):any =>{
             if(selectedInstance){
                 this.instance = selectedInstance.value;
                 client = new RESTClient(this.instance.config);
-                let encodedQuery = 'super_class.name=sys_metadata^nameNOT IN' + this.instance.tableConfig.configured_tables;
+                let encodedQuery = 'super_class.name=sys_metadata';
                 return client.getRecords('sys_db_object', encodedQuery, ['name', 'label']);
             } else {
                 return false;
@@ -48,7 +57,11 @@ export class SyncedTableManager {
             if(tableRecs){
                 let tableQPItems = <Array<SNQPItem>>[];
                 tableRecs.forEach((table:snRecord) =>{
-                    tableQPItems.push({"label":table.label, "detail": table.name + ' - ' + table.sys_scope, value:table});
+                    let label = table.label;
+                    if(this.instance.tableConfig.tableNameList.indexOf(table.name) > -1){
+                        label = table.label + ' |=> Table Config Exists. Continuing Will Overwrite Existing Configuration.';
+                    }
+                    tableQPItems.push({"label":label, "detail": table.name + ' - ' + table.sys_scope, value:table});
                 });
                 return vscode.window.showQuickPick(tableQPItems, {placeHolder:"Select a table to configure for syncing", ignoreFocusOut:true, matchOnDetail:true, matchOnDescription:true});
             } else {
@@ -77,31 +90,38 @@ export class SyncedTableManager {
             }
         }).then((selectedFields) => {
             this.logger.info(this.lib, func, "Selected fields:", selectedFields);
+            
             if(selectedFields.length > 0){
                 let extensionAsker = (selectedPosition:number) => {
                     let func = 'extensionAsker';
+                    
                     this.logger.info(this.lib,func, 'START', {position:selectedPosition, fieldsLength:selectedFields.length});
+                    
                     return new Promise((resolve, reject) =>{
                         if(selectedPosition < selectedFields.length){
                             let selectedField = selectedFields[selectedPosition].value;
-                            this.logger.info(this.lib, func, "Selected Field:", selectedField);
+                            
+                            this.logger.debug(this.lib, func, "Selected Field:", selectedField);
+                            
                             return vscode.window.showInputBox(<vscode.InputBoxOptions>{placeHolder:"Do not include the . symmbol. Suggestions: js, html, css, txt", prompt:"Enter the file extension for field: " + selectedField.column_label + ' [' + selectedField.internal_type + ']', ignoreFocusOut:true}).then((extension) => {
                                 if(extension){
                                     tableConfig.addField(selectedField.element, selectedField.column_label, extension);
-                                    this.logger.info(this.lib, func, 'Added field to table config.', tableConfig);
+                                    this.logger.debug(this.lib, func, 'Added field to table config.', tableConfig);
                                 }
                                 selectedPosition++;
-                                this.logger.info(this.lib, func, 'Going to ask next field.');
+                                this.logger.debug(this.lib, func, 'Going to ask next field.');
                                 resolve(extensionAsker(selectedPosition));
                             });
                         } else {
                             this.logger.info(this.lib, func, 'No more fields to get extensions for!');
                             this.logger.info(this.lib, func, 'END');
+                            
                             resolve(true);
                         }
                     });
                 };
-
+                
+                //return our function, that is returning a promise, so i can continue my function chain when we're done looping!
                 return extensionAsker(0);
             } else {
                 vscode.window.showWarningMessage('No fields selected. Please be sure to checkbox, using mouse or space bar on item to select it. Then click okay or press enter to capture.');
@@ -110,10 +130,12 @@ export class SyncedTableManager {
         }).then((completed) =>{
             this.logger.info(this.lib, func, 'Performing final steps.');
             if(completed){
+                
                 this.logger.info(this.lib, func, 'Adding table config to instance tableConfig. Saving file using WorkspaceManaget');
                 this.instance.tableConfig.addTable(tableConfig);
                 let wsMgr = new WorkspaceManager(this.logger);
                 wsMgr.writeTableConfig(this.instance);
+                
                 this.logger.info(this.lib, func, 'END');
                 return this.instance;
             } else {
@@ -124,25 +146,30 @@ export class SyncedTableManager {
     }
 }
 
-export class SNDefaultTables {
-    tables:Array<snTableConfig> = [];
-    configured_tables:Array<string> = [];
- 
-    constructor(defaultTables?:Array<snTableConfig>){
-       if(defaultTables){
-           this.tables = defaultTables;
-       } else {
-           this.setupDefaults();
-       }
+export class InstanceTableConfig {
+    tableNameList:Array<string> = [];
+    tables:Array<TableConfig> = [];
+
+    constructor(tableData?:InstanceTableConfig){
+        if(tableData){
+            this.setFromConfigFile(tableData);
+        } else {
+            this.setupCommon();
+        }
     }
 
-    setupDefaults(){
+    setFromConfigFile(tableData:InstanceTableConfig){
+        this.tables = tableData.tables;
+        this.tableNameList = tableData.tableNameList;
+    }
+    
+    setupCommon(){
         //==== sys_script ======
         let sys_script = new TableConfig('sys_script');
         sys_script.setDisplayField('name');
         sys_script.addField('script', 'Script', 'js');
         this.addTable(sys_script);
-
+        
         //==== sp_widget ========
         let sp_widget = new TableConfig('sp_widget');
         sp_widget.setLabel('Widget');
@@ -155,42 +182,58 @@ export class SNDefaultTables {
         sp_widget.addField('demo_data', 'Demo data', 'json');
         sp_widget.addField('option_schema', 'Option schema', 'json');
         this.addTable(sp_widget);
-
+        
         let sys_script_include = new TableConfig('sys_script_include');
         sys_script_include.setDisplayField('name');
         sys_script_include.addField('script', 'Script', 'js');
         this.addTable(sys_script_include);
 
+        let ui_page = new TableConfig('sys_ui_page');
+        ui_page.setDisplayField('name');
+        ui_page.addField('html', 'HTML', 'xml');
+        ui_page.addField('client_script', 'Client Script', 'js');
+        ui_page.addField('processing_script', 'Processing Script', 'js');
+        this.addTable(ui_page);
     }
-
-    getTables(){
-        return this.tables;
-    }
-
+    
     addTable(table:TableConfig){
-        this.configured_tables.push(table.name);
-        this.tables.push(table);
+        this.tableNameList.push(table.name);
+        let existingIndex = -1;
+        this.tables.forEach((existingTable, index) =>{
+            if(existingTable.name === table.name){
+                existingIndex = index;
+            }
+        });
+        if(existingIndex > -1){
+            this.tables[existingIndex] = table;
+        } else {
+            this.tables.push(table);
+        }
+        
     }
+
 }
 
+
 export class TableConfig{
-        name:string = "";
-        label:string = "";
-        display_field:string = "name";
-        fields:Array<snTableField> = [];
-        children:Array<TableConfig> = [];
+    name:string = "";
+    label:string = "";
+    display_field:string = "name";
+    fields:Array<snTableField> = [];
+    children:Array<TableConfig> = [];
     
     constructor(name:string){
         this.name = name;
     }
-
+    
     setLabel(label:string){
         this.label = label;
     }
+    
     setDisplayField(fieldName:string){
         this.display_field = fieldName;
     }
-
+    
     addField(name:string, label:string, extension:string){
         this.fields.push(<snTableField>{
             table:this.name,
@@ -199,7 +242,7 @@ export class TableConfig{
             extention: extension
         });
     }
-
+    
     addChildTable(tableConfig:TableConfig){
         this.children.push(tableConfig);
     }
