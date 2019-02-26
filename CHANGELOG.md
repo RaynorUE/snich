@@ -1,18 +1,40 @@
 # Change Log
 All notable changes to the "yansasync" extension will be documented in this file.
 
-
-## [Unreleased]()
-Features and Functionality that have been completed but not yet released. See [FeatureRoadmap.md]() for in progress items.
+## [v0.5.5 (Current)]()
 
 ### Extension Functionality
 #### Added
-    - Will update this during next planning session
-### Changed
-    
-### Removed
+- New Name! Welcoem to SNICH! The Service Now Integrated Code Helper!
+- Compare on save
+    - Files will now compare their contents against the server version upon save. If different, you will be prompted to compare or overwrite!
+- Sync All Application Files
+    - If doing scoped app dev work, you can now choose a scoped app and have it sync every file.
+    - Will only sync files for configured tables. If you see missing records, verify table is configured for syncing. 
 
-## [v0.5.0 (Current)]()
+        
+#### Changed
+- Any commands asking for instance first, will move the last used instance to the top.
+- Move the config files into a .vscode folder inside their instance folder, this seems to be what some extensions do to store things and keep the files out of the root
+- Rename config / settings / etc files in new .vscode folder to be prefixed with SNICH, making it unique, and also in line with new name. 
+- FIXED: Mac OS Writing the server file for temp storage on compare no working cause it's trying to savein "root"
+
+#### Removed
+
+
+### Internal Extension Development
+
+#### Added
+- pullAllAppFiles to SNRecordPuller
+
+#### Changed
+- Made adjustments to how i'm handling the files/folders and settings storage. 
+- More to come on making internal instanceList and Files List Management a bit easier. 
+- Working on Migrating watchers into their own functions and calling accordingly through loadObservers() workspace method. 
+
+#### Removed
+
+## [v0.5.0]()
 
 ### Extension Functionality
 #### Added
