@@ -306,7 +306,8 @@ export class WorkspaceManager{
                 
                 if(!matches || matches.length === 0 || !matches[1]){
                     this.logger.error(this.lib, func, `Couldn't determine instance on save. Matched values:`, matches);
-                    vscode.window.showErrorMessage('Unable to save file, could not determine instance.');
+                    //@todo need to determine if we're a file in our SNICH workspace... This is due to to the extensino being activated in all workspaces when activated... 
+                    //vscode.window.showErrorMessage('Unable to save file, could not determine instance.');
                     resolve();
                     return;
                 }
@@ -366,7 +367,7 @@ export class WorkspaceManager{
                             }
                             
                         }).then((okayToCommit) =>{
-                            let regEx = new RegExp(path.sep.replace('\\', '\\\\') + '([a-zA-Z\.]*)$')
+                            let regEx = new RegExp(path.sep.replace('\\', '\\\\') + '([a-zA-Z\.]*)$');
                             let fileNameMatch = fileConfig.fsPath.match(regEx);
                             
                             let fileName = 'server_version.txt';

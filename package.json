@@ -1,10 +1,19 @@
 {
 	"name": "snich",
 	"publisher": "integrateNate",
-	"displayName": "SN.I.C.H",
-    "description": "Service Now Integrated Code Helper. Connects to any ServiceNow instance and allows remote editing and storage of records from the Application File (and extended) tables.",
-    "icon": "images/icon-shrunk.png",
-	"version": "0.5.5",
+	"displayName": "S.N.I.C.H",
+    "description": "Service Now Integrated Code Helper (SNICH). Connects to any ServiceNow instance and allows remote editing and storage of records from the Application File (and extended) tables.",
+	"icon": "images/icon-shrunk.png",
+	"version": "0.5.51",
+	"keywords": ["SNICH","snich","ServiceNow","Service-Now","ServiceNow Code Sync", "Service-Now Code Helper", "Service-Now Code Syncer", "Service-Now Code Sync"],
+	"qna": "marketplace",
+	"badges": [
+		{
+			"url": "https://www.service-now.com",
+			"description": "Supported Service Now Versions",
+			"href": "https://flat.badgen.net/badge/ServiceNow/Jakarta%20%7C%20Kingston%20%7C%20London%20%7C%20Madrid/red"
+		}
+	],
 	"engines": {
 		"vscode": "^1.30.0"
 	},
@@ -13,11 +22,12 @@
 		"url": "#"
 	},
 	"categories": [
-		"Other"
+		"Other",
+		"SCM Providers"
 	],
 	"activationEvents": [
 		"onCommand:snich.setup.new_instance",
-		"workspaceContains:**/snich_config.json"
+		"workspaceContains:**/.vscode/snich_config.json"
 	],
 	"main": "./out/extension.js",
 	"contributes": {
@@ -44,7 +54,7 @@
             },
             {
                 "command":"snich.application.load.all",
-                "title":"Load all app files (Pull)",
+                "title":"Load all Application Files (Pull)",
                 "category": "SNICH"
             }
 		],
@@ -93,7 +103,7 @@
                     "snich.showSNApps": {
                         "type":"boolean",
                         "title": "When using a command that asks for Application selection, do we show SN apps in the list?",
-                        "default":"false"
+                        "default":false
                     }
                     
 				}
