@@ -18,7 +18,8 @@ This document is intended to indicate and layout the features we are planning to
 #### Added
 - _Compare With Server_
     - _Compare the active text editor with the server. If different, ask to view comparison and load up VSCode file comparer_
-
+- _When showing the "compare/overwrite" options... indicate it's "overwrite server"_
+- _When showing the compare/overwrite" options, add an option to "overwrite local file";    
 
 #### Changed
 - Configure New Synced Table
