@@ -5,6 +5,28 @@ import { WorkspaceManager, SNSyncedFile } from './WorkspaceManager';
 import * as vscode from 'vscode';
 import { InstanceTableConfig } from './SNDefaultTables';
 
+export class InstancesList {
+    private instances: Array<InstanceMaster> = [new InstanceMaster()];
+    private lastSelected: InstanceMaster = new InstanceMaster();
+
+    constructor(){
+
+    }
+
+    addInstance(instance:InstanceMaster){
+        this.instances.push(instance);
+    }
+
+    setLastSelected(instance:InstanceMaster){
+        this.lastSelected = instance;
+    }
+
+    getLastSelected(instance:InstanceMaster){
+        return this.lastSelected;
+    }
+
+}
+
 /**
 * The InstanceManager class is intended for managing and updating information regarding Instance Configuration.
 * Used For
