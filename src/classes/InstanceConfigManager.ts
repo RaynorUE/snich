@@ -8,23 +8,69 @@ import { InstanceTableConfig } from './SNDefaultTables';
 export class InstancesList {
     private instances: Array<InstanceMaster> = [new InstanceMaster()];
     private lastSelected: InstanceMaster = new InstanceMaster();
-
-    constructor(){
-
+    private logger:SystemLogHelper = new SystemLogHelper();
+    
+    constructor(logger?:SystemLogHelper){
+        if(logger){
+            this.logger = logger;
+        }
     }
-
+    
     addInstance(instance:InstanceMaster){
+        let wsManager = new WorkspaceManager(this.logger);
+        wsManager.setupNewInstance(instance);
+        instance.setupComplete = true;
         this.instances.push(instance);
     }
-
+    
     setLastSelected(instance:InstanceMaster){
         this.lastSelected = instance;
     }
-
+    
     getLastSelected(instance:InstanceMaster){
         return this.lastSelected;
     }
 
+    getInstance(name:string){
+        let foundInstance = undefined;
+        this.instances.forEach((instance, index) =>{
+            if(instance.config.name === name){
+                foundInstance = instance;
+                index = this.instances.length;
+            }
+        });
+        return foundInstance;
+    }
+    
+    async selectInstance(){
+        let qpItems: Array<SNQPItem> = [];
+        let selectedInstance = undefined;
+        
+        if(this.instances.length === 0){
+            vscode.window.showErrorMessage('No instances configured. Please setup a new instance.');
+            return selectedInstance;
+        }
+        
+        if(this.lastSelected.config.name !== ''){
+            //if we have a lastSelected instance config name.
+            qpItems.push({ "label": this.lastSelected.config.name, "detail": "Instance URL: " + this.lastSelected.config.connection.url, value: this.lastSelected });
+        }
+        this.instances.forEach((instance) => {
+            if(instance.config.name !== this.lastSelected.config.name){
+                qpItems.push({ "label": instance.config.name, "detail": "Instance URL: " + instance.config.connection.url, value: instance });
+            }
+        });
+        
+        let instanceSelect = await vscode.window.showQuickPick(qpItems, <vscode.QuickPickOptions>{ placeHolder: "Select a Configured ServiceNow Instance.", ignoreFocusOut: true, matchOnDetail: true, matchOnDescription: true })
+        
+        if(instanceSelect){
+            selectedInstance = instanceSelect.value;
+            this.setLastSelected(selectedInstance);
+        } 
+        
+        return selectedInstance;
+    }
+    
 }
 
 /**
@@ -44,7 +90,7 @@ export class InstanceConfigManager {
     private logger:SystemLogHelper;
     private lib:string = "InstanceManager";
     private wsManager:WorkspaceManager;
-        
+    
     constructor(instance?:InstanceMaster, logger?:SystemLogHelper){
         this.logger = logger || new SystemLogHelper();
         let func = 'constructor';
@@ -60,162 +106,96 @@ export class InstanceConfigManager {
     /**
     * Setup a new instance. 
     */
-    setupNew(instanceList:Array<InstanceMaster>){
+    async setupNew(instanceList:InstancesList){
         let func = 'setup';
         this.logger.info(this.lib, func, 'START', );
         
-        this.logger.info(this.lib, func, 'Asking for instance name.');
-        return vscode.window.showInputBox(<vscode.InputBoxOptions>{prompt:"Instance Name",ignoreFocusOut:false})
-        .then((enteredInstanceValue) =>{
-            this.logger.info(this.lib, func, 'Value entered:', {enteredValue:enteredInstanceValue});
-            //if we get a url, strip down to instance name..
-            if(enteredInstanceValue){
-                this.instance.config.name = enteredInstanceValue.replace(/https:\/\/|http:\/\/|.service-now.com|\//g, '');
-            } else {
-                this.instance.config.name = "";
-                return false;
+        let instanceMaster = new InstanceMaster();
+        
+        let enteredInstanceValue = await vscode.window.showInputBox(<vscode.InputBoxOptions>{prompt:"Instance Name",ignoreFocusOut:false});
+        if(!enteredInstanceValue){
+            vscode.window.showWarningMessage('Instance configuration aborted or no name entered.');
+            this.logger.info(this.lib, func, 'END');
+            return undefined;
+        }
+        
+        //get just the subdomain part if a full URL was entered.
+        let instanceName = enteredInstanceValue.replace(/https:\/\/|http:\/\/|.service-now.com|\//g, '');
+        
+        if(instanceList.getInstance(instanceName)){
+            vscode.window.showErrorMessage(`${instanceName} is already configured and loaded into the workspace.`);
+            this.logger.info(this.lib, func, 'END');
+            return undefined;
+        }
+        
+        //met all our fail checks, continue setting up...
+        instanceMaster.setName(instanceName);
+        instanceMaster.setURL(enteredInstanceValue);
+        
+        let authOptions = <Array<SNQPItem>>[ 
+            {label:"Basic",description:"Use basic authentication. Password stored un-encrypted.", value:"basic"}, 
+            {label:"OAuth",description:"Use OAuth to authenticate. More Secure as PW is not stored.", value:"oauth"}
+        ]
+
+        let authSelection = await vscode.window.showQuickPick(authOptions, <vscode.QuickPickOptions>{placeHolder:"Select an authentcation option",ignoreFocusOut:true});
+
+        if(!authSelection){
+            vscode.window.showWarningMessage('Instance configuration aborted. No auth type selected.');
+            this.logger.info(this.lib, func, 'END');
+            return undefined;
+        }
+
+        if(authSelection.value === 'basic'){
+            let username = await vscode.window.showInputBox(<vscode.InputBoxOptions>{prompt:"Enter User Name",ignoreFocusOut:true});
+            let password = await vscode.window.showInputBox(<vscode.InputBoxOptions>{prompt:"Enter Password",password:true,ignoreFocusOut:true});
+
+            if(!username || !password){
+                vscode.window.showWarningMessage('Instance confugration aborted. One or all Auth Details not provided.');
+                return undefined;
             }
 
-            if(this.checkInstanceLoaded( this.instance.config.name, instanceList)){
-                vscode.window.showErrorMessage(`${ this.instance.config.name} is already configured and loaded into the workspace.`);
-                return false;
+            let buff = Buffer.from(password);
+            let base64data = buff.toString('base64');
+            instanceMaster.config.connection.auth.password = base64data || "";
+            instanceMaster.config.connection.auth.username = username;
+
+        } else if(authSelection.value === 'oauth'){
+            let clientID = await vscode.window.showInputBox(<vscode.InputBoxOptions>{prompt:"Enter Client ID",ignoreFocusOut:true});
+            let clientSecret = await vscode.window.showInputBox(<vscode.InputBoxOptions>{prompt:"Enter Client Secret"});
+            let username = await vscode.window.showInputBox(<vscode.InputBoxOptions>{prompt:"Enter Usename (You will be prompted for PW on first connection attempt).",ignoreFocusOut:true});
+
+            if(!clientID || !clientSecret || !username){
+                vscode.window.showWarningMessage('Instance confugration aborted. One or all Auth Details not provided.');
+                return undefined;
             }
 
-            this.setURL(enteredInstanceValue || "");
-            this.logger.info(this.lib, func, 'Name and URL Set.',  this.instance.config);
-            var quickPickItems = <Array<any>>[
-                {label:"Basic",description:"Use basic authentication.", value:"basic"}, 
-                {label:"OAuth",description:"Use OAuth to authenticate. More Secure as PW is not stored.", value:"oauth"}
-            ];
-            this.logger.info(this.lib, func, 'About to ask for auth type.');
-            return vscode.window.showQuickPick(quickPickItems, <vscode.QuickPickOptions>{placeHolder:"Select an authentcation option",ignoreFocusOut:true});
-        }).then((selectedAuth) =>{
-            this.logger.info(this.lib, func, 'Selected auth:', {selectedAuth:selectedAuth});
-            
-            if(selectedAuth && selectedAuth.value){
-                let authType = selectedAuth.value;
-                 this.instance.config.connection.auth.type = authType;
-                if(authType === "basic"){
-                    this.logger.info(this.lib, func, 'All data gathered. Finalized instanceData:',  this.instance.config);
-                    return this.gatherBasicAuth();
-                } else if(authType === 'oauth'){
-                    this.logger.info(this.lib, func, 'All data gathered. Finalized instanceData:',  this.instance.config);
-                    return this.gatherOAuth();
-                }
-            }
-            return false;
-        }).then((authGathered) =>{
-                this.logger.info(this.lib, func, 'Setting up REST client. About to test connection! AuthGathered:', {authGathered:authGathered});
-                if(authGathered){
-                    var client = new RESTClient( this.instance.config);
-                    return client.testConnection();
-                }
-                return false;
-        }).then((testSuccess) =>{
-            this.logger.info(this.lib, func, 'Test connection result: ', testSuccess);
-            
-            if(testSuccess){
-                this.logger.info(this.lib, func, 'Setting up new config on filesystem', );
-                this.instance = this.wsManager.setupNewInstance(this.instance);
-                this.instance.setupComplete = true;
+            instanceMaster.config.connection.auth.OAuth.client_id = clientID;
+            instanceMaster.config.connection.auth.OAuth.client_secret = clientSecret;
+            instanceMaster.config.connection.auth.username = username;
+
+            let client = new RESTClient(instanceMaster.config);
+            let testResult = await client.testConnection();
+            if(testResult){
+                instanceList.addInstance(instanceMaster);
                 return true;
             } else {
-                return false;
+                vscode.window.showErrorMessage('Instance Configuration Failed. Please attempt to setup new instance again. See log for details.');
+                return undefined;
             }
-        }).then(() => {
-            this.logger.info(this.lib, func, 'END');
-            return  this.instance;
-            //end of setup, perform any other cleanup in this function.
-        });
+        }
+        this.logger.info(this.lib, func, 'END');
         
     }
-    
-    private setURL(url:string){
-        if(url.indexOf('http') > -1){
-            //we were given a full url path, use it. 
-             this.instance.config.connection.url = url.replace(/\/$/, ''); //replace trailing slash if it exists..
-        } else {
-            if(url.indexOf('service-now.com') === -1){
-                //if service-now.com isn't in there; add it.. this is just incase we get partial value..
-                url = url + '.service-now.com';
-            }
-             this.instance.config.connection.url = 'https://' + url.replace(/\/$/, '');
-        }
-    }
-    
-    private gatherBasicAuth():Promise<any>{
-        let func = 'gatherBasicAuth';
-        return new Promise((resolve, reject) =>{
-            vscode.window.showInputBox(<vscode.InputBoxOptions>{prompt:"Enter User Name",ignoreFocusOut:true}).then((username) =>{
-                 this.instance.config.connection.auth.username = username || "";
-                if(!username){
-                    this.logger.info(this.lib, func, 'No Username provided. Resolving false.');
-                    resolve(false);
-                    return;
-                }
-                return vscode.window.showInputBox(<vscode.InputBoxOptions>{prompt:"Enter Password",password:true,ignoreFocusOut:true});
-            }).then((password) =>{
 
-                if(password){
-                    let buff = Buffer.from(password);
-                    let base64data = buff.toString('base64');
-                     this.instance.config.connection.auth.password = base64data || "";
-                    resolve(true);
-
-                } else {
-                    this.logger.info(this.lib, func, 'No password provided. Resolving false', );
-                    resolve(false);
-                    return;
-                }
-            });
-        });
-    }
-    
-    private gatherOAuth():Promise<any>{
-        return new Promise((resolve, reject) =>{
-            vscode.window.showInputBox(<vscode.InputBoxOptions>{prompt:"Enter Client ID",ignoreFocusOut:true}).then((clientID) =>{
-                 this.instance.config.connection.auth.OAuth.client_id = clientID || "";
-                
-                return vscode.window.showInputBox(<vscode.InputBoxOptions>{prompt:"Enter Client Secret"});
-                
-            }).then((clientSecret) =>{
-                 this.instance.config.connection.auth.OAuth.client_secret = clientSecret || "";
-                if(!clientSecret){
-                    resolve(false);
-                    return;
-                }
-                return vscode.window.showInputBox(<vscode.InputBoxOptions>{prompt:"Enter Usename (You will be prompted for PW on first connection attempt).",ignoreFocusOut:true});
-            }).then((username) =>{
-                 this.instance.config.connection.auth.username = username || "";
-                if(!username){
-                    resolve(false);
-                    return;
-                }
-                resolve(true);
-            });
-        });
-    }
-    
-    private checkInstanceLoaded(instanceName:string, instanceList:Array<InstanceMaster>){
-        var instanceExists = false;
-        if(instanceList.length > 0){
-            instanceList.forEach((instance) =>{
-                if(instance.config.name === instanceName){
-                    instanceExists = true;
-                }
-            });
-        }
-        return instanceExists;
-    }
 }
 
 export class InstanceChooser {
     instanceList:Array<InstanceMaster>;
-
+    
     constructor(instanceList:Array<InstanceMaster>){
         this.instanceList = instanceList;
     }
-
+    
     getInstance(){
         let instance:InstanceMaster = new InstanceMaster();
         return new Promise((resolve, reject) => {
@@ -235,20 +215,20 @@ export class InstanceChooser {
 }
 
 export class InstanceMaster {
-
+    
     applications:Array<SNApplication>;
     tableConfig:InstanceTableConfig;
     syncedFiles:Array<SNSyncedFile>;
     config:InstanceConfig;
     setupComplete:boolean = false;
     lastSelected:boolean = false;
-
+    
     
     constructor(){
         this.applications = [];
         this.tableConfig = new InstanceTableConfig();
         this.syncedFiles = [];
-
+        
         this.config = {
             name: "",
             configPath: "",
@@ -274,6 +254,23 @@ export class InstanceMaster {
                 }
             }
         };
+    }
+    
+    setName(name:string){
+        this.config.name = name;
+    }
+    
+    setURL(url:string){
+        if(url.indexOf('http') > -1){
+            //we were given a full url path, use it. 
+            this.config.connection.url = url.replace(/\/$/, ''); //replace trailing slash if it exists..
+        } else {
+            if(url.indexOf('service-now.com') === -1){
+                //if service-now.com isn't in there; add it.. this is just incase we get partial value..
+                url = url + '.service-now.com';
+            }
+            this.config.connection.url = 'https://' + url.replace(/\/$/, '');
+        }
     }
 }
 

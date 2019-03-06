@@ -1,7 +1,7 @@
 // The module 'vscode' contains the VS Code extensibility API
 // Import the module and reference it with the alias vscode in your code below
 import * as vscode from 'vscode';
-import { InstanceConfigManager, InstanceMaster } from './classes/InstanceConfigManager';
+import { InstanceConfigManager, InstanceMaster, InstancesList } from './classes/InstanceConfigManager';
 import { SystemLogHelper } from './classes/LogHelper';
 import { RESTClient } from './classes/RESTClient';
 import { WorkspaceManager } from './classes/WorkspaceManager';
@@ -17,7 +17,7 @@ export function activate(context: vscode.ExtensionContext) {
 	let logger:SystemLogHelper = new SystemLogHelper();
     logger.info(lib, func, 'START');
     
-    let instanceList:Array<InstanceMaster> = [];
+    let instanceList = new InstancesList();
     
     if(!workspaceValid(logger, lib)){
         deactivate();
@@ -32,6 +32,9 @@ export function activate(context: vscode.ExtensionContext) {
         wsManager.loadObservers();
     }
     
+    /**
+     * Setup New Instance
+     */
 	vscode.commands.registerCommand('snich.setup.new_instance', () =>{
         let logger = new SystemLogHelper();
         let func = 'setup.new_instance';
@@ -45,38 +48,21 @@ export function activate(context: vscode.ExtensionContext) {
         });
     });
     
+    /**
+     * Test Instance Connection
+     */
 	vscode.commands.registerCommand('snich.setup.test_connection', () =>{
-        logger.info('Activate', 'test_connection', 'START');
-        if(!anyInstancesLoaded(instanceList, logger, lib)){
-            return;
-        }
-        var qpItems:Array<SNQPItem> = [];
-        instanceList.forEach((instance) => {
-            if(instance.lastSelected){
-                qpItems.push({ "label": instance.config.name, "detail": "Instance URL: " + instance.config.connection.url, value: instance });
+        let logger = new SystemLogHelper();
+        let func = 'setup.test_connection';
+        logger.info(lib, func, 'START');
+        instanceList.selectInstance().then((selectedInstance:InstanceMaster) => {
+            if(selectedInstance){
+                let client = new RESTClient(selectedInstance.config, logger);
+                client.testConnection().then(() => logger.info(lib, func, 'END'));
+            } else {
+                logger.info(lib, func, 'END');
             }
-        });
-        instanceList.forEach((instance) => {
-            if(instance.lastSelected == false){
-                qpItems.push({ "label": instance.config.name, "detail": "Instance URL: " + instance.config.connection.url, value: instance });
-            }
-        });
-        vscode.window.showQuickPick(qpItems, <vscode.QuickPickOptions>{"placeHolder":"Select instance to test connection"}).then((selected) =>{
-            if(selected){ 
-                new RESTClient(selected.value.config).testConnection();
-
-                let updatedInstance = <InstanceMaster>selected.value;
-                instanceList.forEach((instance, index) =>{
-                    instanceList[index].lastSelected = false;
-                    if(instance.config.name === updatedInstance.config.name){
-                        updatedInstance.lastSelected = true;
-                        instanceList[index] = updatedInstance;
-                    }
-                });
-            }
-        });
-
-        logger.info('Activate', 'test_connection', 'END');
+        });       
 	});
     
     vscode.commands.registerCommand('snich.instance.setup.new_table', () => {

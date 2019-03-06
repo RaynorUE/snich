@@ -22,7 +22,7 @@ export class SNFilePuller {
         this.logger.info(this.lib, func, 'END');
     }
     
-    pullRecord() {
+    async pullRecord() {
         let func = 'pullRecord';
         let client = new RESTClient(this.activeInstanceData.config);
         let fileRec = <snRecord>{};

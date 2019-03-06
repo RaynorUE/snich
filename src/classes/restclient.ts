@@ -123,25 +123,23 @@ export class RESTClient {
         this.post('', body, 'Creating new record!');
     }
 
-    testConnection():Promise<any> {
+    async testConnection() {
         let func = "testConnection";
-        return new Promise((resolve,reject) =>{
-            let baseURL = this.instanceConfig.connection.url;
-            let url = baseURL + '/api/now/table/sys_user?sysparm_query=' + encodeURIComponent('user_name=' + this.instanceConfig.connection.auth.username);
-            this.logger.info(this.lib, func, 'Getting url: ' + url);
-            this.get(url, `Testing connection for ${baseURL}`).then((response) => {
-                this.logger.info(this.lib, func, 'Response body recieved:', response);
-                if(response && response.body && response.body.result.length > 0){
-                    vscode.window.showInformationMessage("Connection Successful!");
-                    resolve(true);
-                    return;
-                } else {
-                    vscode.window.showErrorMessage("Test Connection failed. View logs for detail.");
-                    resolve(false);
-                    return;
-                }
-            });
-        });
+        
+        let baseURL = this.instanceConfig.connection.url;
+        let url = baseURL + '/api/now/table/sys_user?sysparm_query=' + encodeURIComponent('user_name=' + this.instanceConfig.connection.auth.username);
+        this.logger.info(this.lib, func, 'Getting url: ' + url);
+
+        let response = await this.get(url, `Testing connection for ${baseURL}`);
+        this.logger.info(this.lib, func, 'Response body recieved:', response);
+        
+        if(response && response.body && response.body.result.length > 0){
+            vscode.window.showInformationMessage("Connection Successful!");
+            return true;
+        } else {
+            vscode.window.showErrorMessage("Test Connection failed. View logs for detail.");
+            return false;
+        }
     }
 
     private get(url: string, progressMessage: string) {
