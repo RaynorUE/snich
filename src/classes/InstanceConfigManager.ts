@@ -6,20 +6,29 @@ import * as vscode from 'vscode';
 import { InstanceTableConfig } from './SNDefaultTables';
 
 export class InstancesList {
-    private instances: Array<InstanceMaster> = [new InstanceMaster()];
+    private instances: Array<InstanceMaster> = [];
     private lastSelected: InstanceMaster = new InstanceMaster();
     private logger:SystemLogHelper = new SystemLogHelper();
+    private lib = "InstancesList";
     
     constructor(logger?:SystemLogHelper){
         if(logger){
             this.logger = logger;
         }
     }
+
+    loadWorkspaceInstances(){
+        let wsManager = new WorkspaceManager(this.logger);
+        let wsFolders = vscode.workspace.workspaceFolders || [];
+        if(wsFolders.length > 0){
+            let instanceList = wsManager.loadWorkspaceInstances(wsFolders);
+            this.instances = instanceList;
+        }
+    }
     
     addInstance(instance:InstanceMaster){
         let wsManager = new WorkspaceManager(this.logger);
         wsManager.setupNewInstance(instance);
-        instance.setupComplete = true;
         this.instances.push(instance);
     }
     
@@ -34,7 +43,7 @@ export class InstancesList {
     getInstance(name:string){
         let foundInstance = undefined;
         this.instances.forEach((instance, index) =>{
-            if(instance.config.name === name){
+            if(instance.getName() === name){
                 foundInstance = instance;
                 index = this.instances.length;
             }
@@ -51,13 +60,13 @@ export class InstancesList {
             return selectedInstance;
         }
         
-        if(this.lastSelected.config.name !== ''){
+        if(this.lastSelected.getName() !== ''){
             //if we have a lastSelected instance config name.
-            qpItems.push({ "label": this.lastSelected.config.name, "detail": "Instance URL: " + this.lastSelected.config.connection.url, value: this.lastSelected });
+            qpItems.push({ "label": this.lastSelected.getName(), "detail": "Instance URL: " + this.lastSelected.getURL(), value: this.lastSelected });
         }
         this.instances.forEach((instance) => {
-            if(instance.config.name !== this.lastSelected.config.name){
-                qpItems.push({ "label": instance.config.name, "detail": "Instance URL: " + instance.config.connection.url, value: instance });
+            if(instance.getName() !== this.lastSelected.getName()){
+                qpItems.push({ "label": instance.getName(), "detail": "Instance URL: " + instance.getURL(), value: instance });
             }
         });
         
@@ -70,43 +79,11 @@ export class InstancesList {
         
         return selectedInstance;
     }
-    
-}
 
-/**
-* The InstanceManager class is intended for managing and updating information regarding Instance Configuration.
-* Used For
-*  - Setting up a new instance from scratch.
-*  - Updating Authentication and Connction Information for a given instance. 
-* Not Used For
-*  - Managing / Retrieving Records from an instance. 
-* 
-* @param instanceList
-* @param logger
-*/
-export class InstanceConfigManager {
-    
-    private instance:InstanceMaster;
-    private logger:SystemLogHelper;
-    private lib:string = "InstanceManager";
-    private wsManager:WorkspaceManager;
-    
-    constructor(instance?:InstanceMaster, logger?:SystemLogHelper){
-        this.logger = logger || new SystemLogHelper();
-        let func = 'constructor';
-        this.logger.info(this.lib, func, 'START', );
-        
-        this.wsManager = new WorkspaceManager(logger);
-        this.instance = instance || new InstanceMaster(); 
-        
-        this.logger.info(this.lib, func, 'END');
-        
-    }
-    
     /**
-    * Setup a new instance. 
-    */
-    async setupNew(instanceList:InstancesList){
+     * Setup a new Instance and add it to the instance list.
+     */
+    async setupNew(){
         let func = 'setup';
         this.logger.info(this.lib, func, 'START', );
         
@@ -122,7 +99,7 @@ export class InstanceConfigManager {
         //get just the subdomain part if a full URL was entered.
         let instanceName = enteredInstanceValue.replace(/https:\/\/|http:\/\/|.service-now.com|\//g, '');
         
-        if(instanceList.getInstance(instanceName)){
+        if(this.getInstance(instanceName)){
             vscode.window.showErrorMessage(`${instanceName} is already configured and loaded into the workspace.`);
             this.logger.info(this.lib, func, 'END');
             return undefined;
@@ -153,30 +130,24 @@ export class InstanceConfigManager {
                 vscode.window.showWarningMessage('Instance confugration aborted. One or all Auth Details not provided.');
                 return undefined;
             }
-
-            let buff = Buffer.from(password);
-            let base64data = buff.toString('base64');
-            instanceMaster.config.connection.auth.password = base64data || "";
-            instanceMaster.config.connection.auth.username = username;
-
+            instanceMaster.setBasicAuth(username, password);
+            
         } else if(authSelection.value === 'oauth'){
             let clientID = await vscode.window.showInputBox(<vscode.InputBoxOptions>{prompt:"Enter Client ID",ignoreFocusOut:true});
             let clientSecret = await vscode.window.showInputBox(<vscode.InputBoxOptions>{prompt:"Enter Client Secret"});
             let username = await vscode.window.showInputBox(<vscode.InputBoxOptions>{prompt:"Enter Usename (You will be prompted for PW on first connection attempt).",ignoreFocusOut:true});
 
             if(!clientID || !clientSecret || !username){
-                vscode.window.showWarningMessage('Instance confugration aborted. One or all Auth Details not provided.');
+                vscode.window.showWarningMessage('Instance confugration aborted. One or all OAuth Details not provided.');
                 return undefined;
             }
+            instanceMaster.setOAuth(clientID, clientSecret);
+            instanceMaster.setUserName(username);
 
-            instanceMaster.config.connection.auth.OAuth.client_id = clientID;
-            instanceMaster.config.connection.auth.OAuth.client_secret = clientSecret;
-            instanceMaster.config.connection.auth.username = username;
-
-            let client = new RESTClient(instanceMaster.config);
+            let client = new RESTClient(instanceMaster.getConfig());
             let testResult = await client.testConnection();
             if(testResult){
-                instanceList.addInstance(instanceMaster);
+                this.addInstance(instanceMaster);
                 return true;
             } else {
                 vscode.window.showErrorMessage('Instance Configuration Failed. Please attempt to setup new instance again. See log for details.');
@@ -186,32 +157,6 @@ export class InstanceConfigManager {
         this.logger.info(this.lib, func, 'END');
         
     }
-
-}
-
-export class InstanceChooser {
-    instanceList:Array<InstanceMaster>;
-    
-    constructor(instanceList:Array<InstanceMaster>){
-        this.instanceList = instanceList;
-    }
-    
-    getInstance(){
-        let instance:InstanceMaster = new InstanceMaster();
-        return new Promise((resolve, reject) => {
-            let qpItems = <Array<SNQPItem>>[];
-            this.instanceList.forEach((instance) => {
-                qpItems.push({"label":instance.config.name, "detail":"Instance URL: " + instance.config.connection.url, value:instance });
-            });
-            return vscode.window.showQuickPick(qpItems, <vscode.QuickPickOptions>{placeHolder:"Select instance to test connection", ignoreFocusOut:true, matchOnDetail:true, matchOnDescription:true})
-            .then((selectedInstance) =>{
-                if(selectedInstance){
-                    instance = selectedInstance.value;
-                }
-                resolve(instance);
-            });
-        });
-    }
 }
 
 export class InstanceMaster {
@@ -219,20 +164,16 @@ export class InstanceMaster {
     applications:Array<SNApplication>;
     tableConfig:InstanceTableConfig;
     syncedFiles:Array<SNSyncedFile>;
-    config:InstanceConfig;
-    setupComplete:boolean = false;
-    lastSelected:boolean = false;
-    
+    private config:InstanceConfig;
     
     constructor(){
         this.applications = [];
         this.tableConfig = new InstanceTableConfig();
         this.syncedFiles = [];
-        
         this.config = {
             name: "",
-            configPath: "",
             rootPath: "",
+            configPath: "",
             connection : {
                 url:"",
                 auth: {
@@ -255,9 +196,42 @@ export class InstanceMaster {
             }
         };
     }
+
     
     setName(name:string){
         this.config.name = name;
+    }
+ 
+    getName(){
+        return this.config.name;
+    }
+
+    setUserName(username:string){
+        this.config.connection.auth.username = username;
+    }
+
+    setPassword(password:string){
+        let buff = Buffer.from(password);
+        let base64data = buff.toString('base64');
+        this.config.connection.auth.password = base64data || "";
+    }
+
+    getPassword(){
+        let buff = Buffer.from(this.config.connection.auth.password, "base64");
+        let pw = buff.toString('ascii');
+        return pw;
+    }
+
+    setBasicAuth(username:string, password:string){
+        this.setUserName(username);
+        this.setPassword(password);
+        this.config.connection.auth.type = 'basic';
+    }
+
+    setOAuth(client_id:string, client_secret:string){
+        this.config.connection.auth.type = 'oauth';
+        this.config.connection.auth.OAuth.client_id = client_id;
+        this.config.connection.auth.OAuth.client_secret = client_secret;
     }
     
     setURL(url:string){
@@ -272,11 +246,26 @@ export class InstanceMaster {
             this.config.connection.url = 'https://' + url.replace(/\/$/, '');
         }
     }
+
+    getURL(){
+        return this.config.connection.url;
+    }
+
+    setConfig(config:InstanceConfig){
+        this.config = config;
+    }
+    
+    getConfig(){
+        return this.config;
+    }
+
+
+
 }
 
 export interface InstanceConfig {
     name:string;
     configPath:string;
-    connection:InstanceConnectionData;
     rootPath:string;
+    connection:InstanceConnectionData;
 }

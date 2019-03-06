@@ -46,12 +46,13 @@ export class WorkspaceManager{
         if(vscode.workspace.workspaceFolders){
             let wsFolder = vscode.workspace.workspaceFolders[0];
             
+            let config = instance.getConfig();
             
-            let rootPath = path.resolve(wsFolder.uri.fsPath, instance.config.name);
-            instance.config.rootPath = rootPath;
+            let rootPath = path.resolve(wsFolder.uri.fsPath, config.name);
+            config.rootPath = rootPath;
 
             let configPath = path.resolve(rootPath, '.vscode');
-            instance.config.configPath = configPath;
+            config.configPath = configPath;
 
             this.logger.debug(this.lib, func, 'Resolved path is: ', configPath);
             if(!fs.existsSync(rootPath)){
@@ -89,7 +90,7 @@ export class WorkspaceManager{
                 //setup InstanceMaster class.
                 let instance = new InstanceMaster();
                 this.logger.debug(this.lib, func, "Found!");
-                instance.config = <InstanceConfig>this.loadJSONFromFile(snJSONPath);
+                instance.setConfig(<InstanceConfig>this.loadJSONFromFile(snJSONPath));
                 
                 //load table config from stored value.
                 
@@ -115,9 +116,10 @@ export class WorkspaceManager{
         let func = 'writeInstanceConfig';
         this.logger.info(this.lib, func, "START");
         
-        let configJSONPath = path.resolve(instance.config.configPath, this.configFileName);
-        this.writeJSON(instance.config, configJSONPath);
-        this.logger.debug(this.lib, func, 'Saved instance config:', instance.config);
+        let config = instance.getConfig();
+        let configJSONPath = path.resolve(config.configPath, this.configFileName);
+        this.writeJSON(config, configJSONPath);
+        this.logger.debug(this.lib, func, 'Saved instance config:', config);
         
         this.logger.info(this.lib, func, 'END');
     }
@@ -126,7 +128,8 @@ export class WorkspaceManager{
         let func = 'writeTableConfig';
         this.logger.info(this.lib, func, "START");
         
-        let filePath = path.resolve(instance.config.configPath, this.tableConfigFileName);
+        let config = instance.getConfig();
+        let filePath = path.resolve(config.configPath, this.tableConfigFileName);
         this.writeJSON(instance.tableConfig, filePath);
         this.logger.debug(this.lib, func, "Saved table config.", instance.tableConfig);
         
@@ -136,7 +139,9 @@ export class WorkspaceManager{
     writeSyncedFiles(instance:InstanceMaster, syncedFiles:Array<SNSyncedFile>){
         let func = 'writesyncedFiles';
         this.logger.info(this.lib, func, 'START', );
-        let filePath = path.resolve(instance.config.configPath, this.syncedFilesName) ;
+
+        let config = instance.getConfig();
+        let filePath = path.resolve(config.configPath, this.syncedFilesName) ;
         this.writeJSON(syncedFiles, filePath);
         this.logger.info(this.lib, func, 'END');
     }
@@ -145,7 +150,8 @@ export class WorkspaceManager{
         let func = 'loadSyncedFiles';
         this.logger.info(this.lib, func, 'START', );
         
-        let syncedFilesPath = path.resolve(instance.config.configPath, this.syncedFilesName);
+        let config = instance.getConfig();
+        let syncedFilesPath = path.resolve(config.configPath, this.syncedFilesName);
         this.logger.info(this.lib, func, `Checking for synced Files at path: ${syncedFilesPath}`);
         let syncedFiles:Array<SNSyncedFile> = [];
         
@@ -167,10 +173,11 @@ export class WorkspaceManager{
         let appName = record['sys_scope.name'] + ' (' + record['sys_scope.scope'] + ')';
         let tableName = table.name;
         let multiFile = false;
+        let config = instance.getConfig();
         
         let syncedFiles = this.loadSyncedFiles(instance, appName);
         
-        let appPath = path.resolve(instance.config.rootPath, appName);
+        let appPath = path.resolve(config.rootPath, appName);
         let rootPath = appPath.toString();
         
         if(!fs.existsSync(appPath)){
@@ -214,7 +221,7 @@ export class WorkspaceManager{
                 let fullPath = path.resolve(rootPath, file);
                 this.logger.debug(this.lib, func, `Creating file at ${fullPath}`);
                 fs.writeFileSync(fullPath, content,'utf8');
-                syncedFiles.push(new SNSyncedFile(fullPath, instance.config.name, field, record));
+                syncedFiles.push(new SNSyncedFile(fullPath, instance.getConfig().name, field, record));
                 if(openFile){
                     this.logger.debug(this.lib, func, `Opening file found at: ${fullPath}`);
                     vscode.window.showTextDocument(vscode.Uri.file(fullPath));

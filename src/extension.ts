@@ -1,13 +1,12 @@
 // The module 'vscode' contains the VS Code extensibility API
 // Import the module and reference it with the alias vscode in your code below
 import * as vscode from 'vscode';
-import { InstanceConfigManager, InstanceMaster, InstancesList } from './classes/InstanceConfigManager';
+import { InstanceMaster, InstancesList } from './classes/InstanceConfigManager';
 import { SystemLogHelper } from './classes/LogHelper';
 import { RESTClient } from './classes/RESTClient';
-import { WorkspaceManager } from './classes/WorkspaceManager';
 import { SNFilePuller } from './classes/SNRecordPuller';
 import { SyncedTableManager } from './classes/SNDefaultTables';
-import { SNQPItem } from './myTypes/globals';
+import { WorkspaceManager } from './classes/WorkspaceManager';
 
 // this method is called when your extension is activated
 // your extension is activated the very first time the command is executed
@@ -23,14 +22,10 @@ export function activate(context: vscode.ExtensionContext) {
         deactivate();
         return false;
     }
-    
-    
+
     let wsManager = new WorkspaceManager(logger);
-    let wsFolders = vscode.workspace.workspaceFolders || [];
-    if(wsFolders.length > 0){
-        instanceList = wsManager.loadWorkspaceInstances(wsFolders);
-        wsManager.loadObservers();
-    }
+    wsManager.loadObservers();
+
     
     /**
      * Setup New Instance
@@ -39,11 +34,7 @@ export function activate(context: vscode.ExtensionContext) {
         let logger = new SystemLogHelper();
         let func = 'setup.new_instance';
         logger.info(lib, func, 'START', );
-        let instanceMgr = new InstanceConfigManager(undefined,logger);
-        instanceMgr.setupNew(instanceList).then((instanceMaster) =>{
-            if(instanceMaster && instanceMaster.setupComplete){
-                instanceList.push(instanceMaster);
-			}
+        instanceList.setupNew().then(() =>{
 			logger.info(lib, func, 'END');
         });
     });
@@ -51,18 +42,16 @@ export function activate(context: vscode.ExtensionContext) {
     /**
      * Test Instance Connection
      */
-	vscode.commands.registerCommand('snich.setup.test_connection', () =>{
+	vscode.commands.registerCommand('snich.setup.test_connection', async () =>{
         let logger = new SystemLogHelper();
         let func = 'setup.test_connection';
         logger.info(lib, func, 'START');
-        instanceList.selectInstance().then((selectedInstance:InstanceMaster) => {
-            if(selectedInstance){
-                let client = new RESTClient(selectedInstance.config, logger);
-                client.testConnection().then(() => logger.info(lib, func, 'END'));
-            } else {
-                logger.info(lib, func, 'END');
-            }
-        });       
+        let selectedInstance = await instanceList.selectInstance();
+        if(selectedInstance){
+            let client = new RESTClient(selectedInstance.getConfig(), logger);
+            let testResult = await client.testConnection();
+        }
+        logger.info(lib, func, 'END');
 	});
     
     vscode.commands.registerCommand('snich.instance.setup.new_table', () => {
