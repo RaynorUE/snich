@@ -54,26 +54,14 @@ export function activate(context: vscode.ExtensionContext) {
         logger.info(lib, func, 'END');
 	});
     
-    vscode.commands.registerCommand('snich.instance.setup.new_table', () => {
+    vscode.commands.registerCommand('snich.instance.setup.new_table', async () => {
         let logger = new SystemLogHelper();
         let func = 'snich.instance.setup.new_table';
         logger.info(lib, func, 'START');
         
         let tableMgr = new SyncedTableManager(instanceList, logger);
-        tableMgr.syncNew().then((result) =>{
-            logger.info(lib, func, 'Result from new setup:', result);
-            if(result){
-                let updatedInstance = <InstanceMaster>result;
-                instanceList.forEach((instance, index) =>{
-                    instanceList[index].lastSelected = false;
-                    if(instance.config.name === updatedInstance.config.name){
-                        updatedInstance.lastSelected = true;
-                        instanceList[index] = updatedInstance;
-                    }
-                });
-            }
-            logger.info(lib, func, 'END');
-        });
+        let result = await tableMgr.syncNew();
+        logger.info(lib, func, 'END', result);
         
         
 	});

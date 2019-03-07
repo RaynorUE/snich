@@ -258,9 +258,6 @@ export class InstanceMaster {
     getConfig(){
         return this.config;
     }
-
-
-
 }
 
 export interface InstanceConfig {
