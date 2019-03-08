@@ -26,7 +26,7 @@ This document is intended to indicate and layout the features we are planning to
     - _Set label field for configured tables when configuring new table_
     - _Need to be able to select display field if name is not present. Idea here is to not always be asking for it... since name should be there most of the time_
         - Could do this check just before we "Pick what fields to sync" since we will be getting all the dictionary entries anyway
-
+- No longer asks for instance If only one instance configured. #ClicksReducer
 #### Removed
 
 

@@ -1,12 +1,12 @@
 import * as fs from "fs";
 import * as vscode from 'vscode';
 import { SystemLogHelper } from './LogHelper';
-import {InstanceMaster, InstanceConfig} from './InstanceConfigManager';
+import {InstanceMaster, InstanceConfig, InstancesList} from './InstanceConfigManager';
 import { snTableConfig, snTableField } from "../myTypes/globals";
 import { RESTClient } from "./RESTClient";
-import { InstanceTableConfig } from "./SNDefaultTables";
 import * as path from 'path';
 import * as crypto from 'crypto';
+import { ConfiguredTables } from "./SNDefaultTables";
 
 /**
 * This class is intended to manage the configuration, files, and folders within the workspace. 
@@ -33,6 +33,20 @@ export class WorkspaceManager{
         
         
         this.logger.info(this.lib, func, 'END');
+    }
+
+    workspaceValid(logger:SystemLogHelper, lib:string) {
+        let wsFolders = vscode.workspace.workspaceFolders || [];
+        let func = "workspaceValid";
+        logger.info(lib, func, 'Going hunting for SN Instances! Workspace Folders', wsFolders);
+        if(wsFolders.length === 0){
+            vscode.window.showErrorMessage('No workspace folder loaded. Please open a folder for this workspace. This is where all SN instance folders will be created.');
+            return false;
+        } else if(wsFolders.length > 1){
+            vscode.window.showErrorMessage('More than one workspace folder loaded. Unpredictable results may occur, de-activating extension. Please use just one workspace folder.');
+            return false;
+        }
+        return true;
     }
     
     /**
@@ -76,9 +90,9 @@ export class WorkspaceManager{
     * Used to load all the instances based on the folder configuration of the workspace. 
     * @param wsFolders 
     */
-    loadWorkspaceInstances(wsFolders:Array<vscode.WorkspaceFolder>){
+    loadWorkspaceInstances(instanceList:InstancesList){
         let func = "loadWorkspaceInstances";
-        let instanceList:Array<InstanceMaster> = [];
+        let wsFolders = vscode.workspace.workspaceFolders || [];
         //@todo need to also watch the folder path, to see if it gets delete that we remove from the instanceList
         this.logger.info(this.lib, func, "Testing Statically First folder");
         let rootPath = wsFolders[0].uri.fsPath;
@@ -97,15 +111,13 @@ export class WorkspaceManager{
                 var tableConfigPath = path.resolve(rootPath, folder, '.vscode', this.tableConfigFileName);
                 this.logger.info(this.lib, func, "Checking for table config at path:", tableConfigPath);
                 if(fs.existsSync(tableConfigPath)){
-                    let tableConfig = new InstanceTableConfig(<InstanceTableConfig>this.loadJSONFromFile(tableConfigPath));
-                    instance.tableConfig = tableConfig;
+                    instance.tableConfig.setFromConfigFile(<ConfiguredTables>this.loadJSONFromFile(tableConfigPath));
                 }
-                instanceList.push(instance);
+                instanceList.addInstance(instance);
             }
         });
         this.logger.info(this.lib, func, "Loaded instanceList:", instanceList);
         this.logger.info(this.lib, func, "END");
-        return instanceList;
     }
     
     writeAll(instance:InstanceMaster){
@@ -164,12 +176,22 @@ export class WorkspaceManager{
         return syncedFiles;
         
     }
-    
-    createSyncedFile(instance:InstanceMaster, table:snTableConfig, record:any){
+
+    /**
+     * 
+     * @param instance - Instance to create the file for
+     * @param table - Table the record came from
+     * @param record - The record details to create. 
+     * @param openFile  - Open file or not. Default: True
+     */
+    createSyncedFile(instance:InstanceMaster, table:snTableConfig, record:any, openFile?:boolean){
         let func = 'createSyncedFile';
         this.logger.info(this.lib, func, 'START', {instanceMaster:instance, tableConfig:table, snRecord:record});
         
-        let openFile = true;
+        if(openFile === undefined){
+            openFile = true;
+        }
+        
         let appName = record['sys_scope.name'] + ' (' + record['sys_scope.scope'] + ')';
         let tableName = table.name;
         let multiFile = false;

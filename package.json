@@ -26,7 +26,11 @@
 		"SCM Providers"
 	],
 	"activationEvents": [
-		"onCommand:snich.setup.new_instance",
+        "onCommand:snich.setup.new_instance",
+        "onCommand:snich.setup.test_connection",
+        "onCommand:snich.instance.pull_record",
+        "onCommand:snich.instance.setup.new_table",
+        "onCommand:snich.application.load.all",
 		"workspaceContains:**/.vscode/snich_config.json"
 	],
 	"main": "./out/extension.js",

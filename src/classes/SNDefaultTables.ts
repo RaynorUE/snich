@@ -1,23 +1,27 @@
 import { snTableField, SNQPItem, snRecord } from "../myTypes/globals";
-import { InstanceMaster, InstancesList} from "./InstanceConfigManager";
+import { InstanceMaster} from "./InstanceConfigManager";
 import { RESTClient } from "./RESTClient";
 import * as vscode from "vscode";
 import { SystemLogHelper } from "./LogHelper";
 import { WorkspaceManager } from "./WorkspaceManager";
 
 
-export class SyncedTables {
+export class ConfiguredTables {
     tables:Array<TableConfig> = [];
-    instanceList:InstancesList;
-    logger:SystemLogHelper;
-    lib:string = 'SyncedTableManager';
+    tableNameList:Array<string> = [];
+    private logger:SystemLogHelper;
+    private lib:string = 'SyncedTableManager';
     
-    constructor(instanceList:InstancesList, logger?:SystemLogHelper){
+    constructor(tableData?:ConfiguredTables, logger?:SystemLogHelper){
         this.logger = logger || new SystemLogHelper();
         let func = 'constructor';
         this.logger.info(this.lib, func, 'START');
         
-        this.instanceList = instanceList;
+        if(tableData){
+            this.setFromConfigFile(tableData);
+        } else {
+            this.setupCommon();
+        }
         
         this.logger.info(this.lib, func, 'END');
     }
@@ -26,17 +30,11 @@ export class SyncedTables {
     * Configure a new Table to be synced for a given instance.
     * @return Returns modified instance that was selected. 
     */
-    async syncNew(){
+    async syncNew(selectedInstance:InstanceMaster){
         let func = 'syncNew';
         this.logger.info(this.lib, func, 'START');
         let client = <RESTClient>{};
-        
-        //select an instance..
-        let selectedInstance:InstanceMaster = await this.instanceList.selectInstance();
-        if(!selectedInstance){
-            vscode.window.showWarningMessage('Table Configuration Aborted.');
-            return undefined;
-        }
+
 
         //query instance for tables extending sys_metadata
         client = new RESTClient(selectedInstance.getConfig());
@@ -87,7 +85,7 @@ export class SyncedTables {
         
         this.logger.info(this.lib, func, "Selected fields:", selectedDics);
         if(selectedDics.length > 0){
-            let extensionAsker = (selectedPosition:number) => {
+            let extensionAsker = async (selectedPosition:number) => {
                 let func = 'extensionAsker';
                 
                 this.logger.info(this.lib,func, 'START', {position:selectedPosition, fieldsLength:selectedDics.length});
@@ -108,40 +106,46 @@ export class SyncedTables {
                             resolve(extensionAsker(selectedPosition));
                         });
                     } else {
-                        this.logger.info(this.lib, func, 'No more fields to get extensions for!');
-                        this.logger.info(this.lib, func, 'END');
-                        
+                        this.logger.info(this.lib, func, 'No more fields to get extensions for!');                        
                         resolve(true);
                     }
                 });
             };
+            await extensionAsker(0);
         }
 
-        selectedInstance.tableConfig.addTable(tableConfig);
+        this.addTable(tableConfig);
         let wsMgr = new WorkspaceManager(this.logger);
         wsMgr.writeTableConfig(selectedInstance);
-
+        vscode.window.showInformationMessage('Table added to configuration.', 'Sync New Record').then((choice) =>{
+            if(choice === "Sync New Record"){
+                vscode.commands.executeCommand('snich.instance.pull_record');
+            }
+        });
+        this.logger.info(this.lib, func, 'END');
     }
-    
-}
 
-export class InstanceTableConfig {
-    tableNameList:Array<string> = [];
-    tables:Array<TableConfig> = [];
-
-    constructor(tableData?:InstanceTableConfig){
-        if(tableData){
-            this.setFromConfigFile(tableData);
+    addTable(table:TableConfig){
+        this.tableNameList.push(table.name);
+        let existingIndex = -1;
+        this.tables.forEach((existingTable, index) =>{
+            if(existingTable.name === table.name){
+                existingIndex = index;
+            }
+        });
+        if(existingIndex > -1){
+            this.tables[existingIndex] = table;
         } else {
-            this.setupCommon();
+            this.tables.push(table);
         }
+        
     }
 
-    setFromConfigFile(tableData:InstanceTableConfig){
+    setFromConfigFile(tableData:ConfiguredTables){
         this.tables = tableData.tables;
         this.tableNameList = tableData.tableNameList;
     }
-    
+
     setupCommon(){
         //==== sys_script ======
         let sys_script = new TableConfig('sys_script');
@@ -175,24 +179,7 @@ export class InstanceTableConfig {
         this.addTable(ui_page);
     }
     
-    addTable(table:TableConfig){
-        this.tableNameList.push(table.name);
-        let existingIndex = -1;
-        this.tables.forEach((existingTable, index) =>{
-            if(existingTable.name === table.name){
-                existingIndex = index;
-            }
-        });
-        if(existingIndex > -1){
-            this.tables[existingIndex] = table;
-        } else {
-            this.tables.push(table);
-        }
-        
-    }
-
 }
-
 
 export class TableConfig{
     name:string = "";

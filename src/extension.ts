@@ -1,11 +1,10 @@
 // The module 'vscode' contains the VS Code extensibility API
 // Import the module and reference it with the alias vscode in your code below
 import * as vscode from 'vscode';
-import { InstanceMaster, InstancesList } from './classes/InstanceConfigManager';
+import { InstancesList, InstanceMaster } from './classes/InstanceConfigManager';
 import { SystemLogHelper } from './classes/LogHelper';
 import { RESTClient } from './classes/RESTClient';
 import { SNFilePuller } from './classes/SNRecordPuller';
-import { SyncedTableManager } from './classes/SNDefaultTables';
 import { WorkspaceManager } from './classes/WorkspaceManager';
 
 // this method is called when your extension is activated
@@ -17,26 +16,28 @@ export function activate(context: vscode.ExtensionContext) {
     logger.info(lib, func, 'START');
     
     let instanceList = new InstancesList();
-    
-    if(!workspaceValid(logger, lib)){
+    let wsManager = new WorkspaceManager(logger);
+
+    if(!wsManager.workspaceValid(logger, lib)){
         deactivate();
         return false;
     }
 
-    let wsManager = new WorkspaceManager(logger);
+    //load observers for our workspace.
     wsManager.loadObservers();
+    wsManager.loadWorkspaceInstances(instanceList);
 
     
     /**
      * Setup New Instance
      */
-	vscode.commands.registerCommand('snich.setup.new_instance', () =>{
+	vscode.commands.registerCommand('snich.setup.new_instance', async () =>{
         let logger = new SystemLogHelper();
         let func = 'setup.new_instance';
-        logger.info(lib, func, 'START', );
-        instanceList.setupNew().then(() =>{
-			logger.info(lib, func, 'END');
-        });
+        logger.info(lib, func, 'START');
+        await instanceList.setupNew();
+        logger.info(lib, func, 'END');
+
     });
     
     /**
@@ -46,74 +47,72 @@ export function activate(context: vscode.ExtensionContext) {
         let logger = new SystemLogHelper();
         let func = 'setup.test_connection';
         logger.info(lib, func, 'START');
+
+        if(!instanceList.atLeastOneConfigured()){
+            return;
+        }
+
         let selectedInstance = await instanceList.selectInstance();
         if(selectedInstance){
             let client = new RESTClient(selectedInstance.getConfig(), logger);
-            let testResult = await client.testConnection();
+            await client.testConnection();
         }
-        logger.info(lib, func, 'END');
+        logger.info(lib, func, 'END', instanceList);
 	});
     
     vscode.commands.registerCommand('snich.instance.setup.new_table', async () => {
         let logger = new SystemLogHelper();
         let func = 'snich.instance.setup.new_table';
         logger.info(lib, func, 'START');
-        
-        let tableMgr = new SyncedTableManager(instanceList, logger);
-        let result = await tableMgr.syncNew();
-        logger.info(lib, func, 'END', result);
+
+        if(!instanceList.atLeastOneConfigured()){
+            return;
+        }
+        let selectedInstance:InstanceMaster = await instanceList.selectInstance();
+        if(!selectedInstance){
+            vscode.window.showWarningMessage('Table Configuration Aborted.');
+            return undefined;
+        }
+        await selectedInstance.tableConfig.syncNew(selectedInstance);
+        logger.info(lib, func, 'END', instanceList);
         
         
 	});
     
-	vscode.commands.registerCommand('snich.application.load.all', () => {
-        new SNFilePuller(instanceList).pullAllAppFiles().then((result) =>{
-            if(result){
-                let updatedInstance = <InstanceMaster>result;
-                instanceList.forEach((instance, index) =>{
-                    instanceList[index].lastSelected = false;
-                    if(instance.config.name === updatedInstance.config.name){
-                        updatedInstance.lastSelected = true;
-                        instanceList[index] = updatedInstance;
-                    }
-                });
-            }
-        });
+	vscode.commands.registerCommand('snich.application.load.all', async () => {
+        let func = 'application.load.all';
+        logger.info(lib, func, 'START', );
+        if(!instanceList.atLeastOneConfigured()){
+            return;
+        }
+        let fp = new SNFilePuller(instanceList, logger);
+        await fp.pullAllAppFiles();
+
+        logger.info(lib, func, 'END', instanceList);
 	});
     
 	vscode.commands.registerCommand('snich.application.load.new', () => {
         
 	});
     
-	vscode.commands.registerCommand('snich.instance.pull_record', (folder) =>{
+	vscode.commands.registerCommand('snich.instance.pull_record', async (folder) =>{
 		let logger = new SystemLogHelper();
 		let func = 'instance.pull_record';
         logger.info(lib, func, 'START', );
-        if(!anyInstancesLoaded(instanceList, logger, lib)){
+        if(!instanceList.atLeastOneConfigured()){
             return;
         }
 		let filePuller = new SNFilePuller(instanceList, logger);
 		
-		filePuller.pullRecord().then((result) =>{
-            if(result){
-                let updatedInstance = <InstanceMaster>result;
-                instanceList.forEach((instance, index) =>{
-                    instanceList[index].lastSelected = false;
-                    if(instance.config.name === updatedInstance.config.name){
-                        updatedInstance.lastSelected = true;
-                        instanceList[index] = updatedInstance;
-                    }
-                });
-            }
-		});
+        await filePuller.syncRecord();
+        logger.info(lib, func, 'START', instanceList);
+
 	});
     
 	vscode.commands.registerCommand('snich.folder.application.load.new', () =>{
 		//if we can't do this from the application load new call
 	});
-	vscode.commands.registerCommand('snich.folder.application.load.all', () =>{
-        
-    });
+
     
     //** INSTANCE REMOVAL WATCHER!! */
     let fsWatcher = vscode.workspace.createFileSystemWatcher('**/*/');
@@ -121,16 +120,16 @@ export function activate(context: vscode.ExtensionContext) {
         let func = 'InstanceDeleteWatcher';
         logger.info(lib, func, 'File deleted:', uri);
         let instanceLocation = -1;
-        instanceList.forEach((instance, index) =>{
-            logger.debug(lib, func, "Testing if instance matches.", {instanceListPath:instance.config.rootPath, loadedFromFile:uri.fsPath});
-            if(instance.config.rootPath === uri.fsPath){
+        instanceList.getInstances().forEach((instance, index) =>{
+            logger.debug(lib, func, "Testing if instance matches.", {instanceListPath:instance.getConfig().rootPath, loadedFromFile:uri.fsPath});
+            if(instance.getConfig().rootPath === uri.fsPath){
                 logger.info(lib, func, `Found instance in instance list at position ${index}`);
                 instanceLocation = index;
             }
         });
         
         if(instanceLocation > -1){
-            instanceList.splice(instanceLocation, 1);
+            instanceList.getInstances().splice(instanceLocation, 1);
             logger.info(lib, func, "Removed instance from instanceList.", instanceList);
         }
     });
@@ -142,28 +141,4 @@ export function activate(context: vscode.ExtensionContext) {
 // this method is called when your extension is deactivated
 export function deactivate() {
     
-}
-
-
-function workspaceValid(logger:SystemLogHelper, lib:string) {
-    let wsFolders = vscode.workspace.workspaceFolders || [];
-    let func = "workspaceValid";
-    logger.info(lib, func, 'Going hunting for SN Instances! Workspace Folders', wsFolders);
-    if(wsFolders.length === 0){
-        vscode.window.showErrorMessage('No workspace folder loaded. Please open a folder for this workspace. This is where all SN instance folders will be created.');
-        return false;
-    } else if(wsFolders.length > 1){
-		vscode.window.showErrorMessage('More than one workspace folder loaded. Unpredictable results may occur, de-activating extension. Please use just one workspace folder.');
-        return false;
-    }
-    return true;
-}
-
-function anyInstancesLoaded(instanceList:Array<InstanceMaster>, logger:SystemLogHelper, lib:string){
-    if(instanceList.length === 0){
-        vscode.window.showErrorMessage('No instances configured. Please execute Setup New Instance command.');
-        return false;
-    } else {
-        return true;
-    }
 }
