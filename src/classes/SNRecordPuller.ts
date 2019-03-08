@@ -39,11 +39,14 @@ export class SNFilePuller {
             vscode.window.showWarningMessage('Attempted to get configured tables from instance and failed. Aborting sync record. See logs for detail.');
             return;
         }
+
         let tableqpItems:Array<SNQPItem> = []
         tableRecs.forEach((record: snRecord) => {
             tableqpItems.push({ "label": record.label, "detail": record.name + ' - ' + record.sys_scope, value: record });
         });
+
         this.logger.info(this.lib, func, "Built quick pick options based on table records returned.");
+
         let tableSelection = await vscode.window.showQuickPick(tableqpItems, <vscode.QuickPickOptions>{ "placeHolder": "Select table to retrieve record from. Table Not found? Make sure it's in the table_config. Or configure table using command pallete.", ignoreFocusOut: true, matchOnDetail: true, matchOnDescription: true });
         if(!tableSelection){
             vscode.window.showWarningMessage('Sync record aborted. No Table Selected.');
@@ -56,48 +59,55 @@ export class SNFilePuller {
                 this.logger.info(this.lib, func, 'Found table config.', table);
                 tableConfig = table;
             }
+        });
       
-            let fields = ["name"];
+        let fields = ["name"];
             fields.push(tableConfig.display_field);
-            return client.getRecords(tableRec.name, "", fields, true);
+
+        let fileRecs = await client.getRecords(tableRec.name, "", fields, true);
+        if(!fileRecs || fileRecs.length == 0){
+            vscode.window.showWarningMessage('Did not find any records for table. Aborting sync record.');
+            return undefined;
+        }
+
+        let fileqpitems:Array<SNQPItem> = [];
+        fileRecs.forEach((record:snRecord) => {
+            fileqpitems.push({ "label": record.name, "detail": record.name + ' - ' + record.sys_scope, value: record });
+
         });
 
-            }).then((selectedTable): any => {
-                if (selectedTable) {
-                    
-                    let tableRec = selectedTable.value;
-                    this.logger.info(this.lib, func, "Selected table:", tableRec);
-                    this.activeInstanceData.tableConfig.tables.forEach((table) => {
-                        
-                    });
-    
-                } else {
-                    return false;
-                }
+        let selectedFileRec = await vscode.window.showQuickPick(fileqpitems, <vscode.QuickPickOptions>{ "placeHolder": "Record to retrieved.", ignoreFocusOut: true, matchOnDetail: true, matchOnDescription: true });
+        if(!selectedFileRec){
+            vscode.window.showWarningMessage('No record selected. Sync record aborted.');
+            return undefined;        
+        }
+        this.logger.info(this.lib, func, 'Selected file record:', selectedFileRec);
+                
+        
+        let fileRec = selectedFileRec.value;
+        this.logger.info(this.lib, func, 'selected file', fileRec);
+        let fieldsList = [];
+        fieldsList.push(tableConfig.display_field);
+        tableConfig.fields.forEach((field) => {
+            fieldsList.push(field.name);
+        });
+        
+        return client.getRecord(tableConfig.name, fileRec.sys_id, fieldsList);
+        
+
+
             }).then((fileRecs): any => {
                 this.logger.info(this.lib, func, "Got records from table query:", fileRecs.length);
                 if (fileRecs) {
                     let fileqpItems: Array<SNQPItem> = [];
                     fileRecs.forEach((record: snRecord) => {
-                        fileqpItems.push({ "label": record.name, "detail": record.name + ' - ' + record.sys_scope, value: record });
                     });
-                    return vscode.window.showQuickPick(fileqpItems, <vscode.QuickPickOptions>{ "placeHolder": "Record to retrieved.", ignoreFocusOut: true, matchOnDetail: true, matchOnDescription: true });
+                    return 
                 } else {
                     return false;
                 }
             }).then((selectedFileRec): any => {
-                this.logger.info(this.lib, func, 'Selected file record:', selectedFileRec);
-                
-                if (selectedFileRec) {
-                    fileRec = selectedFileRec.value;
-                    this.logger.info(this.lib, func, 'selected file', fileRec);
-                    let fieldsList = [];
-                    fieldsList.push(tableConfig.display_field);
-                    tableConfig.fields.forEach((field) => {
-                        fieldsList.push(field.name);
-                    });
-                    
-                    return client.getRecord(tableConfig.name, fileRec.sys_id, fieldsList);
+               
                 } else {
                     return false;
                 }
