@@ -24,7 +24,7 @@ export function activate(context: vscode.ExtensionContext) {
     }
 
     //load observers for our workspace.
-    wsManager.loadObservers();
+    wsManager.loadObservers(instanceList);
     wsManager.loadWorkspaceInstances(instanceList);
 
     
@@ -109,8 +109,12 @@ export function activate(context: vscode.ExtensionContext) {
 
 	});
     
-	vscode.commands.registerCommand('snich.folder.application.load.new', () =>{
-		//if we can't do this from the application load new call
+	vscode.commands.registerCommand('snich.activeEditor.compare_with_server', () =>{
+        let logger = new SystemLogHelper();
+        let func = 'activeEditor.compare_with_server';
+        let wsManager = new WorkspaceManager(logger);
+        logger.info(lib, func, 'START');
+        wsManager.compareActiveEditor(instanceList).then(() => {logger.info(lib, func, `END`)});
 	});
 
     

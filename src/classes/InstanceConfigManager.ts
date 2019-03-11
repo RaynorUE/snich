@@ -1,10 +1,9 @@
 import { RESTClient } from './RESTClient';
 import { SystemLogHelper } from './LogHelper';
-import { SNApplication, InstanceConnectionData, SNQPItem } from '../myTypes/globals';
-import { WorkspaceManager, SNSyncedFile } from './WorkspaceManager';
+import { SNApplication, InstanceConnectionData, SNQPItem, snTableField } from '../myTypes/globals';
+import { WorkspaceManager} from './WorkspaceManager';
 import * as vscode from 'vscode';
 import { ConfiguredTables } from './SNDefaultTables';
-import { debug } from 'util';
 
 export class InstancesList {
     private instances: Array<InstanceMaster> = [];
@@ -32,7 +31,7 @@ export class InstancesList {
     }
     
     getInstance(name:string){
-        let foundInstance = undefined;
+        let foundInstance = <InstanceMaster>{};
         this.instances.forEach((instance, index) =>{
             if(instance.getName() === name){
                 foundInstance = instance;
@@ -111,8 +110,9 @@ export class InstancesList {
         
         //get just the subdomain part if a full URL was entered.
         let instanceName = enteredInstanceValue.replace(/https:\/\/|http:\/\/|.service-now.com|\//g, '');
+        let existingInstance = this.getInstance(instanceName);
         
-        if(this.getInstance(instanceName)){
+        if(existingInstance.getName){
             vscode.window.showErrorMessage(`${instanceName} is already configured and loaded into the workspace.`);
             this.logger.info(this.lib, func, 'END');
             return undefined;
@@ -183,7 +183,7 @@ export class InstanceMaster {
     
     applications:Array<SNApplication>;
     tableConfig:ConfiguredTables;
-    syncedFiles:Array<SNSyncedFile>;
+    syncedFiles:SyncedFiles = new SyncedFiles();
     private config:InstanceConfig;
     private logger:SystemLogHelper =  new SystemLogHelper();
     private lib = "InstanceMaster";
@@ -194,7 +194,6 @@ export class InstanceMaster {
         }
         this.applications = [];
         this.tableConfig = new ConfiguredTables();
-        this.syncedFiles = [];
         this.config = {
             name: "",
             rootPath: "",
@@ -221,7 +220,10 @@ export class InstanceMaster {
             }
         };
     }
-    
+
+    getSyncedFiles(){
+        return this.syncedFiles;
+    }
     
     setName(name:string){
         let func = 'funcName';
@@ -290,6 +292,82 @@ export class InstanceMaster {
     
     getConfig(){
         return this.config;
+    }
+}
+
+export class SNSyncedFile {
+    fsPath:string = "";
+    table:string = "";
+    sys_id:string = "";
+    content_field:string = "";
+    sys_scope:string = "";
+    sys_package:string = "";
+    
+    constructor(fsPath:string, instanceName:string, snTableField:snTableField, snRecordObj:any){
+        this.fsPath = fsPath + "";
+        this.table = snTableField.table + "";
+        this.sys_id = snRecordObj.sys_id + "";
+        this.content_field = snTableField.name + "";
+        this.sys_scope = snRecordObj['sys_scope.scope'] + "";
+        this.sys_package = snRecordObj.sys_package + "" || "";
+    }
+}
+
+export class SyncedFiles {
+    syncedFiles:Array<SNSyncedFile> = [];
+    private logger:SystemLogHelper = new SystemLogHelper();
+    private lib:string = "SyncedFiles";
+
+    constructor(logger?:SystemLogHelper){
+        if(logger){
+            this.logger = logger;
+        }
+    }
+
+    setFromConfigFile(fileData:SyncedFiles) {
+        this.syncedFiles = fileData.syncedFiles;
+    }
+
+    getFileByPath(fsPath:string){
+        var func = 'getFileByPath';
+        this.logger.info(this.lib, func, `START`, {fsPath:fsPath, synced:this.syncedFiles});
+        let fileConfig = <SNSyncedFile>{};
+        this.syncedFiles.forEach((file, index) =>{
+            if(file.fsPath === fsPath){
+                this.logger.debug(this.lib, func, "Found file:", file);
+                fileConfig = file;
+                index = this.syncedFiles.length;
+            }
+        });
+        this.logger.info(this.lib, func, `END`, {fsConfig:JSON.stringify(fileConfig)});
+        return fileConfig;
+    }
+
+    getFileBySysID(sysID:string, table:string, content_field:string, syncedFile?:SNSyncedFile){
+        let fileConfig = <SNSyncedFile>{};
+        this.syncedFiles.forEach((file, index) =>{
+            if(file.sys_id === sysID && file.table === table && file.content_field === content_field){
+                if(syncedFile){
+                    this.syncedFiles[index] = syncedFile;
+                    fileConfig = file;
+                } else {
+                    fileConfig = file;
+                }
+                index = this.syncedFiles.length;
+            }
+        });
+        return fileConfig;
+    }
+
+    addFile(fsPath:string, instanceName:string, snTableField:snTableField, snRecordObj:any){
+        let syncedFile = new SNSyncedFile(fsPath, instanceName, snTableField, snRecordObj);
+        let existingFile = this.getFileBySysID(snRecordObj.sys_id, snTableField.table, snTableField.name, syncedFile);
+        if(existingFile.sys_id){
+            //updated file happened in getFileBySysID;
+        } else {
+            //did not have synced file yet, so add it to our list.
+            this.syncedFiles.push(syncedFile);
+        }
     }
 }
 

@@ -99,7 +99,8 @@ export class SNFilePuller {
         }
         
         let wsMgr = new WorkspaceManager(this.logger);
-        let fileCreation = wsMgr.createSyncedFile(selectedInstance, tableConfig, recordToSave, false);
+        let fileCreation = wsMgr.createSyncedFile(selectedInstance, tableConfig, recordToSave, true);
+        wsMgr.writeSyncedFiles(selectedInstance);
         if(!fileCreation){
             vscode.window.showWarningMessage('Failed to create file during Sync Record. See logs for details.');
         }
@@ -111,50 +112,14 @@ export class SNFilePuller {
         this.logger.info(this.lib, func, 'START');
         
         let wsManager = new WorkspaceManager();
-        let recordRecursor = async function (instanceData: InstanceMaster, tableConfigIndex: number, appScope: string) {
-            let tables = instanceData.tableConfig.tables;
-            let tablePromises = <Array<Promise<any>>>[];
-            tables.forEach((tableConfig) => {
-                let fields = <Array<string>>[];
-                fields.push(tableConfig.display_field);
-                tableConfig.fields.forEach((field) => {
-                    fields.push(field.name);
-                });
-                let encodedQuery = 'sys_scope.scope=' + appScope;
-                let tableProm = new Promise( async (resolve,reject) => {
-                    let tableRecs = await client.getRecords(tableConfig.name, encodedQuery, fields);
-                    if(!tableRecs || tableRecs.length === 0){
-                        vscode.window.showInformationMessage(`Did not find any records for table: ${tableConfig.label} [${tableConfig.name}]`)
-                        resolve(false);
-                        return false;
-                    }
-
-                    if (tableRecs) {
-                        tableRecs.forEach((record) => {
-                            wsManager.createSyncedFile(instanceData, tableConfig, record, false);
-                        });
-                        vscode.window.showInformationMessage(`Created ${tableRecs.length} files for: ${tableConfig.label} [${tableConfig.name}]` );
-                        resolve(true);
-                        return true;
-                    } else {
-                        resolve(false);
-                        return false;
-                    }
-                });
-                
-                tablePromises.push(tableProm);
-            });
-            
-            let result = await Promise.all(tablePromises);
-            return result;
-        };
         
         let selectedInstance:InstanceMaster = await this.instanceList.selectInstance();
         if(!selectedInstance){
             vscode.window.showWarningMessage('Load all app files aborted. Instances not selected.');
             return undefined;
         }
-        this.logger.info(this.lib, func, 'Selected:', selectedInstance);
+
+        //setup our rest client and grab the available application records.
         client = new RESTClient(selectedInstance.getConfig());
         let appRecords = await client.getRecords('sys_scope', 'scope!=global', ['name', 'scope', 'short_description']);
         
@@ -163,11 +128,11 @@ export class SNFilePuller {
             return undefined;
         }
         
+        //get config and see if we're showing SN Apps or not. 
         let vsConfig = vscode.workspace.getConfiguration();
         let showSNApps = vsConfig.get('snich.showSNApps');
         
         let appItems = <Array<SNQPItem>>[];
-        
         appRecords.forEach((appRec: any) => {
             if (!showSNApps && appRec.scope.indexOf('sn_') === 0) {
                 //don't add if we aren't showing sn app, and app returned was an sn_ app scope. 
@@ -175,6 +140,7 @@ export class SNFilePuller {
                 appItems.push({ label: appRec.name + " (" + appRec.scope + ")", description: appRec.short_description, value: appRec });
             }
         });
+
         if (appItems.length === 0) {
             vscode.window.showWarningMessage('Selected instance: ' + selectedInstance.getConfig().name + ' did not have any applications that were not in the SN Scope. Adjust settings to allow SN apps or create a scopped application to start syncing records.');
             return undefined;
@@ -185,9 +151,37 @@ export class SNFilePuller {
             vscode.window.showWarningMessage('Load all app files aborted. No application selected.');
             return undefined;
         }
+
         let appScope = appSelected.value.scope;
-        await recordRecursor(selectedInstance, 0, appScope)
+        //await recordRecursor(selectedInstance, 0, appScope);
+
+        let tables = selectedInstance.tableConfig.tables;
         
+        tables.forEach(async (tableConfig) => {
+            //build our fields to get from server for this table config.
+            let fields = <Array<string>>[];
+            fields.push(tableConfig.display_field);
+            tableConfig.fields.forEach((field) => {
+                fields.push(field.name);
+            });
+            let encodedQuery = 'sys_scope.scope=' + appScope;
+            let tableRecs = await client.getRecords(tableConfig.name, encodedQuery, fields);
+            if(!tableRecs || tableRecs.length === 0){
+                vscode.window.showInformationMessage(`Did not find any records for table: ${tableConfig.label} [${tableConfig.name}]`);
+                return false;
+            }
+
+            if (tableRecs) {
+                tableRecs.forEach(async (record) => {
+                    await wsManager.createSyncedFile(selectedInstance, tableConfig, record, false);
+                });
+                vscode.window.showInformationMessage(`Created ${tableRecs.length} files for: ${tableConfig.label} [${tableConfig.name}]` );
+                wsManager.writeSyncedFiles(selectedInstance);
+            }
+        });
+
+
+        this.logger.info(this.lib, func, "About to write synced files!:", selectedInstance);
         vscode.window.showInformationMessage('All application files have been loaded. You may need to refresh your workspace explorer.');
         this.logger.info(this.lib, func, 'END');
         return true;

@@ -3,6 +3,11 @@ This application is intended to accelerate and increase the efficiency of workin
 
 ## [Instructional Videos](https://www.youtube.com/playlist?list=PLp0BtdkD38PWd9PTib4OgRaTQ3SIQDE17)
 
+# ==== READ ME FIRST ====
+>Due to changes in the synced files config file, you will need to delete and re-sync your instances. 
+
+Hoping to keep this down to a minimum!!! Should not see too many more changes in files!
+
 # Release Notes
 >See the change log for details.
 
@@ -61,6 +66,15 @@ Executing this command will perform the following:
 1. Ask which instance to load application files from.
 2. Ask which application on that instance to load. 
 3. Starts syncing all files for that application for each configured table.
+4. __Note:__ You may need to refresh your workspace explorer for all the folders/files to show up.
+
+## [Compare with Server (Active Editor)]()
+This command will compare the active text editor with the associated server file. If the files are the same the compare window will not be loaded. 
+
+Executing this command will perform the following:
+1. Attempt to retrieve the server content for the file in the active text editor. 
+2. Compare the text in the text editor (not on disk) with the server content.
+3. If content is different it will launch the vscode file compare window. 
 
 
 # Requirements
@@ -76,8 +90,9 @@ Need to still test if this has to be installed manually or can be included as pa
 Below are known issues and workarounds for them.
 
 - Load All Application Files overwrites all files if i re-load an application.
-    - > __Workaround__: Save your files before reloading. Working on a more long term / permanent fix for this.
+    - >__Workaround__: Save your files before reloading. Working on a more long term / permanent fix for this.
 - Sometimes when loading new files the File Explorer is not refreshed and the file/folder may not be immediately visible. 
-    - > __Workaround__: Expand/Collapse the instance folder or use the refresh button on the grey bar just above your instance name (the workspace folder header).
+    - This seems to be better as of the latest version... keep an eye on it and let us know if it keeps happening.
+    - >__Workaround__: Expand/Collapse the instance folder or use the refresh button on the grey bar just above your instance name (the workspace folder header).
 
 ---------------------------------------------------------------------------------------------------

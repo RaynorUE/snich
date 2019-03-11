@@ -4,7 +4,7 @@
 	"displayName": "S.N.I.C.H",
     "description": "Service Now Integrated Code Helper (SNICH). Connects to any ServiceNow instance and allows remote editing and storage of records from the Application File (and extended) tables.",
 	"icon": "images/icon-shrunk.png",
-	"version": "0.5.51",
+	"version": "0.5.6",
 	"keywords": ["SNICH","snich","ServiceNow","Service-Now","ServiceNow Code Sync", "Service-Now Code Helper", "Service-Now Code Syncer", "Service-Now Code Sync"],
 	"qna": "marketplace",
 	"badges": [
@@ -30,7 +30,8 @@
         "onCommand:snich.setup.test_connection",
         "onCommand:snich.instance.pull_record",
         "onCommand:snich.instance.setup.new_table",
-        "onCommand:snich.application.load.all",
+		"onCommand:snich.application.load.all",
+		"onCommand:snich.activeEditor.compare_with_server",
 		"workspaceContains:**/.vscode/snich_config.json"
 	],
 	"main": "./out/extension.js",
@@ -60,7 +61,12 @@
                 "command":"snich.application.load.all",
                 "title":"Load all Application Files (Pull)",
                 "category": "SNICH"
-            }
+			},
+			{
+				"command": "snich.activeEditor.compare_with_server",
+				"title": "Compare with Server (Active Editor)",
+				"category": "SNICH"
+			}
 		],
 		"configuration": [
 			{
