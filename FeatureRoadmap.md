@@ -16,13 +16,10 @@ This document is intended to indicate and layout the features we are planning to
 
 ### Extension Functionality
 #### Added
-- _Compare With Server_
-    - _Compare the active text editor with the server. If different, ask to view comparison and load up VSCode file comparer_
 
 
 #### Changed
 - Configure New Synced Table
-    - _Set label field for configured tables when configuring new table_
     - _Need to be able to select display field if name is not present. Idea here is to not always be asking for it... since name should be there most of the time_
         - Could do this check just before we "Pick what fields to sync" since we will be getting all the dictionary entries anyway
 
@@ -32,16 +29,9 @@ This document is intended to indicate and layout the features we are planning to
 ### Internal Extension Development
 
 #### Added
-- _Impelement a "CreateFileAsync" option for creatSyncedFile" function. Or wrap in a promise. Biggest thing, is performance when loading a lot of app files at once"_
-- _Moved compare file functionality into it's own function, so it can be called from command pallet and also from onSave call. Unifying this code._
-- _Need to consider converting the "InstanceList" into it's own class like "InstanceManager" or something... so that we can add helper mthoerds
-    - Like being able to "Set as last selected", etc and managing that internally. 
 
 #### Changed
-- updated onWillSave observer so it calles the new compare function.
-- Updated the "Show last selected instance at top of list, so that code is a bit cleaner and calling a singular function
-    - Goal here is to start consolidating some of the "Show Quick Picks" that i'm doing... so when i update in one place it updates everywhere
-    - Might add a method on InstanceMaster 
+
 #### Removed
 
 
