@@ -1,12 +1,12 @@
 import * as fs from "fs";
 import * as vscode from 'vscode';
 import { SystemLogHelper } from './LogHelper';
-import {InstanceMaster, InstanceConfig} from './InstanceConfigManager';
-import { snTableConfig, snTableField } from "../myTypes/globals";
+import {InstanceMaster, InstanceConfig, InstancesList, SyncedFiles} from './InstanceConfigManager';
+import { snTableConfig } from "../myTypes/globals";
 import { RESTClient } from "./RESTClient";
-import { InstanceTableConfig } from "./SNDefaultTables";
 import * as path from 'path';
 import * as crypto from 'crypto';
+import { ConfiguredTables } from "./SNDefaultTables";
 
 /**
 * This class is intended to manage the configuration, files, and folders within the workspace. 
@@ -34,6 +34,20 @@ export class WorkspaceManager{
         
         this.logger.info(this.lib, func, 'END');
     }
+
+    workspaceValid(logger:SystemLogHelper, lib:string) {
+        let wsFolders = vscode.workspace.workspaceFolders || [];
+        let func = "workspaceValid";
+        logger.info(lib, func, 'Going hunting for SN Instances! Workspace Folders', wsFolders);
+        if(wsFolders.length === 0){
+            vscode.window.showErrorMessage('No workspace folder loaded. Please open a folder for this workspace. This is where all SN instance folders will be created.');
+            return false;
+        } else if(wsFolders.length > 1){
+            vscode.window.showErrorMessage('More than one workspace folder loaded. Unpredictable results may occur, de-activating extension. Please use just one workspace folder.');
+            return false;
+        }
+        return true;
+    }
     
     /**
     * Requires an instanceData object and will create the files/folders based on that.
@@ -46,12 +60,13 @@ export class WorkspaceManager{
         if(vscode.workspace.workspaceFolders){
             let wsFolder = vscode.workspace.workspaceFolders[0];
             
+            let config = instance.getConfig();
             
-            let rootPath = path.resolve(wsFolder.uri.fsPath, instance.config.name);
-            instance.config.rootPath = rootPath;
+            let rootPath = path.resolve(wsFolder.uri.fsPath, config.name);
+            config.rootPath = rootPath;
 
             let configPath = path.resolve(rootPath, '.vscode');
-            instance.config.configPath = configPath;
+            config.configPath = configPath;
 
             this.logger.debug(this.lib, func, 'Resolved path is: ', configPath);
             if(!fs.existsSync(rootPath)){
@@ -62,8 +77,7 @@ export class WorkspaceManager{
             }
             this.logger.info(this.lib, func, 'Folder created. Converting Instance Data to JSON');
             
-            this.writeInstanceConfig(instance);
-            this.writeTableConfig(instance);
+            this.writeAll(instance);
             
         }
         this.logger.info(this.lib, func, 'END', {instance:instance});
@@ -75,49 +89,62 @@ export class WorkspaceManager{
     * Used to load all the instances based on the folder configuration of the workspace. 
     * @param wsFolders 
     */
-    loadWorkspaceInstances(wsFolders:Array<vscode.WorkspaceFolder>){
+    loadWorkspaceInstances(instanceList:InstancesList){
         let func = "loadWorkspaceInstances";
-        let instanceList:Array<InstanceMaster> = [];
+        let wsFolders = vscode.workspace.workspaceFolders || [];
         //@todo need to also watch the folder path, to see if it gets delete that we remove from the instanceList
         this.logger.info(this.lib, func, "Testing Statically First folder");
         let rootPath = wsFolders[0].uri.fsPath;
-        var subFolders = fs.readdirSync(rootPath);
+        let subFolders = fs.readdirSync(rootPath);
         subFolders.forEach((folder) =>{
-            var snJSONPath = path.resolve(rootPath, folder, '.vscode', this.configFileName);
+            let snJSONPath = path.resolve(rootPath, folder, '.vscode', this.configFileName);
             this.logger.info(this.lib, func, "Seeing if JSON file exists at:", snJSONPath);
             if(fs.existsSync(snJSONPath)){
                 //setup InstanceMaster class.
                 let instance = new InstanceMaster();
                 this.logger.debug(this.lib, func, "Found!");
-                instance.config = <InstanceConfig>this.loadJSONFromFile(snJSONPath);
+                instance.setConfig(<InstanceConfig>this.loadJSONFromFile(snJSONPath));
                 
                 //load table config from stored value.
                 
-                var tableConfigPath = path.resolve(rootPath, folder, '.vscode', this.tableConfigFileName);
+                let tableConfigPath = path.resolve(rootPath, folder, '.vscode', this.tableConfigFileName);
                 this.logger.info(this.lib, func, "Checking for table config at path:", tableConfigPath);
                 if(fs.existsSync(tableConfigPath)){
-                    let tableConfig = new InstanceTableConfig(<InstanceTableConfig>this.loadJSONFromFile(tableConfigPath));
-                    instance.tableConfig = tableConfig;
+                    instance.tableConfig.setFromConfigFile(<ConfiguredTables>this.loadJSONFromFile(tableConfigPath));
                 }
-                instanceList.push(instance);
+
+                let syncedFilePath = path.resolve(rootPath, folder, '.vscode', this.syncedFilesName);
+
+                //@todo - This temporary while we wait for the newest version to settle where i changed the structure / pathing of this file. 
+                let syncedFileData = <SyncedFiles>this.loadJSONFromFile(syncedFilePath);
+                if(syncedFileData.syncedFiles){
+                    instance.syncedFiles.setFromConfigFile(syncedFileData);
+                } else {
+                    vscode.window.showErrorMessage(`Unable to load instance ${instance.getName()} due to SyncedFiles config file being out of date. Please delete the instance folder and run the setup command to set it back up.`);
+                    return; 
+                }
+                
+                instanceList.addInstance(instance);
             }
         });
         this.logger.info(this.lib, func, "Loaded instanceList:", instanceList);
         this.logger.info(this.lib, func, "END");
-        return instanceList;
     }
     
     writeAll(instance:InstanceMaster){
-        
+        this.writeInstanceConfig(instance);
+        this.writeTableConfig(instance);
+        this.writeSyncedFiles(instance);
     }
     
     writeInstanceConfig(instance:InstanceMaster){
         let func = 'writeInstanceConfig';
         this.logger.info(this.lib, func, "START");
         
-        let configJSONPath = path.resolve(instance.config.configPath, this.configFileName);
-        this.writeJSON(instance.config, configJSONPath);
-        this.logger.debug(this.lib, func, 'Saved instance config:', instance.config);
+        let config = instance.getConfig();
+        let configJSONPath = path.resolve(config.configPath, this.configFileName);
+        this.writeJSON(config, configJSONPath);
+        this.logger.debug(this.lib, func, 'Saved instance config:', config);
         
         this.logger.info(this.lib, func, 'END');
     }
@@ -126,51 +153,46 @@ export class WorkspaceManager{
         let func = 'writeTableConfig';
         this.logger.info(this.lib, func, "START");
         
-        let filePath = path.resolve(instance.config.configPath, this.tableConfigFileName);
+        let config = instance.getConfig();
+        let filePath = path.resolve(config.configPath, this.tableConfigFileName);
         this.writeJSON(instance.tableConfig, filePath);
         this.logger.debug(this.lib, func, "Saved table config.", instance.tableConfig);
         
         this.logger.info(this.lib, func, 'END');
     }
     
-    writeSyncedFiles(instance:InstanceMaster, syncedFiles:Array<SNSyncedFile>){
+    writeSyncedFiles(instance:InstanceMaster){
         let func = 'writesyncedFiles';
         this.logger.info(this.lib, func, 'START', );
-        let filePath = path.resolve(instance.config.configPath, this.syncedFilesName) ;
-        this.writeJSON(syncedFiles, filePath);
+
+        let config = instance.getConfig();
+        let filePath = path.resolve(config.configPath, this.syncedFilesName);
+        this.writeJSON(instance.getSyncedFiles(), filePath);
         this.logger.info(this.lib, func, 'END');
     }
     
-    loadSyncedFiles(instance:InstanceMaster, appScope:string){
-        let func = 'loadSyncedFiles';
-        this.logger.info(this.lib, func, 'START', );
-        
-        let syncedFilesPath = path.resolve(instance.config.configPath, this.syncedFilesName);
-        this.logger.info(this.lib, func, `Checking for synced Files at path: ${syncedFilesPath}`);
-        let syncedFiles:Array<SNSyncedFile> = [];
-        
-        if(fs.existsSync(syncedFilesPath)){
-            this.logger.info(this.lib, func, 'Found! Loading...', syncedFilesPath);
-            syncedFiles = <Array<SNSyncedFile>>this.loadJSONFromFile(syncedFilesPath);
-        }
-        
-        this.logger.info(this.lib, func, 'END');   
-        return syncedFiles;
-        
-    }
-    
-    createSyncedFile(instance:InstanceMaster, table:snTableConfig, record:any){
+    /**
+     * 
+     * @param instance - Instance to create the file for
+     * @param table - Table the record came from
+     * @param record - The record details to create. 
+     * @param openFile  - Open file or not. Default: True
+     */
+    async createSyncedFile(instance:InstanceMaster, table:snTableConfig, record:any, openFile?:boolean){
         let func = 'createSyncedFile';
         this.logger.info(this.lib, func, 'START', {instanceMaster:instance, tableConfig:table, snRecord:record});
         
-        let openFile = true;
+        if(openFile === undefined){
+            openFile = true;
+        }
+        
         let appName = record['sys_scope.name'] + ' (' + record['sys_scope.scope'] + ')';
         let tableName = table.name;
         let multiFile = false;
-        
-        let syncedFiles = this.loadSyncedFiles(instance, appName);
-        
-        let appPath = path.resolve(instance.config.rootPath, appName);
+        let config = instance.getConfig();
+        let syncedFiles = instance.getSyncedFiles();
+
+        let appPath = path.resolve(config.rootPath, appName);
         let rootPath = appPath.toString();
         
         if(!fs.existsSync(appPath)){
@@ -198,23 +220,25 @@ export class WorkspaceManager{
         }
         
         this.logger.info(this.lib, func, `Create file(s) in ${rootPath} based on table config:`, table);
+        let settings = vscode.workspace.getConfiguration();
+        let createEmptyFiles = settings.get('snich.createEmptyFiles') || "Yes";
         
-        table.fields.forEach((field) =>{
-            this.logger.debug(this.lib, func, 'Processing field:', field);
+        table.fields.forEach(async (field) =>{
+            //this.logger.debug(this.lib, func, 'Processing field:', field);
             let fileName = record[table.display_field];
             if(multiFile){
                 fileName = field.label;
             }
+
             let file = fileName + '.' + field.extention;
             let content = record[field.name];
-            let settings = vscode.workspace.getConfiguration();
-            var createEmptyFiles = settings.get('snich.createEmptyFiles') || "Yes";
+
             
             if((createEmptyFiles === 'Yes' && !content) || content){
                 let fullPath = path.resolve(rootPath, file);
                 this.logger.debug(this.lib, func, `Creating file at ${fullPath}`);
                 fs.writeFileSync(fullPath, content,'utf8');
-                syncedFiles.push(new SNSyncedFile(fullPath, instance.config.name, field, record));
+                syncedFiles.addFile(fullPath + "", instance.getConfig().name + "", field, record);
                 if(openFile){
                     this.logger.debug(this.lib, func, `Opening file found at: ${fullPath}`);
                     vscode.window.showTextDocument(vscode.Uri.file(fullPath));
@@ -223,8 +247,6 @@ export class WorkspaceManager{
                 vscode.window.showWarningMessage(`Attempted to create file (${fileName}) and content was empty. This could be due to protection policy. Configure extension settings to change this behavior.` );
             }
         });
-        
-        this.writeSyncedFiles(instance, syncedFiles);
         
         this.logger.info(this.lib, func, 'END');
         return true;
@@ -247,202 +269,218 @@ export class WorkspaceManager{
         let jsonData = JSON.stringify(objToJSON, null, 4);
         fs.writeFileSync(filePath, jsonData,'utf8');
     }
+
+    compareActiveEditor(instanceList:InstancesList){
+        let func = 'compareActiveEditor';
+        this.logger.info(this.lib, func, `START`);
+
+        let activeEditor = vscode.window.activeTextEditor;
+        if(!activeEditor){
+            vscode.window.showWarningMessage('No actived text editor to compare against server file.');
+            return new Promise((resolve,reject) => {
+                resolve();
+            }).then(()=>{});
+        }
+        
+        return this.compareWithServer(activeEditor.document.uri.fsPath, activeEditor.document.getText(), instanceList, true).then(() =>{
+            this.logger.info(this.lib, func, `END`);
+        });
+
+    }
     
     
-    loadObservers(){
+    loadObservers(instanceList:InstancesList){
         let func = 'loadObservers';
         this.logger.info(this.lib, func, 'START');
-        this.watchAppFileSave();
+        this.watchAppFileSave(instanceList);
     }
 
-    watchAppFileSave(){
+    watchAppFileSave(instanceList:InstancesList){
         let func = "watchAppFileSave";
         this.logger.info(this.lib, func, 'START');
         
         vscode.workspace.onWillSaveTextDocument((willSaveEvent) =>{
             let func = "WillSaveTextDocument";
-            this.logger.info(this.lib, func, 'Will save event started. About to step into waitUntil. WillSaveEvent currently:', willSaveEvent);
+            this.logger.info(this.lib, func, 'Will save event started. About to step into wawitUntil. WillSaveEvent currently:', willSaveEvent);
             let document = willSaveEvent.document;
             
-            willSaveEvent.waitUntil( new Promise((resolve, reject) =>{
-                let func = 'waitUntilPromise';
-                this.logger.info(this.lib, func, 'START', document);
-                
-                let reservedFiles = [this.configFileName, this.syncedFilesName, this.tableConfigFileName];
-                let isReservedFile = false;
-                reservedFiles.forEach((fileName) => {
-                    if(document.fileName.indexOf(fileName) >-1){
-                        isReservedFile = true;
-                    }
-                });
-                
-                if(isReservedFile){
-                    this.logger.info(this.lib, func, 'File saved was not one to be transmitted', document);
-                    this.logger.info(this.lib, func, 'END');
-                    resolve();
-                    return;
-                }
-                //@todo --- Need to figure out how to find the .vscode folder... i think if we take the file path down to the WSfolder, then get the next
-                //position will give us this instance, and then the .vscode from there... I think we will be able to use some regex to get this. 
-                
-                let wsFolder = <vscode.WorkspaceFolder>{};
-                if(vscode.workspace.workspaceFolders){
-                    wsFolder = vscode.workspace.workspaceFolders[0];
-                }
-                //escace path components...
-                let replaceWithPath = "/";
-                if(path.sep === "\\"){
-                    replaceWithPath = "\\\\";
-                }
-
-                let regexPreparedPath = wsFolder.uri.fsPath.replace(new RegExp("\\" + path.sep, 'g'), replaceWithPath) + replaceWithPath + "(\\w*)" + replaceWithPath + "(\\w*)"; 
-                this.logger.debug(this.lib, func, 'RegexPreparedPath', regexPreparedPath);
-                
-                let InstanceAppComponents = new RegExp(regexPreparedPath);
-                this.logger.debug(this.lib, func, 'InstanceAppComponents', InstanceAppComponents.toString());
-                
-                let matches = document.fileName.match(InstanceAppComponents);
-                this.logger.debug(this.lib, func, 'Matches:', matches);
-                
-                if(!matches || matches.length === 0 || !matches[1]){
-                    this.logger.error(this.lib, func, `Couldn't determine instance on save. Matched values:`, matches);
-                    vscode.window.showErrorMessage('Unable to save file, could not determine instance.');
-                    resolve();
-                    return;
-                }
-
-                let instanceName = matches[1]; //2nd grouping will be instance name;
-                let syncedFilesPath = path.resolve(wsFolder.uri.fsPath, instanceName, '.vscode', this.syncedFilesName);
-                let configFilePath = path.resolve(wsFolder.uri.fsPath, instanceName, '.vscode', this.configFileName);
-
-                let syncedFiles = <Array<SNSyncedFile>>this.loadJSONFromFile(syncedFilesPath);
-                let instanceConfig = <InstanceConfig>this.loadJSONFromFile(configFilePath);
-                
-                this.logger.info(this.lib, func, 'Loaded synced files and instance config.', {instanceConfig:instanceConfig, syncedFiles:syncedFiles});
-               
-                if(syncedFiles.length > 0){
-                    let filePath = document.uri.fsPath;
-                    this.logger.info(this.lib, func, 'We have synced files!');
-                    let fileConfig = <SNSyncedFile>{};
-                    syncedFiles.forEach((syncedFile, index) => {
-                        this.logger.debug(this.lib, func, 'Seeing if sycned file is same as path of saved file', {synced:syncedFile, file:filePath} );
-                        if(syncedFile.fsPath === filePath){
-                            this.logger.info(this.lib, func, 'Found synced file that is a match.', syncedFile);
-                            fileConfig = syncedFile;
-                            index = syncedFiles.length; //should break loop?
-                        }
-                    });
-                    
-                    if(fileConfig.fsPath){
-                        //read what we have currently on disk so we can compare what's on server to see if server has a newer version.
-                        let localContent = fs.readFileSync(fileConfig.fsPath).toString();
-                        let localContentHash = crypto.createHash('md5').update(localContent).digest("hex");
-                        let serverContent = "";
-                        let serverContentHash = "";
-                        let newContent = document.getText();
-                        
-                        let client = new RESTClient(instanceConfig);
-                        let contentField = fileConfig.content_field;
-                        let action = 'Overwrite'; //default to overwriting on server.
-                        return client.getRecord(fileConfig.table, fileConfig.sys_id, [contentField]).then((serverRecord:any) => {
-                            serverContent = serverRecord[contentField];
-                            serverContentHash = crypto.createHash('md5').update(serverContent).digest("hex");
-                            this.logger.info(this.lib, func, 'Comparing Server to Local MD5 Hash:', {serverHash: serverContentHash, localHash: localContentHash});
-                            
-                            if(localContentHash !== serverContentHash){
-                                this.logger.warn(this.lib, func, "Server has is different than current copy on disk.");
-                                return vscode.window.showWarningMessage('Server version is newer. If saving from compare window, choose overwrite to update.', 'Overwrite', 'Compare', 'Cancel').then((choice) =>{
-                                    this.logger.info(this.lib, func, 'Choice:', choice);
-                                    action = choice || "Cancel"; //default to cancel in the event they don't respond.
-                                    if(action === "Overwrite"){
-                                        return true;
-                                    } else {
-                                        return false;
-                                    }
-                                });
-                            } else {
-                                action = "Overwrite";
-                                return true;
-                            }
-                            
-                        }).then((okayToCommit) =>{
-                            let regEx = new RegExp(path.sep.replace('\\', '\\\\') + '([a-zA-Z\.]*)$')
-                            let fileNameMatch = fileConfig.fsPath.match(regEx);
-                            
-                            let fileName = 'server_version.txt';
-                            if(fileNameMatch && fileNameMatch.length > 1){
-                                fileName = 'server_version_' + fileNameMatch[1];
-                            }
-                            let wsFolder = vscode.workspace.workspaceFolders ? vscode.workspace.workspaceFolders[0].uri.fsPath : "";
-                            let wsFolderCode = path.resolve(wsFolder, instanceName, ".vscode");
-                            let wsFolderTemp = path.resolve(wsFolderCode, 'compare_files_temp');
-                            let serverTempFilePath = path.resolve(wsFolderTemp, fileName);
-
-                            if(!okayToCommit){
-                                //not okay to commit.
-                                if(action === "Compare"){
-                                    this.logger.info(this.lib, func, 'Not Okay to commit and action is Compare');
-                                    //launch files for comparison. 
-
-                                    if(!fs.existsSync(wsFolderCode)){
-                                        fs.mkdirSync(wsFolderCode);
-                                    }
-                                    if(!fs.existsSync(wsFolderTemp)){
-                                        fs.mkdirSync(wsFolderTemp);
-                                    }
-
-                                    
-                                    fs.writeFileSync(serverTempFilePath, serverContent);
-                                    return vscode.commands.executeCommand('vscode.diff', vscode.Uri.file(serverTempFilePath),vscode.Uri.file(fileConfig.fsPath), "Server File <--> Local File").then(() => {
-                                        this.logger.info(this.lib, func, 'END');
-                                        resolve();
-                                    });
-                                } else {
-                                    resolve(); //just end.
-                                    this.logger.info(this.lib, func, 'END');
-                                    return;
-                                }
-                            }
-                            
-                            if(okayToCommit){
-                                let body:any = {};
-                                body[contentField] = newContent;
-                                this.logger.info(this.lib, func, 'Posting record back to SN!');
-                                if(fs.existsSync(serverTempFilePath)){
-                                    fs.unlinkSync(serverTempFilePath);
-                                }
-                                return client.updateRecord(fileConfig.table, fileConfig.sys_id, body).then((response:any) =>{
-                                    this.logger.info(this.lib, func, 'Response from file save:', response);
-                                    resolve();
-                                    this.logger.info(this.lib, func, 'END');
-                                });
-                            }
-                        });
-                    }     
-                }
-            }));
-            //end of Wait Until
-            this.logger.info(this.lib, func, 'END');
-        });
+            willSaveEvent.waitUntil(this.compareWithServer(document.uri.fsPath, document.getText(), instanceList));
 
         this.logger.info(this.lib, func, 'END');
+        });
     }
-}
 
-export class SNSyncedFile {
-    fsPath:string = "";
-    table:string = "";
-    sys_id:string = "";
-    content_field:string = "";
-    sys_scope:string = "";
-    sys_package:string = "";
-    
-    constructor(fsPath:string, instanceName:string, snTableField:snTableField, snRecordObj:any){
-        this.fsPath = fsPath;
-        this.table = snTableField.table;
-        this.sys_id = snRecordObj.sys_id;
-        this.content_field = snTableField.name;
-        this.sys_scope = snRecordObj['sys_scope.scope'];
-        this.sys_package = snRecordObj.sys_package || "";
+    compareWithServer(fsPath:string, newContent:string, instanceList:InstancesList, onDemand?:boolean){
+        return new Promise(async (resolve, reject) =>{
+            let func = 'waitUntilPromise';
+            this.logger.info(this.lib, func, 'START', {fsPath:fsPath, newContent:newContent});
+            
+            let visibleEditors = vscode.window.visibleTextEditors || [];
+            let isCompareWindow = false;
+            if(visibleEditors && visibleEditors.length >1){
+                //we are in the compare window... in which we'll want to just save this document and overwrite the server.
+                isCompareWindow = true;
+
+            }
+            
+            
+            let reservedFiles = [this.configFileName, this.syncedFilesName, this.tableConfigFileName];
+            let isReservedFile = false;
+            reservedFiles.forEach((fileName) => {
+                if(fsPath.indexOf(fileName) >-1){
+                    isReservedFile = true;
+                }
+            });
+            
+            if(isReservedFile){
+                this.logger.info(this.lib, func, 'File saved was not one to be transmitted', fsPath);
+                this.logger.info(this.lib, func, 'END');
+                resolve();
+                return;
+            }
+            //@todo --- Need to figure out how to find the .vscode folder... i think if we take the file path down to the WSfolder, then get the next
+            //position will give us this instance, and then the .vscode from there... I think we will be able to use some regex to get this. 
+            
+            let wsFolder = <vscode.WorkspaceFolder>{};
+            if(vscode.workspace.workspaceFolders){
+                wsFolder = vscode.workspace.workspaceFolders[0];
+            }
+            
+            //escace path components...
+            let replaceWithPath = "/";
+            if(path.sep === "\\"){
+                replaceWithPath = "\\\\";
+            }
+
+            let regexPreparedPath = wsFolder.uri.fsPath.replace(new RegExp("\\" + path.sep, 'g'), replaceWithPath) + replaceWithPath + "(\\w*)" + replaceWithPath + "(\\w*)"; 
+            this.logger.debug(this.lib, func, 'RegexPreparedPath', regexPreparedPath);
+            
+            let InstanceAppComponents = new RegExp(regexPreparedPath);
+            this.logger.debug(this.lib, func, 'InstanceAppComponents', InstanceAppComponents.toString());
+            
+            let matches = fsPath.match(InstanceAppComponents);
+            this.logger.debug(this.lib, func, 'Matches:', matches);
+            
+            if(!matches || matches.length === 0 || !matches[1]){
+                this.logger.error(this.lib, func, `Couldn't determine instance on save. Matched values:`, matches);
+                //@todo need to determine if we're a file in our SNICH workspace... This is due to to the extensino being activated in all workspaces when activated... 
+                //vscode.window.showErrorMessage('Unable to save file, could not determine instance.');
+                resolve();
+                return;
+            }
+
+            let instanceName = matches[1]; //2nd grouping will be instance name;
+            let instance = instanceList.getInstance(instanceName);
+            let syncedFiles = instance.getSyncedFiles();
+            if(!instance.getName){
+                this.logger.error(this.lib, func, `Attempted to get instance by name [${instanceName}] and did not find it in our list of configured instances.`);
+                resolve();
+                return;
+            }
+            
+            
+            this.logger.info(this.lib, func, 'Loaded synced files and instance config.', syncedFiles);
+            this.logger.info(this.lib, func, 'Loaded instance config.', instance.getConfig());
+           
+            if(syncedFiles.syncedFiles.length > 0){
+                let filePath = fsPath;
+                this.logger.info(this.lib, func, 'We have synced files!');
+                let fileConfig = syncedFiles.getFileByPath(filePath);
+                
+                if(fileConfig.fsPath){
+                    //read what we have currently on disk so we can compare what's on server to see if server has a newer version.
+                    let localContent = fs.readFileSync(fileConfig.fsPath).toString();
+                    let localContentHash = crypto.createHash('md5').update(localContent).digest("hex");
+                    let newContentHash = crypto.createHash('md5').update(newContent).digest("hex");
+                    let serverContent = "";
+                    let serverContentHash = "";
+                    
+                    let client = new RESTClient(instance.getConfig());
+                    let contentField = fileConfig.content_field;
+                    let action = 'Overwrite (Server)'; //default to overwriting on server. This way if no differences we save to server.
+                    let serverRecord:any = {};
+                    if(!isCompareWindow){
+                        serverRecord = await  client.getRecord(fileConfig.table, fileConfig.sys_id, [contentField]);
+                    }
+                    
+                    if(!serverRecord && !isCompareWindow){
+                        vscode.window.showWarningMessage(`Saved file [${fileConfig.fsPath}] does not seem to exist on the server any longer. sys_id:${fileConfig.sys_id} -- table:${fileConfig.table}`);
+                        resolve();
+                        return;
+                    }
+
+                    serverContent = serverRecord[contentField] || "";
+                    serverContentHash = crypto.createHash('md5').update(serverContent).digest("hex");
+                    this.logger.info(this.lib, func, 'Comparing Server to Local MD5 Hash:', {serverHash: serverContentHash, localHash: localContentHash});
+                    
+                    if(localContentHash !== serverContentHash && !isCompareWindow && !onDemand){
+                        this.logger.warn(this.lib, func, "Server has is different than current copy on disk.");
+                        action = await vscode.window.showWarningMessage('Server version is newer. If saving from compare window, choose overwrite to update.', 'Overwrite (Local)', 'Overwrite (Server)', 'Compare', 'Cancel') || "";
+                        if(!action){
+                            vscode.window.showWarningMessage(`No choice was made to action file ${fileConfig.fsPath}. Was saved to disk and not to server.`);
+                            resolve();
+                            return;
+                        }
+                        
+                        if(action === "Cancel"){
+                            vscode.window.showInformationMessage('File was still saved to disk.');
+                            resolve();
+                            return;
+                        }
+
+                    }
+
+                    let regEx = new RegExp(path.sep.replace('\\', '\\\\') + '([a-zA-Z\.]*)$');
+                    let fileNameMatch = fileConfig.fsPath.match(regEx);
+                    
+                    let fileName = 'server_version.txt';
+                    if(fileNameMatch && fileNameMatch.length > 1){
+                        fileName = 'server_version_' + fileNameMatch[1];
+                    }
+
+                    let wsFolder = vscode.workspace.workspaceFolders ? vscode.workspace.workspaceFolders[0].uri.fsPath : "";
+                    let wsFolderCode = path.resolve(wsFolder, instanceName, ".vscode");
+                    let wsFolderTemp = path.resolve(wsFolderCode, 'compare_files_temp');
+                    let serverTempFilePath = path.resolve(wsFolderTemp, fileName);
+
+                    if(action === "Compare" || onDemand){
+                        this.logger.info(this.lib, func, 'User chose to compare files.');
+                        //launch files for comparison. 
+                        if(onDemand && newContentHash === serverContentHash){
+                             vscode.window.showInformationMessage('File is same on server.');
+                        } else {
+                            if(!fs.existsSync(wsFolderCode)){
+                                fs.mkdirSync(wsFolderCode);
+                            }
+                            if(!fs.existsSync(wsFolderTemp)){
+                                fs.mkdirSync(wsFolderTemp);
+                            }
+                        fs.writeFileSync(serverTempFilePath, serverContent);
+                        if(onDemand){vscode.window.showWarningMessage('Content was different on server. Loading compare window!');}
+                        await vscode.commands.executeCommand('vscode.diff', vscode.Uri.file(serverTempFilePath),vscode.Uri.file(fileConfig.fsPath), "Server File <--> Local File");
+                    }
+
+                    } else if(action === "Overwrite (Local)"){
+                        this.logger.info(this.lib, func, "Overwriting local data!");
+                        fs.writeFileSync(fileConfig.fsPath, serverContent);
+                    } else if(action === "Overwrite (Server)" || isCompareWindow){
+                        let body:any = {};
+                        body[contentField] = newContent;
+                        this.logger.info(this.lib, func, 'Posting record back to SN!');
+                        if(fs.existsSync(serverTempFilePath)){
+                            fs.unlinkSync(serverTempFilePath);
+                        }
+                        let updateResult = await client.updateRecord(fileConfig.table, fileConfig.sys_id, body);
+                        this.logger.info(this.lib, func, 'Response from file save:', updateResult);
+                    }
+                    resolve();
+                    this.logger.info(this.lib, func, 'END');
+                    return;
+                }
+            } else {
+                this.logger.info(this.lib, func, "Did not find any synced files");
+            }
+        });
     }
+
 }

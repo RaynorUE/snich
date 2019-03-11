@@ -1,6 +1,6 @@
 import { Uri, QuickPickItem } from "vscode";
-import { InstanceMaster } from "../../classes/InstanceConfigManager";
-import { SNSyncedFile } from "../../classes/WorkspaceManager";
+import { InstanceMaster, SNSyncedFile } from "../../classes/InstanceConfigManager";
+
 
 
 //===============================================
