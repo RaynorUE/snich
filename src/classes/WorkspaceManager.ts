@@ -288,12 +288,12 @@ export class WorkspaceManager{
         let func = "watchAppFileSave";
         this.logger.info(this.lib, func, 'START');
         
-        vscode.workspace.onWillSaveTextDocument((willSaveEvent) =>{
+        vscode.workspace.onWillSaveTextDocument(async (willSaveEvent) =>{
             let func = "WillSaveTextDocument";
             this.logger.info(this.lib, func, 'Will save event started. About to step into waitUntil. WillSaveEvent currently:', willSaveEvent);
             let document = willSaveEvent.document;
             
-            willSaveEvent.waitUntil( new Promise((resolve, reject) =>{
+            willSaveEvent.waitUntil( new Promise(async (resolve, reject) =>{
                 let func = 'waitUntilPromise';
                 this.logger.info(this.lib, func, 'START', document);
                 
@@ -373,7 +373,7 @@ export class WorkspaceManager{
                         
                         let client = new RESTClient(instanceConfig);
                         let contentField = fileConfig.content_field;
-                        let action = 'Overwrite'; //default to overwriting on server.
+                        let action = 'Overwrite (Server)'; //default to overwriting on server. This way if no differences we save to server.
                         return client.getRecord(fileConfig.table, fileConfig.sys_id, [contentField]).then((serverRecord:any) => {
                             serverContent = serverRecord[contentField];
                             serverContentHash = crypto.createHash('md5').update(serverContent).digest("hex");
@@ -381,10 +381,10 @@ export class WorkspaceManager{
                             
                             if(localContentHash !== serverContentHash){
                                 this.logger.warn(this.lib, func, "Server has is different than current copy on disk.");
-                                return vscode.window.showWarningMessage('Server version is newer. If saving from compare window, choose overwrite to update.', 'Overwrite', 'Compare', 'Cancel').then((choice) =>{
+                                return vscode.window.showWarningMessage('Server version is newer. If saving from compare window, choose overwrite to update.', 'Overwrite (Local)', 'Overwrite (Server)', 'Compare', 'Cancel',).then((choice) =>{
                                     this.logger.info(this.lib, func, 'Choice:', choice);
                                     action = choice || "Cancel"; //default to cancel in the event they don't respond.
-                                    if(action === "Overwrite"){
+                                    if(action === "Overwrite (Server)"){
                                         return true;
                                     } else {
                                         return false;
