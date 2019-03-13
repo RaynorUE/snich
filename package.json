@@ -2,10 +2,19 @@
 	"name": "snich",
 	"publisher": "integrateNate",
 	"displayName": "S.N.I.C.H",
-    "description": "Service Now Integrated Code Helper (SNICH). Connects to any ServiceNow instance and allows remote editing and storage of records from the Application File (and extended) tables.",
+	"description": "Service Now Integrated Code Helper (SNICH). Connects to any ServiceNow instance and allows remote editing and storage of records from the Application File (and extended) tables.",
 	"icon": "images/icon-shrunk.png",
-	"version": "0.5.6",
-	"keywords": ["SNICH","snich","ServiceNow","Service-Now","ServiceNow Code Sync", "Service-Now Code Helper", "Service-Now Code Syncer", "Service-Now Code Sync"],
+	"version": "0.5.7",
+	"keywords": [
+		"SNICH",
+		"snich",
+		"ServiceNow",
+		"Service-Now",
+		"ServiceNow Code Sync",
+		"Service-Now Code Helper",
+		"Service-Now Code Syncer",
+		"Service-Now Code Sync"
+	],
 	"qna": "marketplace",
 	"badges": [
 		{
@@ -26,15 +35,15 @@
 		"SCM Providers"
 	],
 	"activationEvents": [
-        "onCommand:snich.setup.new_instance",
-        "onCommand:snich.setup.test_connection",
-        "onCommand:snich.instance.pull_record",
-        "onCommand:snich.instance.setup.new_table",
+		"onCommand:snich.setup.new_instance",
+		"onCommand:snich.setup.test_connection",
+		"onCommand:snich.instance.pull_record",
+		"onCommand:snich.instance.setup.new_table",
 		"onCommand:snich.application.load.all",
 		"onCommand:snich.activeEditor.compare_with_server",
 		"workspaceContains:**/.vscode/snich_config.json"
 	],
-	"main": "./out/extension.js",
+	"main": "./dist/extension.js",
 	"contributes": {
 		"commands": [
 			{
@@ -56,11 +65,11 @@
 				"command": "snich.instance.setup.new_table",
 				"title": "Configure Table (New and Update)",
 				"category": "SNICH"
-            },
-            {
-                "command":"snich.application.load.all",
-                "title":"Load all Application Files (Pull)",
-                "category": "SNICH"
+			},
+			{
+				"command": "snich.application.load.all",
+				"title": "Load all Application Files (Pull)",
+				"category": "SNICH"
 			},
 			{
 				"command": "snich.activeEditor.compare_with_server",
@@ -109,30 +118,32 @@
 							"No: I like warning messages instead."
 						],
 						"default": "Yes"
-                    },
-                    "snich.showSNApps": {
-                        "type":"boolean",
-                        "title": "When using a command that asks for Application selection, do we show SN apps in the list?",
-                        "default":false
-                    }
-                    
+					},
+					"snich.showSNApps": {
+						"type": "boolean",
+						"title": "When using a command that asks for Application selection, do we show SN apps in the list?",
+						"default": false
+					}
 				}
 			}
 		]
 	},
 	"scripts": {
-		"vscode:prepublish": "npm run compile",
-		"compile": "tsc -p ./",
-		"watch": "tsc -watch -p ./",
+		"vscode:prepublish": "webpack --mode production",
+		"compile": "webpack --mode none",
+		"watch": "webpack --mode none --watch",
 		"postinstall": "node ./node_modules/vscode/bin/install",
 		"test": "npm run compile && node ./node_modules/vscode/bin/test"
 	},
 	"devDependencies": {
 		"@types/mocha": "^2.2.42",
 		"@types/node": "^8.10.25",
+		"ts-loader": "^5.3.3",
 		"tslint": "^5.8.0",
 		"typescript": "^3.3.3",
-		"vscode": "^1.1.25"
+		"vscode": "^1.1.25",
+		"webpack": "^4.29.6",
+		"webpack-cli": "^3.2.3"
 	},
 	"dependencies": {
 		"@types/needle": "^2.0.3",
