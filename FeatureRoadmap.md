@@ -12,7 +12,7 @@ This document is intended to indicate and layout the features we are planning to
     __Bold__: Work in progress
      Nothing: Feature complete
 
-## [v0.5.6 (Current)]()
+## [v0.5.8 (Current)]()
 
 ### Extension Functionality
 #### Added
