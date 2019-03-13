@@ -1,5 +1,13 @@
 # Change Log
 All notable changes to the "yansasync" extension will be documented in this file.
+## [v0.5.7 (Current)](#)
+
+### Extension Functionality
+
+#### General
+- Now using webpack to compile extension before publishing. Making the JavaScript file(s) generated super tiny. 
+- With webpack unifying into a single JS file, expect this extension to Active/Load much faster!
+
 
 ## [v0.5.6]()
 
