@@ -16,12 +16,23 @@ This document is intended to indicate and layout the features we are planning to
 
 ### Extension Functionality
 #### Added
+- _Update File From Server_
+    - Ability to update a file from the server without having to go through the entire "Sync Record" process. 
 
 
 #### Changed
 - Configure New Synced Table
     - _Need to be able to select display field if name is not present. Idea here is to not always be asking for it... since name should be there most of the time_
         - Could do this check just before we "Pick what fields to sync" since we will be getting all the dictionary entries anyway
+- Configure New Synced Table
+    - Now Caches tables. Will only update cache when the count of "sys_metadata" tables varies from instance.
+- Sync Record
+    - Table Selection: Just notating that if a table in the global config does not exist on instance, it will not show!
+    - Sync Record: Will cache records from instance and instead perform "Count" diffs to see if it should rebuild the list. 
+        - NOTE: This cache is only in memory, every reload, close/open of VSCode will reset this cache, so first file sync will be a bit slower. 
+- _Update the "Tables query" to be "INSTANCEOFsys_metadata" instead of =  so we get children tables. 
+- _Sync Record - When syncing a record, you can now select multiple files!_
+- _Sync Record - When syncing, we now show if that record is active or not (if it has an active field)_
 
 #### Removed
 
@@ -31,6 +42,7 @@ This document is intended to indicate and layout the features we are planning to
 #### Added
 
 #### Changed
+- _Fixed so pick lists are built based on display value field instead of just name field_
 
 #### Removed
 
@@ -42,6 +54,10 @@ Section is intended as a sandbox for taking general notes and feature planning. 
 
 ## [Definitly going to implement]()
 
+- Global Default Table Config (In root of workspace folder. Add new command for config global default table.)
+    - Instance Specific tables override global.
+- Update existing "Configure Synced Table" functionality to create a global defaults on first instance setup. 
+- Update Current command to be "Configure table for instance"
 - Open in Browser 
     - Opens record in web browser to do anything you can't do in here. 
     

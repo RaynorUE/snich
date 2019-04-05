@@ -80,11 +80,9 @@ Executing this command will perform the following:
 # Requirements
 
 ## Required Software
-### [ServiceNow Intsance](https://www.servicenow.com)
+### [ServiceNow Instance](https://www.servicenow.com)
 You must have access to a ServiceNow.com instance in order for this extension to work. If you're company does not have one or provide you access, you can [sign up for a FREE personal developer instance](https://developer.service-now.com).
 
-### [Needle.js Node Application]()
-Need to still test if this has to be installed manually or can be included as part of the extension.
 
 # Known Issues
 Below are known issues and workarounds for them.
