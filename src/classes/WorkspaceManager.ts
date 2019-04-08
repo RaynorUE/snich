@@ -46,6 +46,7 @@ export class WorkspaceManager{
             vscode.window.showErrorMessage('More than one workspace folder loaded. Unpredictable results may occur, de-activating extension. Please use just one workspace folder.');
             return false;
         }
+        
         return true;
     }
     

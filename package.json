@@ -81,6 +81,18 @@
 			{
 				"title": "SNICH",
 				"properties": {
+                    "snich.always_ask_primary_disp_field":{
+                        "type":"boolean",
+                        "title": "Always ask for primary display field",
+                        "deprecationMessage": "Set to true if you want to always be asked to pick the primary display field when configuring new tables. Else we will default to using name if it exists. If name is not found we will still ask you to pick.",
+                        "default":false
+                    },
+                    "snich.synced_rec_name_seperator":{
+                        "type":"string",
+                        "title": "Sycned Record Display Name Seperator",
+                        "description": "The seperator used when multiple fields are selected for synced record display names. NOTE: Please take into account your file systems restricted characters.",
+                        "default":"|"
+                    },
 					"snich.logLevel": {
 						"type": "string",
 						"title": "Logging Level",

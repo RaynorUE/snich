@@ -63,8 +63,7 @@ export class ConfiguredTables {
 
         let tableConfig = new TableConfig(selectedTable.value.name);
         tableConfig.setLabel(selectedTable.value.label);
-        let dicQuery = 'name=' + tableConfig.name + '^elementISNOTEMPTY';
-        let dicRecs = await client.getRecords('sys_dictionary', dicQuery, ['element', 'column_label', 'internal_type']);
+        let dicRecs = await this.getTableFields(tableConfig.name, client);
 
         if(!dicRecs.length){
             vscode.window.showWarningMessage(`Attempted to get dictionary entries for table [${tableConfig.name}] and none were found! Aborting table configuration.`);
@@ -73,26 +72,49 @@ export class ConfiguredTables {
         
         this.logger.info(this.lib, func, "Dictionary records received. Building QPItems");
         let dicQPItems = <Array<SNQPItem>>[];
+        let missingNameField = true;
+        let primaryDisplayField = 'name';
         dicRecs.forEach((dic:snRecord) => {
+            if(dic.element === 'name'){
+                missingNameField = false;
+            }
             dicQPItems.push({"label":dic.column_label || "", "detail": dic.element + ' - ' + dic.internal_type, value:dic});
         });
 
-        let selectedDics:any = await vscode.window.showQuickPick(dicQPItems, <vscode.QuickPickOptions>{placeHolder:"Select all fields you want to sync.", ignoreFocusOut:true, matchOnDetail:true, matchOnDescription:true, canPickMany:true});
-        if(!selectedDics){
+            
+        let settings = vscode.workspace.getConfiguration();
+        let multiFieldNameSep = settings.get('snich.synced_rec_name_seperator') || "|";
+        let alwaysAskPrimField = settings.get('snich.always_ask_primary_disp_field') || false;
+
+        if(alwaysAskPrimField || missingNameField){
+             let selectedPrimeDisplayField:any = await vscode.window.showQuickPick(dicQPItems, <vscode.QuickPickOptions>{ placeHolder:"Select field to use for file name.", ignoreFocusOut:true, matchOnDetail:true, matchOnDescription:true});
+             if(!selectedPrimeDisplayField){
+                vscode.window.showWarningMessage('No Field selected as primary for file name generation. Aborting Table configuration');
+                 return;
+             }
+
+             let primaryDisplayField = selectedPrimeDisplayField.value.element;
+        }
+
+        let selectedDisplayFields:any = await vscode.window.showQuickPick(dicQPItems, <vscode.QuickPickOptions>{ placeHolder:"Select additional fields for file name. Will add these using the defined seperator in settings (currently: " + multiFieldNameSep + ")", ignoreFocusOut:true, matchOnDetail:true, matchOnDescription:true, canPickMany:true});
+
+
+        let selectedSyncFieldss:any = await vscode.window.showQuickPick(dicQPItems, <vscode.QuickPickOptions>{placeHolder:"Select all fields you want to sync.", ignoreFocusOut:true, matchOnDetail:true, matchOnDescription:true, canPickMany:true});
+        if(!selectedSyncFieldss){
             vscode.window.showWarningMessage('No dictionary entries selected. Aborting Table configuration');
             return;
         }
         
-        this.logger.info(this.lib, func, "Selected fields:", selectedDics);
-        if(selectedDics.length > 0){
+        this.logger.info(this.lib, func, "Selected fields:", selectedSyncFieldss);
+        if(selectedSyncFieldss.length > 0){
             let extensionAsker = async (selectedPosition:number) => {
                 let func = 'extensionAsker';
                 
-                this.logger.info(this.lib,func, 'START', {position:selectedPosition, fieldsLength:selectedDics.length});
+                this.logger.info(this.lib,func, 'START', {position:selectedPosition, fieldsLength:selectedSyncFieldss.length});
                 
                 return new Promise((resolve, reject) =>{
-                    if(selectedPosition < selectedDics.length){
-                        let selectedField = selectedDics[selectedPosition].value;
+                    if(selectedPosition < selectedSyncFieldss.length){
+                        let selectedField = selectedSyncFieldss[selectedPosition].value;
                         
                         this.logger.debug(this.lib, func, "Selected Field:", selectedField);
                         
@@ -122,6 +144,23 @@ export class ConfiguredTables {
                 vscode.commands.executeCommand('snich.instance.pull_record');
             }
         });
+        this.logger.info(this.lib, func, 'END');
+    }
+
+    async getTableFields (tableName:String, RESTClient:RESTClient){
+        let func = 'getTableFields';
+        this.logger.info(this.lib, func, 'START', );
+
+        let tableFields:Array<any> = [];
+        let dicQuery = 'name=' + tableName + '^elementISNOTEMPTY';
+        var dicRecs = await RESTClient.getRecords('sys_dictionary', dicQuery, ['label','element','name']);
+        
+        if(dicRecs.length === 0){
+            return tableFields;
+        }
+
+        return dicRecs;
+        
         this.logger.info(this.lib, func, 'END');
     }
 
