@@ -93,28 +93,36 @@ export class ConfiguredTables {
                  return;
              }
 
-             let primaryDisplayField = selectedPrimeDisplayField.value.element;
+             primaryDisplayField = selectedPrimeDisplayField.value.element;
         }
 
+        tableConfig.setDisplayField(primaryDisplayField);
+        
         let selectedDisplayFields:any = await vscode.window.showQuickPick(dicQPItems, <vscode.QuickPickOptions>{ placeHolder:"Select additional fields for file name. Will add these using the defined seperator in settings (currently: " + multiFieldNameSep + ")", ignoreFocusOut:true, matchOnDetail:true, matchOnDescription:true, canPickMany:true});
+        let selectedSyncFields:any = await vscode.window.showQuickPick(dicQPItems, <vscode.QuickPickOptions>{placeHolder:"Select all fields you want to sync.", ignoreFocusOut:true, matchOnDetail:true, matchOnDescription:true, canPickMany:true});
 
+        if(selectedDisplayFields && selectedDisplayFields.length > 0){
+            selectedDisplayFields.forEach((selectedOption:SNQPItem) => {
+                let selectedField = selectedOption.value;
+                
+            })
+        }
 
-        let selectedSyncFieldss:any = await vscode.window.showQuickPick(dicQPItems, <vscode.QuickPickOptions>{placeHolder:"Select all fields you want to sync.", ignoreFocusOut:true, matchOnDetail:true, matchOnDescription:true, canPickMany:true});
-        if(!selectedSyncFieldss){
-            vscode.window.showWarningMessage('No dictionary entries selected. Aborting Table configuration');
+        if(!selectedSyncFields){
+            vscode.window.showWarningMessage('No fields selected. Aborting Table configuration');
             return;
         }
         
-        this.logger.info(this.lib, func, "Selected fields:", selectedSyncFieldss);
-        if(selectedSyncFieldss.length > 0){
+        this.logger.info(this.lib, func, "Selected fields:", selectedSyncFields);
+        if(selectedSyncFields.length > 0){
             let extensionAsker = async (selectedPosition:number) => {
                 let func = 'extensionAsker';
                 
-                this.logger.info(this.lib,func, 'START', {position:selectedPosition, fieldsLength:selectedSyncFieldss.length});
+                this.logger.info(this.lib,func, 'START', {position:selectedPosition, fieldsLength:selectedSyncFields.length});
                 
                 return new Promise((resolve, reject) =>{
-                    if(selectedPosition < selectedSyncFieldss.length){
-                        let selectedField = selectedSyncFieldss[selectedPosition].value;
+                    if(selectedPosition < selectedSyncFields.length){
+                        let selectedField = selectedSyncFields[selectedPosition].value;
                         
                         this.logger.debug(this.lib, func, "Selected Field:", selectedField);
                         
@@ -226,6 +234,7 @@ export class TableConfig{
     display_field:string = "name";
     fields:Array<snTableField> = [];
     children:Array<TableConfig> = [];
+    additional_display_fields:Array<string> = [];
     
     constructor(name:string){
         this.name = name;
@@ -237,6 +246,28 @@ export class TableConfig{
     
     setDisplayField(fieldName:string){
         this.display_field = fieldName;
+    }
+
+    addDisplayField(fieldName:string){
+        if(!fieldName){
+            //do nothing
+            return;
+        }
+
+        var fieldFound = false;
+        this.additional_display_fields.forEach((displayField) =>{
+            if(displayField === fieldName){
+                fieldFound = true;
+            }
+        });
+        
+        if(!fieldFound){
+            this.additional_display_fields.push(fieldName);
+        }
+    }
+
+    setAdditionalDisplayFields(fieldNames:Array<string>){
+        this.additional_display_fields = fieldNames;
     }
     
     addField(name:string, label:string, extension:string){

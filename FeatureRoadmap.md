@@ -16,6 +16,32 @@ This document is intended to indicate and layout the features we are planning to
 
 ### Extension Functionality
 #### Added
+- Configure New Synced Table
+    - _Need to be able to select display field if name is not present. Idea here is to not always be asking for it... since name should be there most of the time_
+        - Could do this check just before we "Pick what fields to sync" since we will be getting all the dictionary entries anyway
+
+#### Changed
+- Configure New Synced Table
+    - _Update the "Tables query" to be "INSTANCEOFsys_metadata" instead of =  so we get children tables. 
+
+#### Removed
+
+
+### Internal Extension Development
+
+#### Added
+
+#### Changed
+- _Fixed so pick lists are built based on display value field instead of just name field_
+
+#### Removed
+
+
+
+## [v0.5.9 (Upcoming)]()
+
+### Extension Functionality
+#### Added
 - _Update File From Server_
     - Ability to update a file from the server without having to go through the entire "Sync Record" process. 
 
@@ -45,7 +71,6 @@ This document is intended to indicate and layout the features we are planning to
 - _Fixed so pick lists are built based on display value field instead of just name field_
 
 #### Removed
-
 
 
 Organized Upcoming Ideas
