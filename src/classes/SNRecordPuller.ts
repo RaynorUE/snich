@@ -1,9 +1,10 @@
-import { snRecord, SNApplication, snTableConfig, SNQPItem } from "../myTypes/globals";
+import { snRecord, SNApplication, SNQPItem } from "../myTypes/globals";
 import { SystemLogHelper } from "./LogHelper";
 import { InstanceMaster, InstancesList } from "./InstanceConfigManager";
 import { RESTClient } from "./RESTClient";
 import * as vscode from 'vscode';
 import { WorkspaceManager } from "./WorkspaceManager";
+import { TableConfig } from "./SNDefaultTables";
 
 export class SNFilePuller {
     
@@ -29,9 +30,11 @@ export class SNFilePuller {
             vscode.window.showWarningMessage('Aborted Sync Record');
             return;
         }
+
+        let configuredTables = selectedInstance.tableConfig;
         
         let client = new RESTClient(selectedInstance.getConfig(), this.logger);
-        let encodedQuery = 'super_class.name=sys_metadata^nameIN' + selectedInstance.tableConfig.tableNameList;
+        let encodedQuery = 'super_class.name=sys_metadata^nameIN' + configuredTables.tableNameList;
         
         let tableRecs:Array<snRecord> = await client.getRecords('sys_db_object', encodedQuery, ["name", "label"], true);
         
@@ -53,8 +56,8 @@ export class SNFilePuller {
             return;
         }
         let tableRec = tableSelection.value;
-        let tableConfig = <snTableConfig>{};
-        selectedInstance.tableConfig.tables.forEach((table) =>{
+        let tableConfig = <TableConfig>{};
+        configuredTables.tables.forEach((table) =>{
             if (table.name === tableRec.name) {
                 this.logger.info(this.lib, func, 'Found table config.', table);
                 tableConfig = table;
@@ -71,8 +74,10 @@ export class SNFilePuller {
         }
         
         let fileqpitems:Array<SNQPItem> = [];
-        tableFileRecs.forEach((record:snRecord) => {
-            fileqpitems.push({ "label": record.name, "detail": record.name + ' - ' + record.sys_scope, value: record });
+        tableFileRecs.forEach((record:any) => {
+            let label = record[tableConfig.display_field];
+            let recordName = record.sys_name || record.name || record.update_name;
+            fileqpitems.push({ "label": label, "detail": recordName + ' - ' + record.sys_scope, value: record });
             
         });
         
@@ -90,6 +95,9 @@ export class SNFilePuller {
         fieldsList.push(tableConfig.display_field);
         tableConfig.fields.forEach((field) => {
             fieldsList.push(field.name);
+        });
+        tableConfig.additional_display_fields.forEach((dvField) =>{
+            fieldsList.push(dvField);
         });
         
         let recordToSave = await client.getRecord(tableConfig.name, fileRec.sys_id, fieldsList);

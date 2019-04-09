@@ -20,6 +20,7 @@ This document is intended to indicate and layout the features we are planning to
     - _Need to be able to select display field if name is not present. Idea here is to not always be asking for it... since name should be there most of the time_
         - Could do this check just before we "Pick what fields to sync" since we will be getting all the dictionary entries anyway
 
+
 #### Changed
 - Configure New Synced Table
     - _Update the "Tables query" to be "INSTANCEOFsys_metadata" instead of =  so we get children tables. 
@@ -44,8 +45,9 @@ This document is intended to indicate and layout the features we are planning to
 #### Added
 - _Update File From Server_
     - Ability to update a file from the server without having to go through the entire "Sync Record" process. 
-
-
+- Sync Record
+    - Now shows info from sys_package instead of sys_scope, since sys_package is parent of "sys_application" tables this will better reflect "global scope" apps..
+    
 #### Changed
 - Configure New Synced Table
     - _Need to be able to select display field if name is not present. Idea here is to not always be asking for it... since name should be there most of the time_

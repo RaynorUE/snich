@@ -2,11 +2,10 @@ import * as fs from "fs";
 import * as vscode from 'vscode';
 import { SystemLogHelper } from './LogHelper';
 import {InstanceMaster, InstanceConfig, InstancesList, SyncedFiles} from './InstanceConfigManager';
-import { snTableConfig } from "../myTypes/globals";
 import { RESTClient } from "./RESTClient";
 import * as path from 'path';
 import * as crypto from 'crypto';
-import { ConfiguredTables } from "./SNDefaultTables";
+import { ConfiguredTables, TableConfig } from "./SNDefaultTables";
 
 /**
 * This class is intended to manage the configuration, files, and folders within the workspace. 
@@ -179,7 +178,7 @@ export class WorkspaceManager{
      * @param record - The record details to create. 
      * @param openFile  - Open file or not. Default: True
      */
-    async createSyncedFile(instance:InstanceMaster, table:snTableConfig, record:any, openFile?:boolean){
+    async createSyncedFile(instance:InstanceMaster, table:TableConfig, record:any, openFile?:boolean){
         let func = 'createSyncedFile';
         this.logger.info(this.lib, func, 'START', {instanceMaster:instance, tableConfig:table, snRecord:record});
         
@@ -210,7 +209,7 @@ export class WorkspaceManager{
         
         if(table.fields.length > 1){
             this.logger.info(this.lib, func, 'Table definition has more than one field. Updating root path to be based on display value of record.');
-            rootPath = path.resolve(rootPath, record[table.display_field]);
+            rootPath = path.resolve(rootPath, table.getDisplayValue(record));
             multiFile = true;
             openFile = false;
         }
@@ -224,9 +223,10 @@ export class WorkspaceManager{
         let settings = vscode.workspace.getConfiguration();
         let createEmptyFiles = settings.get('snich.createEmptyFiles') || "Yes";
         
+        
         table.fields.forEach(async (field) =>{
             //this.logger.debug(this.lib, func, 'Processing field:', field);
-            let fileName = record[table.display_field];
+            let fileName = table.getDisplayValue(record);
             if(multiFile){
                 fileName = field.label;
             }

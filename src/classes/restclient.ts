@@ -21,7 +21,7 @@ export class RESTClient {
     private apiVersion: string = ''; //can be v1/, preparing for version ups when needed.
     private lib: string = 'RESTClient';
     private authType: String = "basic";
-    private alwaysFields: Array<string> = ["sys_scope","sys_scope.scope","sys_scope.name","sys_package","sys_id"];
+    private alwaysFields: Array<string> = ["sys_scope","sys_scope.scope","sys_scope.name","sys_package","sys_package.name", "sys_package.id","sys_name","sys_id"];
     private useProgress: Boolean = true;
     private progressMessage: string = "";
 
