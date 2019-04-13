@@ -98,8 +98,8 @@ export class ConfiguredTables {
 
         tableConfig.setDisplayField(primaryDisplayField);
         
-        let selectedDisplayFields:any = await vscode.window.showQuickPick(dicQPItems, <vscode.QuickPickOptions>{ placeHolder:"Select additional fields for file name. Will add these using the defined seperator in settings (currently: " + multiFieldNameSep + ")", ignoreFocusOut:true, matchOnDetail:true, matchOnDescription:true, canPickMany:true});
-        let selectedSyncFields:any = await vscode.window.showQuickPick(dicQPItems, <vscode.QuickPickOptions>{placeHolder:"Select all fields you want to sync.", ignoreFocusOut:true, matchOnDetail:true, matchOnDescription:true, canPickMany:true});
+        let selectedDisplayFields:any = await vscode.window.showQuickPick(dicQPItems, <vscode.QuickPickOptions>{ placeHolder:"Additional fields for file name generation. Will use seperator in settings (currently: " + multiFieldNameSep + ")", ignoreFocusOut:true, matchOnDetail:true, matchOnDescription:true, canPickMany:true});
+        let selectedSyncFields:any = await vscode.window.showQuickPick(dicQPItems, <vscode.QuickPickOptions>{placeHolder:"Select all fields of data you want to sync.", ignoreFocusOut:true, matchOnDetail:true, matchOnDescription:true, canPickMany:true});
 
         if(selectedDisplayFields && selectedDisplayFields.length > 0){
             selectedDisplayFields.forEach((selectedOption:SNQPItem) => {

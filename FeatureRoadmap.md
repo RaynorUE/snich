@@ -24,6 +24,7 @@ This document is intended to indicate and layout the features we are planning to
 #### Changed
 - Configure New Synced Table
     - _Update the "Tables query" to be "INSTANCEOFsys_metadata" instead of =  so we get children tables. 
+- REST Calls are now GZipped! Hoping to solve the "no longer updating SN issues". 
 
 #### Removed
 
@@ -34,6 +35,8 @@ This document is intended to indicate and layout the features we are planning to
 
 #### Changed
 - _Fixed so pick lists are built based on display value field instead of just name field_
+- _Update the "Tables query" to be "INSTANCEOFsys_metadata" instead of =  so we get children tables. 
+
 
 #### Removed
 
@@ -50,15 +53,11 @@ This document is intended to indicate and layout the features we are planning to
     
 #### Changed
 - Configure New Synced Table
-    - _Need to be able to select display field if name is not present. Idea here is to not always be asking for it... since name should be there most of the time_
-        - Could do this check just before we "Pick what fields to sync" since we will be getting all the dictionary entries anyway
-- Configure New Synced Table
     - Now Caches tables. Will only update cache when the count of "sys_metadata" tables varies from instance.
 - Sync Record
     - Table Selection: Just notating that if a table in the global config does not exist on instance, it will not show!
     - Sync Record: Will cache records from instance and instead perform "Count" diffs to see if it should rebuild the list. 
         - NOTE: This cache is only in memory, every reload, close/open of VSCode will reset this cache, so first file sync will be a bit slower. 
-- _Update the "Tables query" to be "INSTANCEOFsys_metadata" instead of =  so we get children tables. 
 - _Sync Record - When syncing a record, you can now select multiple files!_
 - _Sync Record - When syncing, we now show if that record is active or not (if it has an active field)_
 
@@ -107,6 +106,7 @@ Section is intended as a sandbox for taking general notes and feature planning. 
         - Update success save message with current update set name.
 - Ability to "Get entire record JSON" for direct / manual editing and syncing back to instance. 
     - Need to think about file/folder structure here... Same naming scheme as tableconfig for table, and just .json extension... Yea!
+- Using webviews to show the JSON config file changes
 
 
 Nates Sh*t show

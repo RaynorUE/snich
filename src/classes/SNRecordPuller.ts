@@ -66,6 +66,7 @@ export class SNFilePuller {
         
         let fields = ["name"];
         fields.push(tableConfig.display_field);
+        fields = fields.concat(tableConfig.additional_display_fields);
         
         let tableFileRecs = await client.getRecords(tableRec.name, "", fields, true);
         if(!tableFileRecs || tableFileRecs.length === 0){
@@ -76,12 +77,16 @@ export class SNFilePuller {
         let fileqpitems:Array<SNQPItem> = [];
         tableFileRecs.forEach((record:any) => {
             let label = record[tableConfig.display_field];
+
             let recordName = record.sys_name || record.name || record.update_name;
+            if(tableConfig.additional_display_fields && tableConfig.additional_display_fields.length > 0){
+                recordName = tableConfig.getDisplayValue(record);
+            }
             fileqpitems.push({ "label": label, "detail": recordName + ' - ' + record.sys_scope, value: record });
             
         });
         
-        let selectedFileRec = await vscode.window.showQuickPick(fileqpitems, <vscode.QuickPickOptions>{ "placeHolder": "Record to retrieved.", ignoreFocusOut: true, matchOnDetail: true, matchOnDescription: true });
+        let selectedFileRec = await vscode.window.showQuickPick(fileqpitems, <vscode.QuickPickOptions>{ "placeHolder": "Record to retrieve.", ignoreFocusOut: true, matchOnDetail: true, matchOnDescription: true });
         if(!selectedFileRec){
             vscode.window.showWarningMessage('No record selected. Sync record aborted.');
             return undefined;        
@@ -169,6 +174,7 @@ export class SNFilePuller {
             //build our fields to get from server for this table config.
             let fields = <Array<string>>[];
             fields.push(tableConfig.display_field);
+            fields = fields.concat(tableConfig.additional_display_fields);
             tableConfig.fields.forEach((field) => {
                 fields.push(field.name);
             });

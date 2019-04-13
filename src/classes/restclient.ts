@@ -12,6 +12,7 @@ import { snRecord } from '../myTypes/globals';
 export class RESTClient {
 
     private needleOpts: needle.NeedleOptions = {
+        compressed:true,
         json: true,
         headers: <OutgoingHttpHeaders>{}
         
