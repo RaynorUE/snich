@@ -1,4 +1,4 @@
-out
-*.zip
 dist
+out
+node_modules
 *.vsix
