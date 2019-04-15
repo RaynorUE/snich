@@ -193,7 +193,7 @@ export class ConfiguredTables {
             var config = new TableConfig(table.name);
             config.setFromConfigFile(table);
             this.tables.push(config);
-        })
+        });
         this.tableNameList = tableData.tableNameList;
     }
 
