@@ -1,6 +1,18 @@
 # Change Log
 All notable changes to the "yansasync" extension will be documented in this file.
-## [v0.5.7 (Current)](#)
+
+## [v0.5.8 (Current)](#)
+Removed the "Internal development" changelog since Git will handle that for us with pull/merge requests and internal diff management. 
+
+### Extension Functionality
+
+#### Added
+- 
+#### Changed
+ -
+#### Removed
+ - Nothing removed.
+## [v0.5.7](#)
 
 ### Extension Functionality
 
