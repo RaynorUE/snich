@@ -68,7 +68,7 @@ export class SNFilePuller {
         fields.push(tableConfig.display_field);
         fields = fields.concat(tableConfig.additional_display_fields);
         
-        let tableFileRecs = await client.getRecords(tableRec.name, "", fields, true);
+        let tableFileRecs = await client.getRecords(tableRec.name, "ORDERBYDESCsys_updated_on", fields, true);
         if(!tableFileRecs || tableFileRecs.length === 0){
             vscode.window.showWarningMessage('Did not find any records for table. Aborting sync record.');
             return undefined;
@@ -86,37 +86,41 @@ export class SNFilePuller {
             
         });
         
-        let selectedFileRec = await vscode.window.showQuickPick(fileqpitems, <vscode.QuickPickOptions>{ "placeHolder": "Record to retrieve.", ignoreFocusOut: true, matchOnDetail: true, matchOnDescription: true });
-        if(!selectedFileRec){
+        let selectedFileRecs:any = await vscode.window.showQuickPick(fileqpitems, <vscode.QuickPickOptions>{ "placeHolder": "Select the records to retrieve.", ignoreFocusOut: true, matchOnDetail: true, matchOnDescription: true, canPickMany: true });
+        this.logger.info(this.lib, func, 'SELECTED FILES TO SYNC: ', selectedFileRecs);
+        if(!selectedFileRecs || selectedFileRecs.length === 0){
             vscode.window.showWarningMessage('No record selected. Sync record aborted.');
             return undefined;        
         }
-        this.logger.info(this.lib, func, 'Selected file record:', selectedFileRec);
+        this.logger.info(this.lib, func, 'Selected file record:', selectedFileRecs);
         
-        
-        let fileRec = selectedFileRec.value;
-        this.logger.info(this.lib, func, 'selected file', fileRec);
-        let fieldsList = [];
-        fieldsList.push(tableConfig.display_field);
-        tableConfig.fields.forEach((field) => {
-            fieldsList.push(field.name);
+        selectedFileRecs.forEach(async(selectedFile:any) => {
+            let fileRec = selectedFile.value;
+            this.logger.info(this.lib, func, 'selected file', fileRec);
+            let fieldsList = [];
+            fieldsList.push(tableConfig.display_field);
+            tableConfig.fields.forEach((field) => {
+                fieldsList.push(field.name);
+            });
+            tableConfig.additional_display_fields.forEach((dvField) =>{
+                fieldsList.push(dvField);
+            });
+            
+            let recordToSave = await client.getRecord(tableConfig.name, fileRec.sys_id, fieldsList);
+            if(!recordToSave){
+                vscode.window.showWarningMessage(`For some reason we couldn't grab the file to sync. Aborting sync record.`);
+                return undefined;
+            }
+            
+            let wsMgr = new WorkspaceManager(this.logger);
+            let fileCreation = wsMgr.createSyncedFile(selectedInstance, tableConfig, recordToSave, true);
+            wsMgr.writeSyncedFiles(selectedInstance);
+            if(!fileCreation){
+                vscode.window.showWarningMessage('Failed to create file during Sync Record. See logs for details.');
+            }
         });
-        tableConfig.additional_display_fields.forEach((dvField) =>{
-            fieldsList.push(dvField);
-        });
         
-        let recordToSave = await client.getRecord(tableConfig.name, fileRec.sys_id, fieldsList);
-        if(!recordToSave){
-            vscode.window.showWarningMessage(`For some reason we couldn't grab the file to sync. Aborting sync record.`);
-            return undefined;
-        }
         
-        let wsMgr = new WorkspaceManager(this.logger);
-        let fileCreation = wsMgr.createSyncedFile(selectedInstance, tableConfig, recordToSave, true);
-        wsMgr.writeSyncedFiles(selectedInstance);
-        if(!fileCreation){
-            vscode.window.showWarningMessage('Failed to create file during Sync Record. See logs for details.');
-        }
     }
     
     async pullAllAppFiles() {

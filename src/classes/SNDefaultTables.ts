@@ -160,7 +160,11 @@ export class ConfiguredTables {
         this.logger.info(this.lib, func, 'START', );
 
         let tableFields:Array<any> = [];
-        let dicQuery = 'name=' + tableName + '^elementISNOTEMPTY^ORDERBYlabel';
+        /**
+         * @todo Need to solve this dependency on PAUtils() at some point. Not a fan of it... As not everyone has PA turned on (Depending on age of installation)
+         */
+        let includeParents = "javascript:new PAUtils().getTableAncestors('"+tableName+"')";
+        let dicQuery = 'name=' + includeParents + '^elementISNOTEMPTY^ORDERBYlabel';
         var dicRecs = await RESTClient.getRecords('sys_dictionary', dicQuery, ['column_label','element','name', 'internal_type']);
         
         if(dicRecs.length === 0){

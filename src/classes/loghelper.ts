@@ -82,6 +82,14 @@ export class SystemLogHelper {
         }
     }
 
+    inChattyMode(){
+        if(this.logLevel > this._WARN){
+            return true;
+        } else {
+            return false;
+        }
+    }
+
     /**
      * 
      * @param level The logging level
