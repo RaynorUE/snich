@@ -7,11 +7,13 @@ Removed the "Internal development" changelog since Git will handle that for us w
 ### Extension Functionality
 
 #### Added
-- 
+- Can now select multiple files!
 #### Changed
- -
+- 
 #### Removed
- - Nothing removed.
+- Nothing removed.
+
+
 ## [v0.5.7](#)
 
 ### Extension Functionality
