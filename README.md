@@ -1,26 +1,34 @@
-# NOW Code Manager
-This application is intended to accelerate and increase the efficiency of working with ServiceNow Records(files) that have some kind of scripting, coding, or html to them. The primary reason is that vsCode offers considerably more rich editing environment as compared to ServiceNows embedded editors.
+# ServiceNow Integrated Code Helper
+Increase your development speed and Reduce Errors! Get out of ServiceNows clunky web editors and edit your scripts using all the power of VSCode!
+
+This extension allows you to sync any application file record from ServiceNow. Including any field from that file! (Not just script fields!)
+
+Fully customize the fields of data being synced for any table!
 
 ## [Instructional Videos](https://www.youtube.com/playlist?list=PLp0BtdkD38PWd9PTib4OgRaTQ3SIQDE17)
 
-# ==== READ ME FIRST ====
->Due to changes in the synced files config file, you will need to delete and re-sync your instances. 
 
-Hoping to keep this down to a minimum!!! Should not see too many more changes in files!
-
-# Release Notes
+# Release Notes v0.6.1
 >See the change log for details.
 
 # Tips
 Everything is done through the command pallete (Ctrl+Shift+P, or CMD+Shift+P on macs). Once launching the command pallete type in SNICH to see a list of all the available commands. 
 
 # First Time Setup
+## Setup New Instance
+1. Create / Open a folder in VScode as your workspace folder. This is the folder all of your ServiceNow Instances will be stored in. 
+2. Open the command pallete and use the "SNICH: Setup New Instance" command. 
+3. Proceed through the setup prompts.
+    - Note: If using a custom url, use the full url when prompted for instance name.
+        - Example: https://sndev.mycompany.com
+4. If setup was successful you will see a Test Connection Successful message. If not, proceed through Setup New Instance again.
+5. Once successful, you are ready to start using the other commands! 
+    - Such as Sync Record to sync your first record! 
 
-### Extension Activation
-- First Time Setup
-    - Refer to the setup section, as no other commands will work until an instance is setup.
-- Automated Activation
-    - Will automatically activate if you load a folder with existing instance configurations
+## Configure Additional Tables for Instance
+1. Open the command pallet and look for "SNICH: Configure Table (New and Update)
+2. Follow the prompts to configure a new table to start syncing records.
+
 # Features
 
 ## [Setup New Instance]()
@@ -92,5 +100,8 @@ Below are known issues and workarounds for them.
 - Sometimes when loading new files the File Explorer is not refreshed and the file/folder may not be immediately visible. 
     - This seems to be better as of the latest version... keep an eye on it and let us know if it keeps happening.
     - >__Workaround__: Expand/Collapse the instance folder or use the refresh button on the grey bar just above your instance name (the workspace folder header).
+- Saving files stops syncing to ServiceNow and I am no longer seeing the Updated Record messages. 
+    - This is due to a timeout issue and is most noticeable on slow instances. You will see this after 3 "Slow Saves"
+    - >__Workaround__: Open your command pallete and look for "Developer: Reload Window" to refresh the window. To reset your counter. 
 
 ---------------------------------------------------------------------------------------------------
