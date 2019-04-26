@@ -1,6 +1,35 @@
 # Change Log
-All notable changes to the "yansasync" extension will be documented in this file.
-## [v0.5.7 (Current)](#)
+Welcome to the Change Log! Here is where you will find all the juicy details of the changes from version to version! Including minor versions!
+## [v0.6.1 (Current)](#)
+
+### General
+- Removed the "Internal development" changelog since Git will handle that for us with pull/merge requests and internal diff management. 
+- Updated changelog structure to flow a bit nicer.
+- Another middle-tier milestone! Big features and getting closer to 1.0.0 this release! Once we fix that dasterdly save issue and a few other tweaks we'll be looking to release 1.0.0!!
+
+
+### Added
+- NEW! When Configuring a new table to be synced (or updating an existing one) you can now select additional display fields!
+    - Now Uses these additional display fields in File Name generation (or Folder name if table syncs multiple fields. ex: sp_widget);
+        - See SNICH Settings to identify or change the field seperator. Remember your file system will complain about certain characters! 
+    - __NOTE:__ if the table being synced doesn't have a name field it will ask you what field to use for the primary display fields. 
+        - Adjust SNICH Settings to always ask you for Primary display field.
+- Sync Record
+    - Can now select multiple files! Use setting to disable this and go back to "one file at a time mode"
+- Will now display warning on "Activation" of extension (ie. loading vscode) letting you know if your log level is still set below warnings. 
+    - This is to reduce log noise, and also improve overall performance when you're not debugging or sending me your logs to fix issues.
+### Changed
+- Updated REST API Calls to use gzip. Making things a tiny bit snappier.
+- Updated "Configure Table" so that it included all parent field names
+- Updated "Configure Table" so that it now allow selecting child tables (like sysauto_script from sysauto)
+- Sync Record file list will now use thew new "Display Value" based on fields above.
+- Sync Record file list now sorted by "sys_updated". This way your recent files are on top!
+
+### Fixed
+- Fixed issue where proxed/custom SN Urls were not being picked up correctly when saving files. Causing saves to fail.
+- Files with Same Name name overwrite each other when syncing. (See new Display Value feature).
+
+## [v0.5.7](#)
 
 ### Extension Functionality
 

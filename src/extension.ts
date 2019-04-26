@@ -27,6 +27,16 @@ export function activate(context: vscode.ExtensionContext) {
     wsManager.loadObservers(instanceList);
     wsManager.loadWorkspaceInstances(instanceList);
 
+    //check current log setting and option to reset...
+
+    (async function(logger){
+        if(logger.inChattyMode()){
+            let settings = vscode.workspace.getConfiguration();
+            var level = settings.get('snich.logLevel') || 0;
+            vscode.window.showWarningMessage('S.N.I.C.H Log level currently set to [' + level + '] recommended level is [Error]');
+        }
+    }(logger));
+
     
     /**
      * Setup New Instance
