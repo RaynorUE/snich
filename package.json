@@ -4,7 +4,7 @@
 	"displayName": "S.N.I.C.H",
 	"description": "Service Now Integrated Code Helper (SNICH). Connects to any ServiceNow instance and allows remote editing and storage of records from the Application File (and extended) tables.",
 	"icon": "images/icon-shrunk.png",
-	"version": "0.5.8",
+	"version": "0.6.1",
 	"keywords": [
 		"SNICH",
 		"snich",
@@ -133,8 +133,15 @@
 					},
 					"snich.showSNApps": {
 						"type": "boolean",
-						"title": "When using a command that asks for Application selection, do we show SN apps in the list?",
+						"title": "Show sn_ applications",
+						"description":"When using a command that asks for Application selection, do we show SN apps in the list?",
 						"default": false
+					},
+					"snich.syncRecordMultiple":{
+						"type": "boolean",
+						"title": "Sync Record: Select Multiple",
+						"description": "When using the Sync Record command, allow multiple files to be selected. Disable this if you are annoyed by having to checkbox a single record during selection.",
+						"default": true
 					}
 				}
 			}
@@ -149,7 +156,7 @@
 	"devDependencies": {
 		"@types/mocha": "^2.2.42",
 		"@types/node": "^8.10.46",
-		"ts-loader": "^5.4.0",
+		"ts-loader": "^5.4.3",
 		"tslint": "^5.16.0",
 		"typescript": "^3.4.4",
 		"vscode": "^1.1.33",

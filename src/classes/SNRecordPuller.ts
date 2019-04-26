@@ -85,9 +85,16 @@ export class SNFilePuller {
             fileqpitems.push({ "label": label, "detail": recordName + ' - ' + record.sys_scope, value: record });
             
         });
-        
-        let selectedFileRecs:any = await vscode.window.showQuickPick(fileqpitems, <vscode.QuickPickOptions>{ "placeHolder": "Select the records to retrieve.", ignoreFocusOut: true, matchOnDetail: true, matchOnDescription: true, canPickMany: true });
+        let settings = vscode.workspace.getConfiguration();
+        let selectMultiple = settings.get('snich.syncRecordMultiple');
+
+        let selectedFileRecs:any = await vscode.window.showQuickPick(fileqpitems, <vscode.QuickPickOptions>{ "placeHolder": "Select the records to retrieve.", ignoreFocusOut: true, matchOnDetail: true, matchOnDescription: true, canPickMany: selectMultiple });
         this.logger.info(this.lib, func, 'SELECTED FILES TO SYNC: ', selectedFileRecs);
+        if(selectedFileRecs && !selectedFileRecs.length){
+            //not an array which means we're in select one mode... lets make it array so the rest of our code can stay the same
+            selectedFileRecs = [selectedFileRecs];
+        }
+        
         if(!selectedFileRecs || selectedFileRecs.length === 0){
             vscode.window.showWarningMessage('No record selected. Sync record aborted.');
             return undefined;        
