@@ -1,6 +1,28 @@
 # Change Log
 Welcome to the Change Log! Here is where you will find all the juicy details of the changes from version to version! Including minor versions!
-## [v0.6.1 (Current)](#)
+
+# YOU ARE ON "LATEST" BRANCH
+## REMOVE ME WHEN GOING TO BETA OR MASTER BRANCH!
+You are currently using the "Latest" branch of SNICH. I will try to keep up with putting sub-version numbers in here so we know 
+
+## [v0.7.0.02](#)
+### Changed
+- Updated "Sync Record" to show the "${Package} (${Scope})" of the file.
+    - This can make differentiating "Global Scope" files a bit easier. 
+- Updated "Sync Record" so that the "Name" of the record now includes the full "DisplayValue" you created during table configuration.
+
+### Fixes
+- Scond attempt to fix onWillSave issue. Currently dying when "overwrite local" is selected (at least for john?);
+- Syncing single record throwing error that "sys_id" doest not exist
+
+
+
+## [v0.7.0.01](#)
+### Fixes
+- First Attempt to fix "onWillSave" events no longer being honored due to "Saving and round tripping to serviceNow
+
+# PREVIOUS LIVE RELEASE NOTES
+## [v0.6.1](#)
 
 ### General
 - Removed the "Internal development" changelog since Git will handle that for us with pull/merge requests and internal diff management. 

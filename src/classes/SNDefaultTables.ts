@@ -176,6 +176,17 @@ export class ConfiguredTables {
         
     }
 
+    getTable(tableName:String){
+        var selectedTable = <TableConfig>{};
+        this.tables.forEach((table) =>{
+            if(table.name === tableName){
+                selectedTable = table;
+            }
+        });
+
+        return selectedTable;
+    }
+
     addTable(table:TableConfig){
         this.tableNameList.push(table.name);
         let existingIndex = -1;
@@ -295,7 +306,7 @@ export class TableConfig{
     getDisplayValue(record:any){
         var dv = record[this.display_field];
         
-        if(this.additional_display_fields.length > 0){
+        if(this.additional_display_fields && this.additional_display_fields.length && this.additional_display_fields.length > 0){
 
             let settings = vscode.workspace.getConfiguration();
             let multiFieldNameSep = settings.get('snich.synced_rec_name_seperator') || "^";

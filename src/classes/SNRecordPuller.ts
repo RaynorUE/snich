@@ -27,43 +27,45 @@ export class SNFilePuller {
         
         let selectedInstance:InstanceMaster = await this.instanceList.selectInstance();
         if(!selectedInstance){
-            vscode.window.showWarningMessage('Aborted Sync Record');
-            return;
+            vscode.window.showWarningMessage('Aborted Sync Record. No Instance Selected.');
+            return undefined;
         }
 
-        let configuredTables = selectedInstance.tableConfig;
-        
+        /** Setup REST Client */
         let client = new RESTClient(selectedInstance.getConfig(), this.logger);
+        
+        /** Make our calls for table selection. Why do we query for tables we pre-configured? 
+         * Just incase the table has been deleted (or was never created!)
+        */
+        let configuredTables = selectedInstance.tableConfig;
         let encodedQuery = 'super_class.name=sys_metadata^nameIN' + configuredTables.tableNameList;
-        
         let tableRecs:Array<snRecord> = await client.getRecords('sys_db_object', encodedQuery, ["name", "label"], true);
-        
         if(!tableRecs || tableRecs.length === 0){
             vscode.window.showWarningMessage('Attempted to get configured tables from instance and failed. Aborting sync record. See logs for detail.');
-            return;
+            return undefined;
         }
         
+        /** Build our list of tables into an array to be passed into the quick pick */
         let tableqpItems:Array<SNQPItem> = [];
         tableRecs.forEach((record: snRecord) => {
             tableqpItems.push({ "label": record.label, "detail": record.name + ' - ' + record.sys_scope, value: record });
         });
-        
-        this.logger.info(this.lib, func, "Built quick pick options based on table records returned.");
-        
+
+        /** Ask user to select a table to sync from.*/
         let tableSelection = await vscode.window.showQuickPick(tableqpItems, <vscode.QuickPickOptions>{ "placeHolder": "Select table to retrieve record from. Table Not found? Make sure it's in the table_config. Or configure table using command pallete.", ignoreFocusOut: true, matchOnDetail: true, matchOnDescription: true });
         if(!tableSelection){
             vscode.window.showWarningMessage('Sync record aborted. No Table Selected.');
-            return;
+            return undefined;
         }
+
         let tableRec = tableSelection.value;
-        let tableConfig = <TableConfig>{};
-        configuredTables.tables.forEach((table) =>{
-            if (table.name === tableRec.name) {
-                this.logger.info(this.lib, func, 'Found table config.', table);
-                tableConfig = table;
-            }
-        });
+        let tableConfig = configuredTables.getTable(tableRec.name);
+        if(!tableConfig || !tableConfig.name){
+            vscode.window.showErrorMessage('Sync Record aborted. For some reason we did not find the selected table in the instance tables.. Weird. Try re-configuring the table you are trying to sync a record for.');
+            return undefined;
+        }
         
+        /**Build our field list and query the table for records to sync. */
         let fields = ["name"];
         fields.push(tableConfig.display_field);
         fields = fields.concat(tableConfig.additional_display_fields);
@@ -74,37 +76,40 @@ export class SNFilePuller {
             return undefined;
         }
         
+        /**Build our list of records into an array to be passed into the QuickPick */
         let fileqpitems:Array<SNQPItem> = [];
         tableFileRecs.forEach((record:any) => {
-            let label = record[tableConfig.display_field];
-
-            let recordName = record.sys_name || record.name || record.update_name;
-            if(tableConfig.additional_display_fields && tableConfig.additional_display_fields.length > 0){
-                recordName = tableConfig.getDisplayValue(record);
-            }
-            fileqpitems.push({ "label": label, "detail": recordName + ' - ' + record.sys_scope, value: record });
+            let label = tableConfig.getDisplayValue(record);
+            let recordDetail = `${record['sys_package.name']} (${record['sys_scope.name']})`
             
+            fileqpitems.push({ "label": label, "detail": recordDetail, value: record });
         });
+        
+        /** See if we are allowing select multiple */
         let settings = vscode.workspace.getConfiguration();
         let selectMultiple = settings.get('snich.syncRecordMultiple');
 
         let selectedFileRecs:any = await vscode.window.showQuickPick(fileqpitems, <vscode.QuickPickOptions>{ "placeHolder": "Select the records to retrieve.", ignoreFocusOut: true, matchOnDetail: true, matchOnDescription: true, canPickMany: selectMultiple });
         this.logger.info(this.lib, func, 'SELECTED FILES TO SYNC: ', selectedFileRecs);
-        if(selectedFileRecs && !selectedFileRecs.length){
-            //not an array which means we're in select one mode... lets make it array so the rest of our code can stay the same
+        
+        //if we are not in multi-select mode, still make it array so the rest of our code will work.
+        if(!selectMultiple){
             selectedFileRecs = [selectedFileRecs];
         }
         
+        /** Process our selection result and determine if we have anything to action. If we dont, abort processing and show an error message. */
         if(!selectedFileRecs || selectedFileRecs.length === 0){
             vscode.window.showWarningMessage('No record selected. Sync record aborted.');
             return undefined;        
         }
-        if(selectedFileRecs && selectedFileRecs.length > 0 && !selectedFileRecs[0].sys_id){
+
+        if(selectedFileRecs && selectedFileRecs.length > 0 && !selectedFileRecs[0].value.sys_id){
             vscode.window.showErrorMessage('Unknown error occured, but the record that came back did not have a sys_id attribute. Please submit issue on github for this extension.');
             return undefined;
         }
         this.logger.info(this.lib, func, 'Selected file record:', selectedFileRecs);
         
+        /** Go through all our selected records and write our files! */
         selectedFileRecs.forEach(async(selectedFile:any) => {
             let fileRec = selectedFile.value;
             this.logger.info(this.lib, func, 'selected file', fileRec);
@@ -130,8 +135,6 @@ export class SNFilePuller {
                 vscode.window.showWarningMessage('Failed to create file during Sync Record. See logs for details.');
             }
         });
-        
-        
     }
     
     async pullAllAppFiles() {
