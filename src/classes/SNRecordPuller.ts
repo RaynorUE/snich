@@ -4,7 +4,6 @@ import { InstanceMaster, InstancesList } from "./InstanceConfigManager";
 import { RESTClient } from "./RESTClient";
 import * as vscode from 'vscode';
 import { WorkspaceManager } from "./WorkspaceManager";
-import { TableConfig } from "./SNDefaultTables";
 
 export class SNFilePuller {
     
