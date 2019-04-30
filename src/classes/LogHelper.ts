@@ -63,7 +63,7 @@ export class SystemLogHelper {
         this.setLogLevel();
     }
 
-    private setLogLevel = () =>{
+    private setLogLevel(){
         let settings = workspace.getConfiguration();
         var level = settings.get('snich.logLevel') || 0;
         if(level === 'Debug'){
@@ -79,6 +79,20 @@ export class SystemLogHelper {
             this.logLevel = this._ERROR;
         } else {
             this.logLevel = this._NONE;
+        }
+    }
+
+    private getLogLevelLabel(level:number) {
+        if(level === 0){
+            return " NONE:";
+        } else if(level === 1){
+            return "ERROR:";
+        } else if(level === 2){
+            return " WARN:";
+        } else if(level === 3){
+            return " INFO:";
+        } else if(level === 4){
+            return "DEBUG:";
         }
     }
 
@@ -106,7 +120,8 @@ export class SystemLogHelper {
         var entryNumPadded = this.padding.substring(0, this.padding.length - ("" + this.entry).length) + this.entry;
         var fullMsg = `[${entryNumPadded}] - {${library} : ${func}} - ${msg}`;
         */
-       var fullMsg = `{${library} : ${func}} - ${msg}`;
+       var logLevelLabel = this.getLogLevelLabel(level);
+       var fullMsg = `${logLevelLabel} {${library} : ${func}} - ${msg}`;
         if (level <= this.logLevel) {
             let log = console.log;
             
