@@ -99,6 +99,10 @@ export class SNFilePuller {
             vscode.window.showWarningMessage('No record selected. Sync record aborted.');
             return undefined;        
         }
+        if(selectedFileRecs && selectedFileRecs.length > 0 && !selectedFileRecs[0].sys_id){
+            vscode.window.showErrorMessage('Unknown error occured, but the record that came back did not have a sys_id attribute. Please submit issue on github for this extension.');
+            return undefined;
+        }
         this.logger.info(this.lib, func, 'Selected file record:', selectedFileRecs);
         
         selectedFileRecs.forEach(async(selectedFile:any) => {
