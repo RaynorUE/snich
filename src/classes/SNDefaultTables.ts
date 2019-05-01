@@ -83,8 +83,8 @@ export class ConfiguredTables {
 
             
         let settings = vscode.workspace.getConfiguration();
-        let multiFieldNameSep = settings.get('snich.synced_rec_name_seperator') || "^";
-        let alwaysAskPrimField = settings.get('snich.always_ask_primary_disp_field') || false;
+        let multiFieldNameSep = settings.get('snich.syncedRecordNameSeparator') || "^";
+        let alwaysAskPrimField = settings.get('snich.alwaysAskPrimaryDisplayField') || false;
 
         if(alwaysAskPrimField || missingNameField){
              let selectedPrimeDisplayField:any = await vscode.window.showQuickPick(dicQPItems, <vscode.QuickPickOptions>{ placeHolder:"Select field to use for file name.", ignoreFocusOut:true, matchOnDetail:true, matchOnDescription:true});
@@ -304,12 +304,12 @@ export class TableConfig{
 
     //will get display value based on record passed in.
     getDisplayValue(record:any){
-        var dv = record[this.display_field];
+        var dv = record[this.display_field] || "";
         
         if(this.additional_display_fields && this.additional_display_fields.length && this.additional_display_fields.length > 0){
 
             let settings = vscode.workspace.getConfiguration();
-            let multiFieldNameSep = settings.get('snich.synced_rec_name_seperator') || "^";
+            let multiFieldNameSep = settings.get('snich.syncedRecordNameSeparator') || "^";
             this.additional_display_fields.forEach((fieldName) =>{
                 dv += multiFieldNameSep + record[fieldName];
             });

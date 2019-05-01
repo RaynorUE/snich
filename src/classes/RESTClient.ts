@@ -134,11 +134,16 @@ export class RESTClient {
         let response = await this.get(url, `Testing connection for ${baseURL}`);
         this.logger.info(this.lib, func, 'Response body recieved:', response);
         
-        if(response && response.body && response.body.result.length > 0){
+        if(response && response.body && response.body.result && response.body.result.length && response.body.result.length > 0){
             vscode.window.showInformationMessage("Connection Successful!");
             return true;
         } else {
-            vscode.window.showErrorMessage("Test Connection failed. View logs for detail.");
+            if(response && response.statusCode){
+                var respMsg = `${response.statusCode} - ${response.statusMessage}`;
+                vscode.window.showErrorMessage(`Test Connection Failed. ${respMsg}`);
+            } else {
+                vscode.window.showErrorMessage(`Test Connection failed. Uknown Error. View logs for detail.`);
+            }
             return false;
         }
     }

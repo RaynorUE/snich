@@ -8,7 +8,7 @@ Fully customize the fields of data being synced for any table!
 ## [Instructional Videos](https://www.youtube.com/playlist?list=PLp0BtdkD38PWd9PTib4OgRaTQ3SIQDE17)
 
 
-# Release Notes v0.6.1
+# Release Notes v0.7.0
 >See the change log for details.
 
 # Tips
@@ -100,8 +100,5 @@ Below are known issues and workarounds for them.
 - Sometimes when loading new files the File Explorer is not refreshed and the file/folder may not be immediately visible. 
     - This seems to be better as of the latest version... keep an eye on it and let us know if it keeps happening.
     - >__Workaround__: Expand/Collapse the instance folder or use the refresh button on the grey bar just above your instance name (the workspace folder header).
-- Saving files stops syncing to ServiceNow and I am no longer seeing the Updated Record messages. 
-    - This is due to a timeout issue and is most noticeable on slow instances. You will see this after 3 "Slow Saves"
-    - >__Workaround__: Open your command pallete and look for "Developer: Reload Window" to refresh the window. To reset your counter. 
 
 ---------------------------------------------------------------------------------------------------
