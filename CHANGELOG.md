@@ -1,6 +1,23 @@
 # Change Log
 Welcome to the Change Log! Here is where you will find all the juicy details of the changes from version to version! Including minor versions!
-## [v0.6.1 (Current)](#)
+
+## [v0.7.0](#)
+### Changed
+- Sync Record now uses sys_scope AND sys_package. This way you can see what OOB Files are associated to particular apps. 
+- Sync Record now uses all the "Display Fields" you selected when configuring the table as the display name shown to you in the pick list. 
+    - Lemme know how this goes... Might add a setting for this!
+
+### Fixes
+- __I DID IT!__ (I think). Issue regarding "Saving files no longer updating ServiceNow" (aka the onWillSave Issue) has been resolved!
+- Setup New Instance and Test Connection now show the HTTP Error information if available.
+    - This is to help with "unauthorized" to let you know you typed in your ID/PW incorrectly. 
+- Random issue where sys_ui_context_menu did not load records. Turns out this was "null values" used in building the file names. Now handles null values properly, but could cause you some weird file names..
+    - Double check your display value config for a given table!
+- When using older file structures before "Additional Display Fields" functionality, 
+- Fixed some of the settings names and descriptions not showing correctly.
+
+
+## [v0.6.1](#)
 
 ### General
 - Removed the "Internal development" changelog since Git will handle that for us with pull/merge requests and internal diff management. 
