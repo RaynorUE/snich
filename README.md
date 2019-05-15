@@ -1,12 +1,15 @@
 # ServiceNow Integrated Code Helper
 Increase your development speed and Reduce Errors! Get out of ServiceNows clunky web editors and edit your scripts using all the power of VSCode!
 
-This extension allows you to sync any application file record from ServiceNow. Including any field from that file! (Not just script fields!)
+This extension allows you to sync any application file record from ServiceNow. Including any field from that file! (Not just script fields!) Fully customize the fields of data being synced for any table!
 
-Fully customize the fields of data being synced for any table!
-
-## [Instructional Videos](https://www.youtube.com/playlist?list=PLp0BtdkD38PWd9PTib4OgRaTQ3SIQDE17)
-
+<a href="https://www.servicenow.com"><img src="https://badgen.net/badge/ServiceNow/Kingston%20%7C%20London%20%7C%20Madrid/red"/></a>
+<br/>
+<br/>
+<a href="https://www.youtube.com/playlist?list=PLp0BtdkD38PWd9PTib4OgRaTQ3SIQDE17"><img src="https://badgen.net/badge/YouTube/Instructional Videos/blue?icon=googleplay"/></a>
+<br/><br/>
+<img src="https://vsmarketplacebadge.apphb.com/version-short/integrateNate.snich.svg"/> <img src="https://vsmarketplacebadge.apphb.com/installs/integrateNate.snich.svg
+"/> <img src="https://vsmarketplacebadge.apphb.com/rating-short/integrateNate.snich.svg"/>
 
 # Release Notes v0.7.0
 >See the change log for details.
