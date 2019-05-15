@@ -37,7 +37,7 @@ export class SNFilePuller {
          * Just incase the table has been deleted (or was never created!)
         */
         let configuredTables = selectedInstance.tableConfig;
-        let encodedQuery = 'super_class.name=sys_metadata^nameIN' + configuredTables.tableNameList;
+        let encodedQuery = 'nameIN' + configuredTables.tableNameList;
         let tableRecs:Array<snRecord> = await client.getRecords('sys_db_object', encodedQuery, ["name", "label"], true);
         if(!tableRecs || tableRecs.length === 0){
             vscode.window.showWarningMessage('Attempted to get configured tables from instance and failed. Aborting sync record. See logs for detail.');
