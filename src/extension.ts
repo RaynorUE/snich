@@ -26,6 +26,7 @@ export function activate(context: vscode.ExtensionContext) {
     //load observers for our workspace.
     wsManager.loadObservers(instanceList);
     wsManager.loadWorkspaceInstances(instanceList);
+    wsManager.loadSNTypeDefinitions(context);
 
     //check current log setting and option to reset...
 

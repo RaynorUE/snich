@@ -18,9 +18,9 @@
 	"qna": "marketplace",
 	"badges": [
 		{
-			"url":"https://badgen.net/badge/YouTube/Instructional Videos/blue?icon=googleplay",
+			"url": "https://badgen.net/badge/YouTube/Instructional Videos/blue?icon=googleplay",
 			"description": "Watch instructional videos on Youtube!",
-			"href":"https://www.youtube.com/playlist?list=PLp0BtdkD38PWd9PTib4OgRaTQ3SIQDE17"
+			"href": "https://www.youtube.com/playlist?list=PLp0BtdkD38PWd9PTib4OgRaTQ3SIQDE17"
 		},
 		{
 			"url": "https://badgen.net/badge/ServiceNow/Kingston%20%7C%20London%20%7C%20Madrid/red",
