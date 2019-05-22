@@ -6,6 +6,7 @@ import { SystemLogHelper } from './classes/LogHelper';
 import { RESTClient } from './classes/RESTClient';
 import { SNFilePuller } from './classes/SNRecordPuller';
 import { WorkspaceManager } from './classes/WorkspaceManager';
+import { TSDefinitionGenerator } from './classes/TSDefinitionGeneator';
 
 // this method is called when your extension is activated
 // your extension is activated the very first time the command is executed
@@ -26,7 +27,7 @@ export function activate(context: vscode.ExtensionContext) {
     //load observers for our workspace.
     wsManager.loadObservers(instanceList);
     wsManager.loadWorkspaceInstances(instanceList);
-    wsManager.loadSNTypeDefinitions(context);
+    new TSDefinitionGenerator().loadSNTypeDefinitions(context);
 
     //check current log setting and option to reset...
 
