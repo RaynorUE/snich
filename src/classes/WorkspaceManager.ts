@@ -131,6 +131,7 @@ export class WorkspaceManager{
                 instanceList.addInstance(instance);
             }
         });
+        
         this.logger.info(this.lib, func, "Loaded instanceList:", instanceList);
         this.logger.info(this.lib, func, "END");
     }

@@ -16,8 +16,10 @@ import { WorkspaceManager } from "./WorkspaceManager";
 
 export class TSDefinitionGenerator {
 
-    logger:SystemLogHelper;
-    lib:string = 'TSDefinitionGenerator';
+    private logger:SystemLogHelper;
+    private lib:string = 'TSDefinitionGenerator';
+
+    readonly skipClientMethods:Array<string> = ['GlideRecord', 'Mobile GlideForm (g_form)'];
 
     constructor(logger?:SystemLogHelper){
         let func = 'constructor';
@@ -34,81 +36,82 @@ export class TSDefinitionGenerator {
         this.logger.info(this.lib, func, 'START');
 
         let wsFolders = vscode.workspace.workspaceFolders || [];
-        this.logger.info(this.lib, func, "Testing Statically First folder");
+        
         let rootPath = wsFolders[0].uri.fsPath;
+        this.logger.debug(this.lib, func, 'Workspace root: ' + rootPath);
 
         let atTypesPath = path.resolve(rootPath, '@Types');
-        let GlideSoftTypesPath = path.resolve(rootPath, '@Types', 'GlideSoft');
+        let GlideSoftTypesPath = path.resolve(rootPath, '@Types', 'GlideSoft'); //using GlideSoft cause who doesn't like easter? ;)
         //it's cloodgy for now, but we'll wipe @Types and regenerate everytime we execute this method. 
         if(!fs.existsSync(atTypesPath)){
             //create @TypesPath
             fs.mkdirSync(atTypesPath);
         }
         
-        //wipe GlideSoft Folder and regenerate below. It's cloodgy I know... but since we're allowing .inactive, easier to manage this way. 
         if(!fs.existsSync(GlideSoftTypesPath)){
             fs.mkdirSync(GlideSoftTypesPath);
         }
 
+        let SNCodeDefinitionsPath = path.resolve(context.extensionPath, 'SNCodeDefinitions');
+        this.logger.debug(this.lib, func, 'Source SNCodeDefinitions Path: ' + SNCodeDefinitionsPath);
 
-        //using GlideSoft cause who doesn't like easter? ;)
-        //let scopedTypesPath = path.resolve(rootPath, '@Types', 'GlideSoft', this.scopedTypesFileName);
-
-        
-        let SNCodeDefinitionsPath = path.resolve(context.extensionPath, 'dist', 'SNCodeDefinitions');
-
-        let codeFiles = fs.readdirSync(SNCodeDefinitionsPath)
+        let codeFiles = fs.readdirSync(SNCodeDefinitionsPath);
 
         for(let i = 0; i < codeFiles.length; i++){
+            
             let tsDefJSONFileName = codeFiles[i];
-            if(tsDefJSONFileName.indexOf('.json') > -1){
+            this.logger.debug(this.lib, func, 'Processing codeFile: ' + tsDefJSONFileName);
+            if(tsDefJSONFileName.indexOf('.json') === -1){
                 //not a json file... skip it so things don't explode..
                 continue;
             }
 
-
             let filePath = path.resolve(SNCodeDefinitionsPath, tsDefJSONFileName);
             let typeData:any = new WorkspaceManager(this.logger).loadJSONFromFile(filePath);
 
-            var rootTSDefPath = path.resolve(rootPath, '@Types', 'GlideSoft', typeData.release || 'Other');
+            let rootTSDefPath = path.resolve(GlideSoftTypesPath, typeData.release || 'Other');
+
+            if(!fs.existsSync(rootTSDefPath)){
+                fs.mkdirSync(rootTSDefPath);
+            }
 
             //for each top level property create a unique file for each one.. (Scoped, legacy, client, etc);
-            for(var highType in typeData){
-                if(highType == 'release'){
+            for(let highType in typeData){
+                if(highType === 'release'){
                     continue; //they put this at the high level groupings.. 
                 }
                 let tsDefFilePath = path.resolve(rootTSDefPath, highType + '.d.ts');
                 let tsDefFileInactive = path.resolve(rootTSDefPath, highType + '.d.ts.inactive');
                 
+                if(!fs.existsSync(tsDefFilePath) && !fs.existsSync(tsDefFileInactive)){
+                    let dataToProcess = typeData[highType];
+                    let pathToUse = tsDefFilePath;
+                    if(highType === 'legacy'){
+                        pathToUse = tsDefFileInactive;
+                    }
+
+                    this.createTSDefFile(dataToProcess, pathToUse, highType === 'client');
+                }
             }
-            this.createTSDefFile(typeData.scoped, scopedTypesPath);
-            this.createTSDefFile(typeData.legacy, legacyTypesPath);
-            this.createTSDefFile(typeData.client, clientTypesPath);
         }
 
-
-
-        
         this.logger.info(this.lib, func, 'END');
     }
 
-    private createTSDefFile(data:any, filePath:string){
+    private createTSDefFile(data:any, filePath:string, isClientDefs:Boolean){
         let func = 'createTSDefFile';
         this.logger.info(this.lib, func, 'START');
         let tsDefFileContent = '//SCOPED GlideSoft Definition File. In combination with JSConfig.json I provide you intellisense for ServiceNow APIs.\n\n\n';
 
         let spaces4 = '    ';
 
-        var skipClientMethods = ['GlideRecord'];
-        var isClientFile = filePath.indexOf(this.clientTypesFileName) > -1;
-
         //@TODO - Try to figure a way to handle the sn_ws prefixes and the like and wrap them in NameSpaces...
-        // 
 
         for(let className in data){
-            if(isClientFile && skipClientMethods.indexOf(className) > -1){
+            if(isClientDefs && this.skipClientMethods.indexOf(className) > -1){
                 continue;
             }
+
             let classData = data[className];
             let classDefinition = '';
 
@@ -128,7 +131,7 @@ export class TSDefinitionGenerator {
             /*======= End Class Description Block =======*/
 
             /*======= Begin Class Definition =======*/
-            classDefinition += 'declare class ' + className.replace(' - Scoped', '').replace(' -', '') + ' {\n\n';
+            classDefinition += 'declare class ' + this.fixClassNames(className) + ' {\n\n';
 
             /*===== Beging Properties Definition ======*/
             if(classData.properties){
@@ -158,8 +161,8 @@ export class TSDefinitionGenerator {
                     }
                     
                     let returnType = '';
-                    if(method.returns && method.returns.type && method.returns.type != 'void'){
-                        classDefinition += spaces4 + ' * @returns ' + method.returns.description + '\n';
+                    if(method.returns && method.returns.type && method.returns.type !== 'void'){
+                        classDefinition += spaces4 + ' * @returns ' + this.fixTSContent(method.returns.description) + '\n';
                         returnType = ': ' + this.handleType(method.returns.type);
                     }
 
@@ -179,11 +182,24 @@ export class TSDefinitionGenerator {
         
     }
 
+    private fixClassNames(className:String){
+        if(!className){
+            return '';
+        }
+
+        if(className === 'GlideForm (g_form)'){
+            className = 'g_form';
+        }
+
+        
+        return className.replace(' - Scoped', '').replace(' -', '');
+    }
+
     private fixParamName(paramName:String){
         if(!paramName){
             return '';
         }
-        if(paramName == 'function'){
+        if(paramName === 'function'){
             paramName = 'func';
         }
 
