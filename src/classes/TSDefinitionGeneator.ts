@@ -41,6 +41,12 @@ export class TSDefinitionGenerator {
         let rootPath = wsFolders[0].uri.fsPath;
         this.logger.debug(this.lib, func, 'Workspace root: ' + rootPath);
 
+        let jsConfig = path.resolve(rootPath, 'jsconfig.json');
+
+        if(!fs.existsSync(jsConfig)){
+            fs.writeFileSync(jsConfig, '//DO NOT DLETE ME!! I MAKE YOUR ServiceNow Intellisense work!');
+        }
+
         let atTypesPath = path.resolve(rootPath, '@Types');
         let GlideSoftTypesPath = path.resolve(rootPath, '@Types', 'GlideSoft'); //using GlideSoft cause who doesn't like easter? ;)
         //it's cloodgy for now, but we'll wipe @Types and regenerate everytime we execute this method. 
