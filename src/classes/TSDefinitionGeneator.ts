@@ -18,6 +18,7 @@ export class TSDefinitionGenerator {
 
     private logger:SystemLogHelper;
     private lib:string = 'TSDefinitionGenerator';
+    private snNameSpaces = new snNameSpaces();
 
     readonly skipClientMethods:Array<string> = ['GlideRecord', 'Mobile GlideForm (g_form)'];
 
@@ -80,6 +81,7 @@ export class TSDefinitionGenerator {
                 if(highType === 'release'){
                     continue; //they put this at the high level groupings.. 
                 }
+
                 let tsDefFilePath = path.resolve(rootTSDefPath, highType + '.d.ts');
                 let tsDefFileInactive = path.resolve(rootTSDefPath, highType + '.d.ts.inactive');
                 
@@ -90,7 +92,7 @@ export class TSDefinitionGenerator {
                         pathToUse = tsDefFileInactive;
                     }
 
-                    this.createTSDefFile(dataToProcess, pathToUse, highType === 'client');
+                    this.createTSDefFile(dataToProcess, pathToUse, highType);
                 }
             }
         }
@@ -98,7 +100,7 @@ export class TSDefinitionGenerator {
         this.logger.info(this.lib, func, 'END');
     }
 
-    private createTSDefFile(data:any, filePath:string, isClientDefs:Boolean){
+    private createTSDefFile(data:any, filePath:string, fileType:string){
         let func = 'createTSDefFile';
         this.logger.info(this.lib, func, 'START');
         let tsDefFileContent = '//SCOPED GlideSoft Definition File. In combination with JSConfig.json I provide you intellisense for ServiceNow APIs.\n\n\n';
@@ -108,12 +110,23 @@ export class TSDefinitionGenerator {
         //@TODO - Try to figure a way to handle the sn_ws prefixes and the like and wrap them in NameSpaces...
 
         for(let className in data){
-            if(isClientDefs && this.skipClientMethods.indexOf(className) > -1){
+            if(fileType === 'client' && this.skipClientMethods.indexOf(className) > -1){
                 continue;
             }
 
             let classData = data[className];
             let classDefinition = '';
+            let fixedClassName = this.fixClassNames(className);
+            let isNameSpaced = false;
+
+            /* ====== Start Wrap In NameSpace if exists ======= */
+
+            var nameSpace = this.determineNameSpace(fixedClassName);
+            if(nameSpace){
+                isNameSpaced = true;
+                classDefinition += 'declare namespace ' + nameSpace + '{\n\n';
+            }
+            
 
             /*====== Start Class Description Block =======*/
 
@@ -131,7 +144,7 @@ export class TSDefinitionGenerator {
             /*======= End Class Description Block =======*/
 
             /*======= Begin Class Definition =======*/
-            classDefinition += 'declare class ' + this.fixClassNames(className) + ' {\n\n';
+            classDefinition += 'declare class ' + fixedClassName + ' {\n\n';
 
             /*===== Beging Properties Definition ======*/
             if(classData.properties){
@@ -172,10 +185,14 @@ export class TSDefinitionGenerator {
             }
 
             /*======= End Class Definition =======*/
-            tsDefFileContent += classDefinition + '}\n\n';          
+            tsDefFileContent += classDefinition + '}\n\n';
+            if(isNameSpaced){
+                tsDefFileContent += '}'; //close our namespace
+            }
         }
 
         tsDefFileContent = this.addTSDefForFixing(tsDefFileContent);
+        tsDefFileContent = this.declareExtensions(tsDefFileContent, fileType);
 
         fs.writeFileSync(filePath, tsDefFileContent);
         this.logger.info(this.lib, func, 'END');
@@ -258,5 +275,83 @@ export class TSDefinitionGenerator {
         tsDefFileContent += 'declare interface JSONString {}';
         return tsDefFileContent;
     }
+
+    /**
+     * Method is intended to add any additional "Implements" lines so that we can get some reference lookups
+     * without having to rename everything..
+     * @param tsDefFileContent Definition file content to modify and return.
+     */
+    private declareExtensions(tsDefFileContent:string, fileType:string){
+
+        /** Might consider making this it's own JSON File so we can load it in. Seperating Code from Data. */
+        var extensionsMap:any = {
+            server:<Array<snClassExtensionMap>>
+            [
+                {
+                    class:'RESTResponse',
+                    extends: 'RESTResponseV2'
+                },
+                {
+                    class:'gs',
+                    extends:'GlideSystem'
+                },
+                {
+                    class:'SOAPResponse',
+                    extends:'SOAPResponseV2'
+                }
+            ],
+            client:<Array<snClassExtensionMap>>[],
+            scoped:<Array<snClassExtensionMap>>[],
+            legacy:<Array<snClassExtensionMap>>[]
+        };
+
+        //add server into scoped and legacy markers since those are both "server" apis..
+        extensionsMap.scoped = extensionsMap.server.concat(extensionsMap.scoped);
+        extensionsMap.legacy = extensionsMap.server.concat(extensionsMap.legacy);
+
+        let currentMap = extensionsMap[fileType];
+        
+        for(let i = 0; i < currentMap.length; i++){
+            let extendData = currentMap[i];
+            tsDefFileContent += '\n' + `declare class ${extendData.class} extends ${extendData.extends}{}`;
+        }
+        
+        return tsDefFileContent;
+    }
+
+    private determineNameSpace(className:string){
+        if(!className){
+            return '';
+        }
+
+        var returnNameSpace = '';
+        for(let nameSpace in this.snNameSpaces){
+            for(let i = 0; i < this.snNameSpaces.nameSpaces[nameSpace]; i++){
+                let apiName = this.snNameSpaces.nameSpaces[nameSpace][i];
+                if(apiName === className){
+                    return nameSpace;
+                }
+            }
+        }
+        return returnNameSpace;
+    }
     
+}
+
+/**
+ * Used to define the name spaces to wrap around ServiceNow APIs. For example, wrapping RESTMessageV2 with sn_ws
+ * So that the code lookup works properly with sn_ws.RESTMessageV2
+ */
+class snNameSpaces {
+    nameSpaces:any = {}
+    constructor(){
+        this.nameSpaces.sn_ws = ['RESTMessageV2', 'RESTResponseV2', 'RESTAPIRequest', 'RESTAPIRequestBody','RESTAPIResponse', 'RESTAPIResponseStream','SOAPMessageV2','SOAPResponseV2']
+    }
+
+}
+
+
+declare interface snClassExtensionMap{
+    class:string,
+    extends:string
 }
