@@ -366,7 +366,7 @@ export class TSDefinitionGenerator {
         }
 
         var returnNameSpace = '';
-        for(let nameSpace in this.snNameSpaces){
+        for(let nameSpace in this.snNameSpaces.nameSpaces){
             for(let i = 0; i < this.snNameSpaces.nameSpaces[nameSpace]; i++){
                 let apiName = this.snNameSpaces.nameSpaces[nameSpace][i];
                 if(apiName === className){
