@@ -4,7 +4,7 @@
 	"displayName": "S.N.I.C.H",
 	"description": "Service Now Integrated Code Helper (SNICH). Connects to any ServiceNow instance and allows remote editing and storage of records from the Application File (and extended) tables.",
 	"icon": "images/icon-shrunk.png",
-	"version": "0.7.1",
+	"version": "0.7.3",
 	"keywords": [
 		"SNICH",
 		"snich",
@@ -18,17 +18,22 @@
 	"qna": "marketplace",
 	"badges": [
 		{
-			"url": "https://www.service-now.com",
+			"url": "https://badgen.net/badge/YouTube/Instructional Videos/blue?icon=googleplay",
+			"description": "Watch instructional videos on Youtube!",
+			"href": "https://www.youtube.com/playlist?list=PLp0BtdkD38PWd9PTib4OgRaTQ3SIQDE17"
+		},
+		{
+			"url": "https://badgen.net/badge/ServiceNow/Kingston%20%7C%20London%20%7C%20Madrid/red",
 			"description": "Supported Service Now Versions",
-			"href": "https://flat.badgen.net/badge/ServiceNow/Jakarta%20%7C%20Kingston%20%7C%20London%20%7C%20Madrid/red"
+			"href": "https://www.servicenow.com"
 		}
 	],
 	"engines": {
 		"vscode": "^1.30.0"
 	},
 	"repository": {
-		"type": "none",
-		"url": "#"
+		"type": "git",
+		"url": "https://github.com/RaynorUE/snich"
 	},
 	"categories": [
 		"Other",

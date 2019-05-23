@@ -22,6 +22,10 @@ export class WorkspaceManager{
     readonly configFileName:string = "snich_config.json";
     readonly tableConfigFileName:string = "snich_table_config.json";
     readonly syncedFilesName:string = "snich_synced_files.json";
+
+
+    readonly ignoreFolders = ['@Types'];
+
     logger:SystemLogHelper;
     lib:string = 'ConfigMgr';
     
@@ -127,6 +131,7 @@ export class WorkspaceManager{
                 instanceList.addInstance(instance);
             }
         });
+        
         this.logger.info(this.lib, func, "Loaded instanceList:", instanceList);
         this.logger.info(this.lib, func, "END");
     }
@@ -259,7 +264,9 @@ export class WorkspaceManager{
         let returnData = {};
         if(fs.existsSync(filePath)){
             this.logger.info(this.lib, func, `Loading json from path: ${filePath}`);
-            returnData = JSON.parse(fs.readFileSync(filePath).toString());
+            let fileData = fs.readFileSync(filePath).toString();
+            this.logger.info(this.lib, func, 'Snippet from file data: ' + fileData.slice(0, 100));
+            returnData = JSON.parse(fileData);
         } 
         this.logger.info(this.lib, func, 'END', {returnData:returnData});
         return returnData;
@@ -304,6 +311,15 @@ export class WorkspaceManager{
             let func = "WillSaveTextDocument";
             this.logger.info(this.lib, func, 'Will save event started. About to step into wawitUntil. WillSaveEvent currently:', willSaveEvent);
             let document = willSaveEvent.document;
+
+            for(let i = 0; i < this.ignoreFolders.length; i++){
+                let folderName = this.ignoreFolders[i];
+                if(document.uri.fsPath.indexOf(folderName) > -1){
+                    this.logger.info(this.lib, func, 'Folder is in exclusion list!');
+                    this.logger.info(this.lib, func, 'END');
+                    return;
+                }
+            }
             
             willSaveEvent.waitUntil(new Promise((resolve, reject) =>{
                 let func = "waitUntilPromise";
@@ -334,6 +350,14 @@ export class WorkspaceManager{
         vscode.workspace.onDidSaveTextDocument(async (document) =>{
             let func = 'onDidSaveTextDocument';
             this.logger.debug(this.lib, func, 'START', document);
+            for(let i = 0; i < this.ignoreFolders.length; i++){
+                let folderName = this.ignoreFolders[i];
+                if(document.uri.fsPath.indexOf(folderName) > -1){
+                    this.logger.info(this.lib, func, 'Folder is in exclusion list!');
+                    this.logger.info(this.lib, func, 'END');
+                    return;
+                }
+            }
             let visibleEditors = vscode.window.visibleTextEditors || [];
             if(visibleEditors && visibleEditors.length >1){
                 this.logger.debug(this.lib, func, "we are in the compare window.");
@@ -370,7 +394,7 @@ export class WorkspaceManager{
         
         let func = 'compareWithServer';
         this.logger.info(this.lib, func, 'START', {fsPath:fsPath, newContent:newContent});
-        
+
         let visibleEditors = vscode.window.visibleTextEditors || [];
         let isCompareWindow = false;
         if(visibleEditors && visibleEditors.length >1){
@@ -531,5 +555,5 @@ export class WorkspaceManager{
             this.logger.info(this.lib, func, "Did not find any synced files");
         }
     }
-    
+
 }
