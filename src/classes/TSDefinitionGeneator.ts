@@ -18,9 +18,9 @@ export class TSDefinitionGenerator {
 
     private logger:SystemLogHelper;
     private lib:string = 'TSDefinitionGenerator';
-    private snNameSpaces = new snNameSpaces();
+    private snNameSpaces = new SNNameSpaces();
 
-    readonly skipClientMethods:Array<string> = ['GlideRecord', 'Mobile GlideForm (g_form)'];
+    readonly snSkipThese = new SNSkipThese();
 
     constructor(logger?:SystemLogHelper){
         let func = 'constructor';
@@ -85,7 +85,9 @@ export class TSDefinitionGenerator {
                 let tsDefFilePath = path.resolve(rootTSDefPath, highType + '.d.ts');
                 let tsDefFileInactive = path.resolve(rootTSDefPath, highType + '.d.ts.inactive');
                 
-                if(!fs.existsSync(tsDefFilePath) && !fs.existsSync(tsDefFileInactive)){
+                //debugging always smash over..
+                let debugging = true;
+                if(!fs.existsSync(tsDefFilePath) && !fs.existsSync(tsDefFileInactive) || debugging){
                     let dataToProcess = typeData[highType];
                     let pathToUse = tsDefFilePath;
                     if(highType === 'legacy'){
@@ -110,13 +112,13 @@ export class TSDefinitionGenerator {
         //@TODO - Try to figure a way to handle the sn_ws prefixes and the like and wrap them in NameSpaces...
 
         for(let className in data){
-            if(fileType === 'client' && this.skipClientMethods.indexOf(className) > -1){
+            if(fileType === 'client' && this.snSkipThese.classes.indexOf(className) > -1){
                 continue;
             }
 
             let classData = data[className];
             let classDefinition = '';
-            let fixedClassName = this.fixClassNames(className);
+            let fixedClassName = this.fixClassName(className);
             let isNameSpaced = false;
 
             /* ====== Start Wrap In NameSpace if exists ======= */
@@ -160,27 +162,30 @@ export class TSDefinitionGenerator {
 
             if(classData.methods && classData.methods.length > 0){
                 classData.methods.forEach((method:any) =>{
-                    classDefinition += spaces4 + '/**\n';
-                    classDefinition += spaces4 + ' * ' + this.fixTSContent(method.description) + '\n';
-                    classDefinition += spaces4 + ' * \n';
 
-                    let methodTSParams:Array<any> = []; //setup array so as we loop through params we can store and just inject into method
-                    if(method.params && method.params.length > 0){
-                        method.params.forEach((param:any) => {
-                            
-                            methodTSParams.push(this.fixParamName(param.name) + ': ' + this.handleType(param.type));
-                            classDefinition += spaces4 + ' * @' + this.fixParamName(param.name) + ' ' + param.description + '\n';
-                        });
-                    }
-                    
-                    let returnType = '';
-                    if(method.returns && method.returns.type && method.returns.type !== 'void'){
-                        classDefinition += spaces4 + ' * @returns ' + this.fixTSContent(method.returns.description) + '\n';
-                        returnType = ': ' + this.handleType(method.returns.type);
-                    }
+                    if(this.snSkipThese.methods.indexOf(method.name) === -1){
+                        classDefinition += spaces4 + '/**\n';
+                        classDefinition += spaces4 + ' * ' + this.fixTSContent(method.description) + '\n';
+                        classDefinition += spaces4 + ' * \n';
 
-                    classDefinition += spaces4 + ' */\n';
-                    classDefinition += spaces4 + method.name + '(' + methodTSParams.join(', ') + ')' + returnType + ';\n\n';
+                        let methodTSParams:Array<any> = []; //setup array so as we loop through params we can store and just inject into method
+                        if(method.params && method.params.length > 0){
+                            method.params.forEach((param:any) => {
+                                
+                                methodTSParams.push(this.fixParamName(param.name) + ': ' + this.handleType(param.type));
+                                classDefinition += spaces4 + ' * @' + this.fixParamName(param.name) + ' ' + param.description + '\n';
+                            });
+                        }
+                        
+                        let returnType = '';
+                        if(method.returns && method.returns.type && method.returns.type !== 'void'){
+                            classDefinition += spaces4 + ' * @returns ' + this.fixTSContent(method.returns.description) + '\n';
+                            returnType = ': ' + this.handleType(method.returns.type);
+                        }
+
+                        classDefinition += spaces4 + ' */\n';
+                        classDefinition += spaces4 + this.fixMethodName(method.name) + '(' + methodTSParams.join(', ') + ')' + returnType + ';\n\n';
+                    }
                 });
             }
 
@@ -199,17 +204,33 @@ export class TSDefinitionGenerator {
         
     }
 
-    private fixClassNames(className:String){
+    private fixClassName(className:String){
         if(!className){
             return '';
         }
 
         if(className === 'GlideForm (g_form)'){
-            className = 'g_form';
+            className = 'GlideForm';
+        }
+
+        if(className === 'GlideListV3 (g_list)'){
+            className = 'GlideListV3';
+        }
+
+        if(className === 'GlideMenu (g_menu and g_item)'){
+            className = 'GlideMenu';
         }
 
         
         return className.replace(' - Scoped', '').replace(' -', '');
+    }
+
+    private fixMethodName(methodName:String){
+
+
+        //mostly stuff in client scripts, like spModal
+        methodName = methodName.replace('(String message).then', '').replace('(String message, String default).then', '').replace('(Object options).then', '');
+        return methodName;
     }
 
     private fixParamName(paramName:String){
@@ -285,7 +306,7 @@ export class TSDefinitionGenerator {
 
         /** Might consider making this it's own JSON File so we can load it in. Seperating Code from Data. */
         var extensionsMap:any = {
-            server:<Array<snClassExtensionMap>>
+            server:<Array<SNClassExtensionMap>>
             [
                 {
                     class:'RESTResponse',
@@ -300,9 +321,23 @@ export class TSDefinitionGenerator {
                     extends:'SOAPResponseV2'
                 }
             ],
-            client:<Array<snClassExtensionMap>>[],
-            scoped:<Array<snClassExtensionMap>>[],
-            legacy:<Array<snClassExtensionMap>>[]
+
+            client:<Array<SNClassExtensionMap>>[
+                {
+                    class:'g_form',
+                    extends:'GlideForm'
+                },
+                {
+                    class:'g_list',
+                    extends: 'GlideListV3'
+                },
+                {
+                    class:'g_menu',
+                    extends:'GlideMenu'
+                }
+            ],
+            scoped:<Array<SNClassExtensionMap>>[],
+            legacy:<Array<SNClassExtensionMap>>[]
         };
 
         //add server into scoped and legacy markers since those are both "server" apis..
@@ -342,7 +377,7 @@ export class TSDefinitionGenerator {
  * Used to define the name spaces to wrap around ServiceNow APIs. For example, wrapping RESTMessageV2 with sn_ws
  * So that the code lookup works properly with sn_ws.RESTMessageV2
  */
-class snNameSpaces {
+class SNNameSpaces {
     nameSpaces:any = {}
     constructor(){
         this.nameSpaces.sn_ws = ['RESTMessageV2', 'RESTResponseV2', 'RESTAPIRequest', 'RESTAPIRequestBody','RESTAPIResponse', 'RESTAPIResponseStream','SOAPMessageV2','SOAPResponseV2']
@@ -350,8 +385,34 @@ class snNameSpaces {
 
 }
 
+class SNSkipThese {
+    classes:Array<string> = [];
+    methods:Array<string> = [];
 
-declare interface snClassExtensionMap{
+    constructor(){
+        
+        this.buildClasses();
+        this.buildMethods();
+    }
+
+    buildClasses(){
+        //these methods are trying to 
+
+        this.classes.push('GlideRecord'); //just cause this collides... and no good way to know/set which "type per file"
+        this.classes.push('Mobile GlideForm (g_form)'); //Might need a way to handle this.. or maybe merge in with regular g_form.. there would be some overlap.. but at least it's there?
+        this.classes.push('GlideList2 (g_list)'); //superceded by GlideList3
+        this.classes.push('CustomEvent'); //collides with something built-in on VSCode... will debug if people start wondering where this is..
+
+    }
+
+    buildMethods(){
+        var GlideFlow = ['execution.awaitCompletion', 'execution.getExecutionStatus', 'execution.getOutputs'];
+        this.methods = GlideFlow.concat(this.methods);
+    }
+}
+
+
+declare interface SNClassExtensionMap{
     class:string,
     extends:string
 }
