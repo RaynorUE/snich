@@ -1,6 +1,10 @@
 # Change Log
 Welcome to the Change Log! Here is where you will find all the juicy details of the changes from version to version! Including minor versions!
 
+## [v0.7.01](#)
+### Fixes
+- Fixed issue where when re-querying for configured tables against an instance we're still filtering on sys_metadata... doh...
+
 ## [v0.7.0](#)
 ### Changed
 - Sync Record now uses sys_scope AND sys_package. This way you can see what OOB Files are associated to particular apps. 
