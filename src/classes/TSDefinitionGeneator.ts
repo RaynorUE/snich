@@ -129,10 +129,10 @@ export class TSDefinitionGenerator {
 
             /* ====== Start Wrap In NameSpace if exists ======= */
 
-            var nameSpace = this.determineNameSpace(fixedClassName);
+            var nameSpace = this.snNameSpaces.getNameSpace(fixedClassName);
             if(nameSpace){
                 isNameSpaced = true;
-                classDefinition += 'declare namespace ' + nameSpace + '{\n\n';
+                classDefinition += '\ndeclare namespace ' + nameSpace + '{\n\n';
             }
             
 
@@ -179,7 +179,7 @@ export class TSDefinitionGenerator {
                             method.params.forEach((param:any) => {
                                 
                                 methodTSParams.push(this.fixParamName(param.name) + ': ' + this.handleType(param.type));
-                                classDefinition += spaces4 + ' * @' + this.fixParamName(param.name) + ' ' + param.description + '\n';
+                                classDefinition += spaces4 + ' * @' + this.fixParamName(param.name) + ' ' + this.fixTSContent(param.description) + '\n';
                             });
                         }
                         
@@ -251,14 +251,15 @@ export class TSDefinitionGenerator {
         return paramName.replace(/\s|\.|\(|\)/g, '');
     }
 
-    private fixTSContent(content:String){
+    private fixTSContent(content:String, spaceing?:string){
+        
         if(!content){
             return '';
         }
 
         let htmlRegex = /<\/?[a-z][a-z0-9]*[^<>]*>|<!--.*?-->/g;
         let extraSpacesRegex = /\s{2,}/g;
-        return content.replace(/<br\/>/g, '\n * ').replace(htmlRegex, '').replace(extraSpacesRegex, '').replace(/\n/g, '\n * ');
+        return content.replace(/<br\/>/g, '\n * ').replace(htmlRegex, '').replace(extraSpacesRegex, '').replace(/\n/g, '\n' + spaceing + ' * ');
     }
 
     private handleType(type:String){
@@ -359,23 +360,6 @@ export class TSDefinitionGenerator {
         
         return tsDefFileContent;
     }
-
-    private determineNameSpace(className:string){
-        if(!className){
-            return '';
-        }
-
-        var returnNameSpace = '';
-        for(let nameSpace in this.snNameSpaces.nameSpaces){
-            for(let i = 0; i < this.snNameSpaces.nameSpaces[nameSpace]; i++){
-                let apiName = this.snNameSpaces.nameSpaces[nameSpace][i];
-                if(apiName === className){
-                    return nameSpace;
-                }
-            }
-        }
-        return returnNameSpace;
-    }
     
 }
 
@@ -387,6 +371,24 @@ class SNNameSpaces {
     nameSpaces:any = {}
     constructor(){
         this.nameSpaces.sn_ws = ['RESTMessageV2', 'RESTResponseV2', 'RESTAPIRequest', 'RESTAPIRequestBody','RESTAPIResponse', 'RESTAPIResponseStream','SOAPMessageV2','SOAPResponseV2']
+    }
+
+    getNameSpace(className:string){
+        if(!className){
+            return '';
+        }
+
+        var returnNameSpace = '';
+        for(let nameSpace in this.nameSpaces){
+            for(let i = 0; i < this.nameSpaces[nameSpace].length; i++){
+                let apiName = this.nameSpaces[nameSpace][i];
+                if(apiName === className){
+                    return nameSpace;
+                }
+            }
+        }
+
+        return returnNameSpace;
     }
 
 }

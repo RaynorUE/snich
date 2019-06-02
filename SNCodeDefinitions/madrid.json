@@ -51880,7 +51880,7 @@
                             "output": ""
                         }
                     ]
-                },
+                }, 
                 {
                     "name": "toggleListNoPref",
                     "description": "Toggles the display of the list but does not save the current collapsed/expanded state of the list as a user preference.",
