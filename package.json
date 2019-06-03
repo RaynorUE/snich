@@ -4,7 +4,7 @@
 	"displayName": "S.N.I.C.H",
 	"description": "Service Now Integrated Code Helper (SNICH). Connects to any ServiceNow instance and allows remote editing and storage of records from the Application File (and extended) tables.",
 	"icon": "images/icon-shrunk.png",
-	"version": "0.7.3",
+	"version": "1.0.0",
 	"keywords": [
 		"SNICH",
 		"snich",
@@ -13,7 +13,10 @@
 		"ServiceNow Code Sync",
 		"Service-Now Code Helper",
 		"Service-Now Code Syncer",
-		"Service-Now Code Sync"
+		"Service-Now Code Sync",
+		"SNOW",
+		"SNOW Code Syncer",
+		"SNOW Code Editor"
 	],
 	"qna": "marketplace",
 	"badges": [
@@ -146,7 +149,7 @@
 						"type": "boolean",
 						"title": "Sync Record: Select Multiple",
 						"description": "When using the Sync Record command, allow multiple files to be selected. Disable this if you are annoyed by having to checkbox a single record during selection.",
-						"default": true
+						"default": false
 					}
 				}
 			}

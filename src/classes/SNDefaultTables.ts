@@ -98,18 +98,18 @@ export class ConfiguredTables {
 
         tableConfig.setDisplayField(primaryDisplayField);
         
-        let selectedDisplayFields:any = await vscode.window.showQuickPick(dicQPItems, <vscode.QuickPickOptions>{ placeHolder:"Additional fields for file name generation. Will use seperator in settings (currently: " + multiFieldNameSep + ")", ignoreFocusOut:true, matchOnDetail:true, matchOnDescription:true, canPickMany:true});
+        let selectedAdditionalDisplayFields:any = await vscode.window.showQuickPick(dicQPItems, <vscode.QuickPickOptions>{ placeHolder:"Additional fields for file name generation. Will use seperator in settings (currently: " + multiFieldNameSep + ")", ignoreFocusOut:true, matchOnDetail:true, matchOnDescription:true, canPickMany:true});
         let selectedSyncFields:any = await vscode.window.showQuickPick(dicQPItems, <vscode.QuickPickOptions>{placeHolder:"Select all fields of data you want to sync.", ignoreFocusOut:true, matchOnDetail:true, matchOnDescription:true, canPickMany:true});
 
-        if(selectedDisplayFields && selectedDisplayFields.length > 0){
-            selectedDisplayFields.forEach((selectedOption:SNQPItem) => {
+        if(selectedAdditionalDisplayFields && selectedAdditionalDisplayFields.length > 0){
+            selectedAdditionalDisplayFields.forEach((selectedOption:SNQPItem) => {
                 let selectedField = selectedOption.value;
                 tableConfig.addDisplayField(selectedField.element);
             });
         }
 
-        if(!selectedSyncFields){
-            vscode.window.showWarningMessage('No fields selected. Aborting Table configuration');
+        if(!selectedSyncFields || selectedSyncFields.length === 0){
+            vscode.window.showWarningMessage('No data fields to syncselected. Aborting Table configuration');
             return;
         }
         
@@ -126,8 +126,9 @@ export class ConfiguredTables {
                         
                         this.logger.debug(this.lib, func, "Selected Field:", selectedField);
                         
-                        return vscode.window.showInputBox(<vscode.InputBoxOptions>{placeHolder:"Do not include the . symmbol. Suggestions: js, html, css, txt", prompt:"Enter the file extension for field: " + selectedField.column_label + ' [' + selectedField.internal_type + ']', ignoreFocusOut:true}).then((extension) => {
+                        return vscode.window.showInputBox(<vscode.InputBoxOptions>{placeHolder:"Suggestions: js, html, css, txt", prompt:"Enter the file extension for Field [Type]: " + selectedField.column_label + ' [' + selectedField.internal_type + ']', ignoreFocusOut:true}).then((extension) => {
                             if(extension){
+                                extension = extension.replace(/\./g, ''); //replace any periods with nothing.
                                 tableConfig.addField(selectedField.element, selectedField.column_label, extension);
                                 this.logger.debug(this.lib, func, 'Added field to table config.', tableConfig);
                             }

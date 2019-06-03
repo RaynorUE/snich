@@ -22,6 +22,7 @@ export class WorkspaceManager{
     readonly configFileName:string = "snich_config.json";
     readonly tableConfigFileName:string = "snich_table_config.json";
     readonly syncedFilesName:string = "snich_synced_files.json";
+    readonly ignoreFiles:Array<string> = [this.configFileName, this.tableConfigFileName, this.syncedFilesName, 'jsconfig.json'];
 
 
     readonly ignoreFolders = ['@Types'];
@@ -320,6 +321,19 @@ export class WorkspaceManager{
                     return;
                 }
             }
+
+            let isReservedFile = false;
+            this.ignoreFiles.forEach((fileName) => {
+                if(document.uri.fsPath.indexOf(fileName) >-1){
+                    isReservedFile = true;
+                }
+            });
+            
+            if(isReservedFile){
+                this.logger.info(this.lib, func, 'File saved was not one to be transmitted', document.uri.fsPath);
+                this.logger.info(this.lib, func, 'END');
+                return;
+            }
             
             willSaveEvent.waitUntil(new Promise((resolve, reject) =>{
                 let func = "waitUntilPromise";
@@ -350,6 +364,7 @@ export class WorkspaceManager{
         vscode.workspace.onDidSaveTextDocument(async (document) =>{
             let func = 'onDidSaveTextDocument';
             this.logger.debug(this.lib, func, 'START', document);
+
             for(let i = 0; i < this.ignoreFolders.length; i++){
                 let folderName = this.ignoreFolders[i];
                 if(document.uri.fsPath.indexOf(folderName) > -1){
@@ -358,6 +373,20 @@ export class WorkspaceManager{
                     return;
                 }
             }
+
+            let isReservedFile = false;
+            this.ignoreFiles.forEach((fileName) => {
+                if(document.uri.fsPath.indexOf(fileName) >-1){
+                    isReservedFile = true;
+                }
+            });
+            
+            if(isReservedFile){
+                this.logger.info(this.lib, func, 'File saved was not one to be transmitted', document.uri.fsPath);
+                this.logger.info(this.lib, func, 'END');
+                return;
+            }
+
             let visibleEditors = vscode.window.visibleTextEditors || [];
             if(visibleEditors && visibleEditors.length >1){
                 this.logger.debug(this.lib, func, "we are in the compare window.");
@@ -403,9 +432,8 @@ export class WorkspaceManager{
         }
         
         
-        let reservedFiles = [this.configFileName, this.syncedFilesName, this.tableConfigFileName];
         let isReservedFile = false;
-        reservedFiles.forEach((fileName) => {
+        this.ignoreFiles.forEach((fileName) => {
             if(fsPath.indexOf(fileName) >-1){
                 isReservedFile = true;
             }
