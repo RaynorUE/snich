@@ -1,35 +1,41 @@
 # ServiceNow Integrated Code Helper
 Increase your development speed and Reduce Errors! Get out of ServiceNows clunky web editors and edit your scripts using all the power of VSCode!
 
-This extension allows you to sync any application file record from ServiceNow. Including any field from that file! (Not just script fields!)
+This extension allows you to sync any application file record from ServiceNow. Including any field from that file! (Not just script fields!) Fully customize the fields of data being synced for any table!
 
-Fully customize the fields of data being synced for any table!
+<a href="https://www.servicenow.com"><img src="https://badgen.net/badge/ServiceNow/Kingston%20%7C%20London%20%7C%20Madrid/"/></a>
 
-## [Instructional Videos](https://www.youtube.com/playlist?list=PLp0BtdkD38PWd9PTib4OgRaTQ3SIQDE17)
+<img src="https://vsmarketplacebadge.apphb.com/version-short/integrateNate.snich.svg"/> <img src="https://vsmarketplacebadge.apphb.com/installs/integrateNate.snich.svg
+"/> <img src="https://vsmarketplacebadge.apphb.com/rating-short/integrateNate.snich.svg"/>
 
 
-# Release Notes v0.7.0
->See the change log for details.
 
-# Tips
-Everything is done through the command pallete (Ctrl+Shift+P, or CMD+Shift+P on macs). Once launching the command pallete type in SNICH to see a list of all the available commands. 
+# [TL;DR]()
+<a href="https://www.youtube.com/playlist?list=PLp0BtdkD38PWd9PTib4OgRaTQ3SIQDE17"><img src="https://badgen.net/badge/YouTube/Instructional Videos/red?icon=googleplay"/></a>
+<br/>
 
-# First Time Setup
-## Setup New Instance
-1. Create / Open a folder in VScode as your workspace folder. This is the folder all of your ServiceNow Instances will be stored in. 
-2. Open the command pallete and use the "SNICH: Setup New Instance" command. 
-3. Proceed through the setup prompts.
-    - Note: If using a custom url, use the full url when prompted for instance name.
-        - Example: https://sndev.mycompany.com
-4. If setup was successful you will see a Test Connection Successful message. If not, proceed through Setup New Instance again.
-5. Once successful, you are ready to start using the other commands! 
-    - Such as Sync Record to sync your first record! 
+>__Tip:__ Everything is done through the command pallete (Ctrl+Shift+P, or CMD+Shift+P on macs). Once launching the command pallete type in SNICH to see a list of all the available commands. 
 
-## Configure Additional Tables for Instance
-1. Open the command pallet and look for "SNICH: Configure Table (New and Update)
-2. Follow the prompts to configure a new table to start syncing records.
+# [SeriviceNow API Code Class Intellisense]()
+This extention provides code completion for ServiceNow Code API And Classes. 
+>__WARNING:__ This functionality is currently in a __*Experimental Stage*__. It's solid, but will be odd in a few places.
 
-# Features
+>__Call For Help:__ If you see oddities, please take a moment to submit a github issue on the [GitHub Repo!](https://github.com/RaynorUE/snich/issues/new?assignees=RaynorUE&labels=bug&template=bug_report.md&title=I%20found%20an%20IntelliSense%20Issue...) Even if it's like a few words / sentences, or just a screenshot!
+
+## Example GlideRecord Code Completion
+![GlideRecord Intellisense](/docs/gifs/GlideRecord.gif)
+
+---------------------------------
+## Example RESTMEssageV2 Completion and Return Object type from Method
+![RESTMessage Intellisense](/docs/gifs/RESTMessageV2.gif)
+
+---------------------------------
+## Example Compare with Server
+![Compare With Server](/docs/gifs/CompareWindow.gif)
+
+
+# Primary Features
+If you are into some heavy reading, this will go over the primary features!
 
 ## [Setup New Instance]()
 Will kick off new instance configuration. Asking for the following information.
