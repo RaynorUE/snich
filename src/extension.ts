@@ -6,6 +6,7 @@ import { SystemLogHelper } from './classes/LogHelper';
 import { RESTClient } from './classes/RESTClient';
 import { SNFilePuller } from './classes/SNRecordPuller';
 import { WorkspaceManager } from './classes/WorkspaceManager';
+import { TSDefinitionGenerator } from './classes/TSDefinitionGeneator';
 
 // this method is called when your extension is activated
 // your extension is activated the very first time the command is executed
@@ -26,6 +27,7 @@ export function activate(context: vscode.ExtensionContext) {
     //load observers for our workspace.
     wsManager.loadObservers(instanceList);
     wsManager.loadWorkspaceInstances(instanceList);
+    new TSDefinitionGenerator().loadSNTypeDefinitions(context);
 
     //check current log setting and option to reset...
 
@@ -124,7 +126,7 @@ export function activate(context: vscode.ExtensionContext) {
         let func = 'activeEditor.compare_with_server';
         let wsManager = new WorkspaceManager(logger);
         logger.info(lib, func, 'START');
-        wsManager.compareActiveEditor(instanceList).then(() => {logger.info(lib, func, `END`)});
+        wsManager.compareActiveEditor(instanceList).then(() => {logger.info(lib, func, `END`);});
 	});
 
     
@@ -149,6 +151,16 @@ export function activate(context: vscode.ExtensionContext) {
     });
     
     logger.info(lib, func, "We have finished registering all commands. Extension fully activated!");
+
+    let instancesForMessage = instanceList.getInstances();
+    let instanceNamesForMessage = '';
+    for(var i = 0; i < instancesForMessage.length; i++){
+        let instance = instancesForMessage[i];
+        instanceNamesForMessage += instance.getName() + ', ';
+    }
+    instanceNamesForMessage = instanceNamesForMessage.replace(/, $/, ''); //replace trailing comma.
+
+    vscode.window.showInformationMessage('S.N.I.C.H has been activated with the following ServiceNow Instances:\n' + instanceNamesForMessage);
     logger.info(lib, func, "END");
 }
 

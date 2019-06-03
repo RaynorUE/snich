@@ -1,7 +1,19 @@
 # Change Log
 Welcome to the Change Log! Here is where you will find all the juicy details of the changes from version to version! Including minor versions!
 
-## [v0.7.01](#)
+## [v1.0.0](#)
+Awwww yea baby!! Version 1.0.0! This last update brings one of the majore milestones I wanted to get in before calling it Version 1.0.0!! 
+
+### Added
+- > Now we have IntelliSense for ServiceNow Code! Auto-Completion in the house, what what????
+- Will now tell you that it's "Activated" and what instances it found and loaded for syncing.
+
+### Changed
+- Table config no longer cares if you put a "." symbol in your extension when setting up the fields to be synced!
+- Will properly throw a warning and abort table config when aborting before the end.
+    - This is preventing a weird state in which you could have an empty table config and nothing can sync for that table. 
+
+## [v0.7.1](#)
 ### Fixes
 - Fixed issue where when re-querying for configured tables against an instance we're still filtering on sys_metadata... doh...
 
