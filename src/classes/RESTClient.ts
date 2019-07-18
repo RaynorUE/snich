@@ -305,7 +305,12 @@ export class RESTClient {
 
             if(getNew){
                 this.logger.info(this.lib, func, 'Attempting to get new Access token.');
-                vscode.window.showInputBox(<vscode.InputBoxOptions>{"placeholder":`Enter password for ${this.instanceConfig.connection.url}.`,"password":true})
+                let prompt = `Access token expired. Please Enter password for ${this.instanceConfig.connection.auth.username} on: ${this.instanceConfig.connection.url}. We do not store this value.`;
+                if(!this.instanceConfig.connection.auth.OAuth.token.access_token){
+                    //first time setup
+                    prompt = `Enter password for ${this.instanceConfig.connection.auth.username} on: ${this.instanceConfig.connection.url}. We do not store this value.`;
+                }
+                vscode.window.showInputBox(<vscode.InputBoxOptions>{prompt:prompt,"password":true, ignoreFocusOut:true})
                 .then((value) =>{
                     this.logger.info(this.lib, func, "asked user for password. Proceeding to attempt to auth.", );
                     
