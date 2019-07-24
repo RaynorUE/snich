@@ -310,7 +310,7 @@ export class RESTClient {
                     //first time setup
                     prompt = `Enter password for ${this.instanceConfig.connection.auth.username} on: ${this.instanceConfig.connection.url}. We do not store this value.`;
                 }
-                vscode.window.showInputBox(<vscode.InputBoxOptions>{prompt:prompt,"password":true, ignoreFocusOut:true})
+                vscode.window.showInputBox(<vscode.InputBoxOptions>{prompt:prompt, password:true, ignoreFocusOut:true})
                 .then((value) =>{
                     this.logger.info(this.lib, func, "asked user for password. Proceeding to attempt to auth.", );
                     
