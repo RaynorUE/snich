@@ -79,7 +79,7 @@ export class SNFilePuller {
         let fileqpitems:Array<SNQPItem> = [];
         tableFileRecs.forEach((record:any) => {
             let label = tableConfig.getDisplayValue(record);
-            let recordDetail = `${record['sys_package.name']} (${record['sys_scope.name']})`
+            let recordDetail = `${record['sys_package.name']} (${record['sys_scope.name']})`;
             
             fileqpitems.push({ "label": label, "detail": recordDetail, value: record });
         });
@@ -151,7 +151,7 @@ export class SNFilePuller {
 
         //setup our rest client and grab the available application records.
         client = new RESTClient(selectedInstance.getConfig());
-        let appRecords = await client.getRecords('sys_scope', 'scope!=global', ['name', 'scope', 'short_description']);
+        let appRecords = await client.getRecords('sys_scope', 'name!=Global', ['name', 'scope', 'short_description']);
         
         if(!appRecords || appRecords.length === 0){
             vscode.window.showWarningMessage('Load all app files aborted. Did not find any applications for the selected instance.');
@@ -183,6 +183,8 @@ export class SNFilePuller {
         }
 
         let appScope = appSelected.value.scope;
+        let appSys = appSelected.value.sys_id;
+
         //await recordRecursor(selectedInstance, 0, appScope);
 
         let tables = selectedInstance.tableConfig.tables;
@@ -196,6 +198,10 @@ export class SNFilePuller {
                 fields.push(field.name);
             });
             let encodedQuery = 'sys_scope.scope=' + appScope;
+            if(appScope == 'global'){
+                encodedQuery = 'sys_scope=' + appSys;
+            }
+
             let tableRecs = await client.getRecords(tableConfig.name, encodedQuery, fields);
             if(!tableRecs || tableRecs.length === 0){
                 vscode.window.showInformationMessage(`Did not find any records for table: ${tableConfig.label} [${tableConfig.name}]`);
