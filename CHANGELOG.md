@@ -1,6 +1,15 @@
 # Change Log
 Welcome to the Change Log! Here is where you will find all the juicy details of the changes from version to version! Including minor versions!
 
+## [v1.0.1](#)
+For those of us with some "global scope, custom applications" (When you create a scoped app in legacy/global), we felt you needed some love! So we added the ability to sync records from "Legacy / global scope, scoped apps!"
+
+### Added
+- You can now sync "Custom Applications" from the "global/legacy" scope!
+
+### Changed
+- Fixed issue when using oAuth to better highlight that you're token has expired when re-asking for your password 
+
 ## [v1.0.0](#)
 Awwww yea baby!! Version 1.0.0! This last update brings one of the majore milestones I wanted to get in before calling it Version 1.0.0!! 
 
