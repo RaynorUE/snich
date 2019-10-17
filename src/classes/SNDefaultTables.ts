@@ -217,6 +217,7 @@ export class ConfiguredTables {
         //==== sys_script ======
         let sys_script = new TableConfig('sys_script');
         sys_script.setDisplayField('name');
+        sys_script.addDisplayField('when');
         sys_script.addField('script', 'Script', 'js');
         this.addTable(sys_script);
         
@@ -225,25 +226,83 @@ export class ConfiguredTables {
         sp_widget.setLabel('Widget');
         sp_widget.setDisplayField("name");
         sp_widget.addField('template', 'Body HTML template', 'html');
-        sp_widget.addField('css', 'CSS', 'css');
-        sp_widget.addField('script', 'Server Script', 'js');
-        sp_widget.addField('client_script', 'Client script', 'js');
+        sp_widget.addField('css', 'CSS', 'scss');
+        sp_widget.addField('script', 'Server sript', 'js');
+        sp_widget.addField('client_script', 'Client controller', 'js');
         sp_widget.addField('link', 'Link', 'js');
         sp_widget.addField('demo_data', 'Demo data', 'json');
         sp_widget.addField('option_schema', 'Option schema', 'json');
         this.addTable(sp_widget);
+
+        //==== Angular provider ========
+        let sp_angular_provider = new TableConfig('sp_angular_provider');
+        sp_angular_provider.setDisplayField('name');
+        sp_angular_provider.addDisplayField('type');
+        sp_angular_provider.addField('script', 'Client Script', 'js');
+        this.addTable(sp_angular_provider);
+
+        //==== Angular NG-Template ========
+        let sp_ng_template = new TableConfig('sp_ng_template');
+        sp_ng_template.setDisplayField('widget');
+        sp_ng_template.addDisplayField('id');
+        sp_ng_template.addField('template', 'Template', 'html');
+        this.addTable(sp_ng_template);
         
+        //==== script include ========
+
         let sys_script_include = new TableConfig('sys_script_include');
         sys_script_include.setDisplayField('name');
         sys_script_include.addField('script', 'Script', 'js');
         this.addTable(sys_script_include);
 
+        //==== UI Page ========
         let ui_page = new TableConfig('sys_ui_page');
         ui_page.setDisplayField('name');
         ui_page.addField('html', 'HTML', 'xml');
         ui_page.addField('client_script', 'Client Script', 'js');
         ui_page.addField('processing_script', 'Processing Script', 'js');
         this.addTable(ui_page);
+
+        //==== UI Script ========
+        let sys_ui_script = new TableConfig('sys_ui_script');
+        sys_ui_script.setDisplayField('name');
+        sys_ui_script.addField('script', 'Script', 'js');
+        this.addTable(sys_ui_script);
+
+        //==== UI Action ========
+        let sys_ui_action = new TableConfig('sys_ui_action');
+        sys_ui_action.setDisplayField('name');
+        sys_ui_action.addDisplayField('table');
+        sys_ui_action.addDisplayField('sys_id');
+        sys_ui_action.addField('script', 'Script', 'js');
+        this.addTable(sys_ui_action);
+
+        //==== Client Script =======
+        let sys_client_script = new TableConfig('sys_client_script');
+        sys_client_script.setDisplayField('name');
+        sys_client_script.addDisplayField('table');
+        sys_client_script.addDisplayField('type');
+        sys_client_script.addField('script', 'Script', 'js');
+        this.addTable(sys_client_script);
+        
+        //==== Scripted REST Resource =======
+        let sys_ws_operation = new TableConfig('sys_ws_operation');
+        sys_ws_operation.setDisplayField('name');
+        sys_ws_operation.addDisplayField('http_method');
+        sys_ws_operation.addField('operation_script', 'Script', 'js');
+        this.addTable(sys_ws_operation);
+
+        //==== Fix Scripts =======
+        let sys_fix_script = new TableConfig('sys_fix_script');
+        sys_fix_script.setDisplayField('name');
+        sys_fix_script.addField('script', 'Script', 'js');
+        this.addTable(sys_fix_script);
+
+        //==== Scheduled Jobs =======
+        let sysauto_script = new TableConfig('sysauto_script');
+        sysauto_script.setDisplayField('name');
+        sysauto_script.addField('script', 'Run this script', 'js');
+        this.addTable(sysauto_script);
     }
     
 }

@@ -99,7 +99,7 @@
 						"type": "string",
 						"title": "Sycned Record Display Name Seperator",
 						"description": "The seperator used when multiple fields are selected for synced record display names. NOTE: Please take into account your file systems restricted characters.",
-						"default": "^"
+						"default": "__"
 					},
 					"snich.logLevel": {
 						"type": "string",
@@ -168,8 +168,8 @@
 		"tslint": "^5.16.0",
 		"typescript": "^3.4.4",
 		"vscode": "^1.1.33",
-		"webpack": "^4.30.0",
-		"webpack-cli": "^3.3.1"
+		"webpack": "^4.41.2",
+		"webpack-cli": "^3.3.9"
 	},
 	"dependencies": {
 		"@types/needle": "^2.0.4",
