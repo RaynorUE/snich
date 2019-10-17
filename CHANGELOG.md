@@ -1,5 +1,25 @@
 # Change Log
+
 Welcome to the Change Log! Here is where you will find all the juicy details of the changes from version to version! Including minor versions!
+
+## [v1.0.2](#)
+
+For those of us with some "global scope, custom applications" (When you create a scoped app in legacy/global), we felt you needed some love! So we added the ability to sync records from "Legacy / global scope, scoped apps!"
+
+### Added
+
+- Example scripts for Type-ahead now available!
+- Additional "Default Tables" that are setup upon initial instance setup.
+- Added $sp as an extension of GlideSPScriptable 
+  - If you add JSDoc tags to your widget server scripts it should pick up $sp properly. 
+
+### Changes
+
+- Updated the "Default Tables" upon instance creation to be a bit more robust.
+
+### Fixes
+
+- Fixed issue where "widget" table definition for CSS Files were using `css` instead of `scss` extension. 
 
 ## [v1.0.1](#)
 For those of us with some "global scope, custom applications" (When you create a scoped app in legacy/global), we felt you needed some love! So we added the ability to sync records from "Legacy / global scope, scoped apps!"
