@@ -2,9 +2,18 @@
 
 Welcome to the Change Log! Here is where you will find all the juicy details of the changes from version to version! Including minor versions!
 
-## [v1.0.2](#)
+## [v1.0.3](#)
 
-For those of us with some "global scope, custom applications" (When you create a scoped app in legacy/global), we felt you needed some love! So we added the ability to sync records from "Legacy / global scope, scoped apps!"
+### Added
+
+- Additional "Default Tables" that are setup upon initial instance setup.\
+  - UI Macro, Record Producer (Script field), MID server Script Include
+
+### Changes
+
+- Fixed 1.0.2 release notes, repeating parts of 1.0.1 release notes. 
+
+## [v1.0.2](#)
 
 ### Added
 
