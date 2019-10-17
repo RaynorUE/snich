@@ -303,6 +303,26 @@ export class ConfiguredTables {
         sysauto_script.setDisplayField('name');
         sysauto_script.addField('script', 'Run this script', 'js');
         this.addTable(sysauto_script);
+
+        //==== Record Producer =======
+        let sys_cat_item_producer = new TableConfig('sysauto_script');
+        sys_cat_item_producer.setDisplayField('name');
+        sys_cat_item_producer.addField('script', 'Script', 'js');
+        this.addTable(sys_cat_item_producer);
+        
+        //==== MID Server Script Include =======
+        let ecc_agent_script_include = new TableConfig('sysauto_script');
+        ecc_agent_script_include.setDisplayField('name');
+        ecc_agent_script_include.addField('script', 'Script', 'js');
+        this.addTable(ecc_agent_script_include);
+
+        //==== UI Macros =======
+        //This one's for your @JohnAndersen :)
+        let sys_ui_macro = new TableConfig('sys_ui_macro');
+        sys_ui_macro.setDisplayField('name');
+        sys_ui_macro.addField('xml', 'Xml', 'xml');
+        this.addTable(sys_ui_macro);
+        
     }
     
 }
