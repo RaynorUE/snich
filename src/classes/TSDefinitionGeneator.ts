@@ -145,8 +145,11 @@ export class TSDefinitionGenerator {
                 classDefinition += '\n' + spaces +' * \n' + spaces + ' * ';
             }
 
-            if(classData.meta && classData.meta.example){
-                classDefinition += spaces + ' * @example ' + classData.meta.example.replace(/\n/g, '\n * ');
+            if(classData.meta && classData.meta.example && classData.meta.example.length > 0){
+                this.logger.info(this.lib, func, "FOUND EXAMPLE!", classData.meta.example);
+                for(let i = 0; i < classData.meta.example.length; i++){
+                    classDefinition += spaces + ' * @example\n ' + classData.meta.example[i].replace(/\n/g, '\n * ');
+                }
             }
 
             classDefinition += '\n' + spaces + ' */\n';
@@ -185,6 +188,13 @@ export class TSDefinitionGenerator {
                                 methodTSParams.push(this.fixParamName(param.name) + ': ' + this.handleType(param.type, highType));
                                 classDefinition += spaces + ' * @' + this.fixParamName(param.name) + ' ' + this.fixTSContent(param.description, spaces) + '\n';
                             });
+                        }
+
+                        if(method.example && method.example.length > 0){
+                            for(let i = 0; i < method.example.length; i++){
+                                classDefinition += spaces + ' * @example\n ';
+                                classDefinition += spaces + '* ' + method.example[i].code.replace(/\n/g, '\n' + spaces + ' * ').replace(/\/\*/g, '//').replace(/\*\//g, '') + '\n';
+                            }
                         }
                         
                         let returnType = '';
@@ -347,6 +357,14 @@ export class TSDefinitionGenerator {
                 {
                     class:'SOAPResponse',
                     extends:'sn_ws.SOAPResponseV2'
+                },
+                {
+                    class:"$sp",
+                    extends:"GlideSPScriptable"
+                },
+                {
+                    class:"GlideRecordSecure",
+                    extends:"GlideRecord"
                 }
             ],
 
