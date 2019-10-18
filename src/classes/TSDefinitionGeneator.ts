@@ -64,6 +64,8 @@ export class TSDefinitionGenerator {
 
         let codeFiles = fs.readdirSync(SNCodeDefinitionsPath);
 
+        let currentRelease = 'madrid'; //wil expand on this in the future to be part of the selector code.
+
         for(let i = 0; i < codeFiles.length; i++){
             
             let tsDefJSONFileName = codeFiles[i];
@@ -96,7 +98,7 @@ export class TSDefinitionGenerator {
                 if(!fs.existsSync(tsDefFilePath) && !fs.existsSync(tsDefFileInactive) || debugging){
                     let dataToProcess = typeData[highType];
                     let pathToUse = tsDefFilePath;
-                    if(highType === 'legacy'){
+                    if(highType === 'legacy' || typeData.release != currentRelease ){
                         pathToUse = tsDefFileInactive;
                     }
 
