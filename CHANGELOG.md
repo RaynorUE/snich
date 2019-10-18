@@ -2,6 +2,13 @@
 
 Welcome to the Change Log! Here is where you will find all the juicy details of the changes from version to version! Including minor versions!
 
+## [v1.0.4](#)
+
+### Fixes
+
+- `sys_script_client` != `sys_client_script`
+  - Fixed issue where i was trying to look up "Client scripts" by the wrong table name.
+
 ## [v1.0.3](#)
 
 ### Added
