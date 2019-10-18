@@ -278,12 +278,12 @@ export class ConfiguredTables {
         this.addTable(sys_ui_action);
 
         //==== Client Script =======
-        let sys_client_script = new TableConfig('sys_client_script');
-        sys_client_script.setDisplayField('name');
-        sys_client_script.addDisplayField('table');
-        sys_client_script.addDisplayField('type');
-        sys_client_script.addField('script', 'Script', 'js');
-        this.addTable(sys_client_script);
+        let sys_script_client = new TableConfig('sys_script_client');
+        sys_script_client.setDisplayField('name');
+        sys_script_client.addDisplayField('table');
+        sys_script_client.addDisplayField('type');
+        sys_script_client.addField('script', 'Script', 'js');
+        this.addTable(sys_script_client);
         
         //==== Scripted REST Resource =======
         let sys_ws_operation = new TableConfig('sys_ws_operation');
