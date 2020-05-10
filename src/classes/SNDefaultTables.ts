@@ -227,7 +227,7 @@ export class ConfiguredTables {
         sp_widget.setDisplayField("name");
         sp_widget.addField('template', 'Body HTML template', 'html');
         sp_widget.addField('css', 'CSS', 'scss');
-        sp_widget.addField('script', 'Server sript', 'js');
+        sp_widget.addField('script', 'Server script', 'js');
         sp_widget.addField('client_script', 'Client controller', 'js');
         sp_widget.addField('link', 'Link', 'js');
         sp_widget.addField('demo_data', 'Demo data', 'json');
