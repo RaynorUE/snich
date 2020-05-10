@@ -64,7 +64,7 @@ export class TSDefinitionGenerator {
 
         let codeFiles = fs.readdirSync(SNCodeDefinitionsPath);
 
-        let currentRelease = 'madrid'; //wil expand on this in the future to be part of the selector code.
+        let currentRelease = 'newyork'; //wil expand on this in the future to be part of the selector code.
 
         for(let i = 0; i < codeFiles.length; i++){
             
