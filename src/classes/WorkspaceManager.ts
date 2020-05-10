@@ -520,7 +520,7 @@ export class WorkspaceManager{
                 
                 if(localContentHash !== serverContentHash && !isCompareWindow && !onDemand){
                     this.logger.warn(this.lib, func, "Server has is different than current copy on disk.");
-                    action = await vscode.window.showWarningMessage('Server version is newer. If saving from compare window, choose overwrite to update.', 'Overwrite (Local)', 'Overwrite (Server)', 'Compare', 'Cancel') || "";
+                    action = await vscode.window.showWarningMessage('Server version is newer. If saving from compare window, choose overwrite to update.', 'Overwrite Local File', 'Overwrite Server File', 'Compare', 'Cancel') || "";
                     if(!action){
                         vscode.window.showWarningMessage(`No choice was made to action file ${fileConfig.fsPath}. Was saved to disk and not to server.`);
                         return;
@@ -563,10 +563,10 @@ export class WorkspaceManager{
                         await vscode.commands.executeCommand('vscode.diff', vscode.Uri.file(serverTempFilePath),vscode.Uri.file(fileConfig.fsPath), "Server File <--> Local File");
                     }
                     
-                } else if(action === "Overwrite (Local)"){
+                } else if(action === "Overwrite Local File"){
                     this.logger.info(this.lib, func, "Overwriting local data!");
                     fs.writeFileSync(fileConfig.fsPath, serverContent);
-                } else if(action === "Overwrite (Server)" || isCompareWindow){
+                } else if(action === "Overwrite Server File" || isCompareWindow){
                     let body:any = {};
                     body[contentField] = newContent;
                     this.logger.info(this.lib, func, 'Posting record back to SN!');
