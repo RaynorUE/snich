@@ -140,7 +140,7 @@ export class SystemLogHelper {
                 }
                 
                 if(objString.indexOf('password') > -1 || objString.indexOf('pass') > -1 || objString.indexOf('pw') > -1){
-                    log(fullMsg, {log_exception:'Data to be logged may have contained a password. Not logging.'});
+                  log(fullMsg, {log_exception:'Data to be logged may have contained a password. Not logging.'});
                 } else {
                     log(fullMsg, obj);
                 }

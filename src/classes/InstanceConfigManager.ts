@@ -112,7 +112,7 @@ export class InstancesList {
         let instanceName = enteredInstanceValue.replace(/https:\/\/|http:\/\/|.service-now.com|\//g, '');
         let existingInstance = this.getInstance(instanceName);
         
-        if(existingInstance.getName){
+        if(existingInstance.getName()){
             vscode.window.showErrorMessage(`${instanceName} is already configured and loaded into the workspace.`);
             this.logger.info(this.lib, func, 'END');
             return undefined;
