@@ -64,6 +64,7 @@ export class TSDefinitionGenerator {
 
         let codeFiles = fs.readdirSync(SNCodeDefinitionsPath);
 
+        //let oldReleases = ['madrid'];
         let currentRelease = 'newyork'; //wil expand on this in the future to be part of the selector code.
 
         for(let i = 0; i < codeFiles.length; i++){
@@ -98,11 +99,24 @@ export class TSDefinitionGenerator {
                 if(!fs.existsSync(tsDefFilePath) && !fs.existsSync(tsDefFileInactive) || debugging){
                     let dataToProcess = typeData[highType];
                     let pathToUse = tsDefFilePath;
-                    if(highType === 'legacy' || typeData.release != currentRelease ){
+                    if(highType === 'legacy' || typeData.release !== currentRelease ){
                         pathToUse = tsDefFileInactive;
                     }
 
                     this.createTSDefFile(dataToProcess, pathToUse, highType);
+                }
+
+                //if we have a file and it's not part of the current release, then lets rename it to inactive or remove.
+                if(fs.existsSync(tsDefFilePath) && typeData.release !== currentRelease){
+                    
+                    if(!fs.existsSync(tsDefFileInactive)){
+                        //if we do not have inactive file.. rename this one.
+                        fs.renameSync(tsDefFilePath, tsDefFileInactive);
+                    }
+
+                    if(fs.existsSync(tsDefFileInactive)){
+                        fs.unlinkSync(tsDefFilePath);
+                    }
                 }
             }
         }

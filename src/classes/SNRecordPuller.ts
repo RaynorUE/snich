@@ -198,7 +198,7 @@ export class SNFilePuller {
                 fields.push(field.name);
             });
             let encodedQuery = 'sys_scope.scope=' + appScope;
-            if(appScope == 'global'){
+            if(appScope === 'global'){
                 encodedQuery = 'sys_scope=' + appSys;
             }
 

@@ -1,6 +1,12 @@
 .vscode
 node_modules
-out/
 src/
+tsconfig.json
+webpack.config.json
+.github
+.gitignore
+.vscodeignore
+ACSIILogo.md
+package.json
 tsconfig.json
 webpack.config.json
