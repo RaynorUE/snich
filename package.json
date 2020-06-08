@@ -1,11 +1,11 @@
 {
-    "name": "snich-canary",
+    "name": "snich",
     "publisher": "integrateNate",
-    "displayName": "S.N.I.C.H. Canary",
-    "description": "ServiceNow Integrated Code Helper - Canary. Get the latest as I build stuff ready to be tested! Provide feedback to integratenate@gmail.com",
-    "icon": "images/icon-canary.png",
-    "version": "1.0.7-5",
-    "liveVersion": "1.0.6",
+    "displayName": "S.N.I.C.H.",
+    "description": "ServiceNow Integrated Code Helper. Do not worry, we will not tell anyone!",
+    "icon": "images/icon-shrunk.png",
+    "version": "1.1.0",
+    "liveVersion": "1.1.0",
     "canaryVersion": "1.0.7-5",
     "betaVersion": "1.0.6",
     "keywords": [
