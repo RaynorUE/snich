@@ -10,3 +10,4 @@ ACSIILogo.md
 package.json
 tsconfig.json
 webpack.config.json
+prepublish-beta.js
