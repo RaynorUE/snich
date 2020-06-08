@@ -3,4 +3,3 @@ out
 node_modules
 *.vsix
 ./.vscode/settings.json
-.github
