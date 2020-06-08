@@ -1,186 +1,189 @@
 {
-	"name": "snich",
-	"publisher": "integrateNate",
-	"displayName": "S.N.I.C.H",
-	"description": "Service Now Integrated Code Helper (SNICH). Connects to any ServiceNow instance and allows remote editing and storage of records from the Application File (and extended) tables.",
-	"icon": "images/icon-shrunk.png",
-	"version": "1.0.5",
-	"keywords": [
-		"SNICH",
-		"snich",
-		"ServiceNow",
-		"Service-Now",
-		"ServiceNow Code Sync",
-		"Service-Now Code Helper",
-		"Service-Now Code Syncer",
-		"Service-Now Code Sync",
-		"SNOW",
-		"SNOW Code Syncer",
-		"SNOW Code Editor"
-	],
-	"qna": "marketplace",
-	"badges": [
-		{
-			"url": "https://badgen.net/badge/YouTube/Instructional Videos/blue?icon=googleplay",
-			"description": "Watch instructional videos on Youtube!",
-			"href": "https://www.youtube.com/playlist?list=PLp0BtdkD38PWd9PTib4OgRaTQ3SIQDE17"
-		},
-		{
-			"url": "https://badgen.net/badge/ServiceNow/Kingston%20%7C%20London%20%7C%20Madrid/red",
-			"description": "Supported Service Now Versions",
-			"href": "https://www.servicenow.com"
-		}
-	],
-	"engines": {
-		"vscode": "^1.30.0"
-	},
-	"repository": {
-		"type": "git",
-		"url": "https://github.com/RaynorUE/snich"
-	},
-	"categories": [
-		"Other",
-		"SCM Providers"
-	],
-	"activationEvents": [
-		"onCommand:snich.setup.new_instance",
-		"onCommand:snich.setup.test_connection",
-		"onCommand:snich.instance.pull_record",
-		"onCommand:snich.instance.setup.new_table",
-		"onCommand:snich.application.load.all",
-		"onCommand:snich.activeEditor.compare_with_server",
-		"workspaceContains:**/.vscode/snich_config.json"
-	],
-	"main": "./dist/extension.js",
-	"contributes": {
-		"commands": [
-			{
-				"command": "snich.setup.new_instance",
-				"title": "Setup New Instance",
-				"category": "SNICH"
-			},
-			{
-				"command": "snich.setup.test_connection",
-				"title": "Test Connection",
-				"category": "SNICH"
-			},
-			{
-				"command": "snich.instance.pull_record",
-				"title": "Sync Record (Pull)",
-				"category": "SNICH"
-			},
-			{
-				"command": "snich.instance.setup.new_table",
-				"title": "Configure Table (New and Update)",
-				"category": "SNICH"
-			},
-			{
-				"command": "snich.application.load.all",
-				"title": "Load all Application Files (Pull)",
-				"category": "SNICH"
-			},
-			{
-				"command": "snich.activeEditor.compare_with_server",
-				"title": "Compare with Server (Active Editor)",
-				"category": "SNICH"
-			}
-		],
-		"configuration": [
-			{
-				"title": "SNICH",
-				"properties": {
-					"snich.alwaysAskPrimaryDisplayField": {
-						"type": "boolean",
-						"title": "Always ask for primary display field",
-						"description": "Set to true if you want to always be asked to pick the primary display field when configuring new tables. Else we will default to using name if it exists. If name is not found we will still ask you to pick.",
-						"default": false
-					},
-					"snich.syncedRecordNameSeparator": {
-						"type": "string",
-						"title": "Sycned Record Display Name Seperator",
-						"description": "The seperator used when multiple fields are selected for synced record display names. NOTE: Please take into account your file systems restricted characters.",
-						"default": "__"
-					},
-					"snich.logLevel": {
-						"type": "string",
-						"title": "Logging Level",
-						"description": "Enable the level of logging you want. Picking a more detail log option will incldue the less detailed options \"above it\"",
-						"enum": [
-							"Debug",
-							"Info",
-							"Warn",
-							"Error"
-						],
-						"enumDescriptions": [
-							"Debug: Extremely detailed. Intended for extension development. But can help identify edge case issues.",
-							"Info: Moderately detailed. Can be useful for seeing what's going on under the hood without a bunch of noise.",
-							"Warn: This is the Default log level. Typically warnings are used for things you should be doing instead, but functionality is not yet broken.",
-							"Error: Least detailed. Use this if you only want to know when major issues occur."
-						],
-						"default": "Error"
-					},
-					"snich.alwaysAskScope": {
-						"type": "boolean",
-						"title": "Always Ask for Application Scope (Future Planning, not yet implemented)",
-						"description": "When syncing / pulling a record from ServiceNow do we always ask for the app scope? This will be used for filtering the record list when selecting a table to sync from. If false, we will show all files from all application scopes, always.",
-						"default": false
-					},
-					"snich.createEmptyFiles": {
-						"type": "string",
-						"title": "Should we create files when the field data is empty?",
-						"description": "If choosing not to sync empty files, a warning will be generated letting you know it was empty.",
-						"enum": [
-							"Yes",
-							"No"
-						],
-						"enumDescriptions": [
-							"Yes: Create files with empty content.",
-							"No: I like warning messages instead."
-						],
-						"default": "Yes"
-					},
-					"snich.showSNApps": {
-						"type": "boolean",
-						"title": "Show sn_ applications",
-						"description": "When using a command that asks for Application selection, do we show SN apps in the list?",
-						"default": false
-					},
-					"snich.syncRecordMultiple": {
-						"type": "boolean",
-						"title": "Sync Record: Select Multiple",
-						"description": "When using the Sync Record command, allow multiple files to be selected. Disable this if you are annoyed by having to checkbox a single record during selection.",
-						"default": false
-					}
-				}
-			}
-		]
-	},
-	"scripts": {
-		"package":"vsce package",
-		"vscode:prepublish": "webpack --mode production",
-		"compile": "webpack --mode none",
-		"watch": "webpack --mode development --watch",
-
-		"test-compile":"tsc -p ./ && npm run compile"
-	},
-	"devDependencies": {
-		"@types/glob": "^7.1.1",
-		"@types/mocha": "^7.0.2",
-		"@types/node": "^13.11.0",
-		"@types/vscode": "^1.45.1",
-		"@typescript-eslint/eslint-plugin": "^2.30.0",
-		"@typescript-eslint/parser": "^2.30.0",
-		"eslint": "^6.8.0",
-		"glob": "^7.1.6",
-		"mocha": "^7.1.2",
-		"ts-loader": "^7.0.5",
-		"typescript": "^3.9.3",
-		"vscode-test": "^1.4.0",
-		"webpack": "^4.43.0",
-		"webpack-cli": "^3.3.11"
-	},
-	"dependencies": {
-		"@types/needle": "^2.0.4",
-		"needle": "^2.5.0"
-	}
+    "name": "snich-canary",
+    "publisher": "integrateNate",
+    "displayName": "S.N.I.C.H. Canary",
+    "description": "ServiceNow Integrated Code Helper - Canary. Get the latest as I build stuff ready to be tested! Provide feedback to integratenate@gmail.com",
+    "icon": "images/icon-canary.png",
+    "version": "1.0.7-5",
+    "liveVersion": "1.0.6",
+    "canaryVersion": "1.0.7-5",
+    "betaVersion": "1.0.6",
+    "keywords": [
+        "SNICH",
+        "snich",
+        "ServiceNow",
+        "Service-Now",
+        "ServiceNow Code Sync",
+        "Service-Now Code Helper",
+        "Service-Now Code Syncer",
+        "Service-Now Code Sync",
+        "SNOW",
+        "SNOW Code Syncer",
+        "SNOW Code Editor"
+    ],
+    "qna": "marketplace",
+    "badges": [
+        {
+            "url": "https://badgen.net/badge/YouTube/Instructional Videos/blue?icon=googleplay",
+            "description": "Watch instructional videos on Youtube!",
+            "href": "https://www.youtube.com/playlist?list=PLp0BtdkD38PWd9PTib4OgRaTQ3SIQDE17"
+        },
+        {
+            "url": "https://badgen.net/badge/ServiceNow/Kingston%20%7C%20London%20%7C%20Madrid/red",
+            "description": "Supported Service Now Versions",
+            "href": "https://www.servicenow.com"
+        }
+    ],
+    "engines": {
+        "vscode": "^1.45.1"
+    },
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/RaynorUE/snich"
+    },
+    "categories": [
+        "Other",
+        "SCM Providers"
+    ],
+    "activationEvents": [
+        "onCommand:snich.setup.new_instance",
+        "onCommand:snich.setup.test_connection",
+        "onCommand:snich.instance.pull_record",
+        "onCommand:snich.instance.setup.new_table",
+        "onCommand:snich.application.load.all",
+        "onCommand:snich.activeEditor.compare_with_server",
+        "workspaceContains:./**/.vscode/snich_config.json"
+    ],
+    "main": "./dist/extension.js",
+    "contributes": {
+        "commands": [
+            {
+                "command": "snich.setup.new_instance",
+                "title": "Setup New Instance",
+                "category": "SNICH"
+            },
+            {
+                "command": "snich.setup.test_connection",
+                "title": "Test Connection",
+                "category": "SNICH"
+            },
+            {
+                "command": "snich.instance.pull_record",
+                "title": "Sync Record (Pull)",
+                "category": "SNICH"
+            },
+            {
+                "command": "snich.instance.setup.new_table",
+                "title": "Configure Table (New and Update)",
+                "category": "SNICH"
+            },
+            {
+                "command": "snich.application.load.all",
+                "title": "Load all Application Files (Pull)",
+                "category": "SNICH"
+            },
+            {
+                "command": "snich.activeEditor.compare_with_server",
+                "title": "Compare with Server (Active Editor)",
+                "category": "SNICH"
+            }
+        ],
+        "configuration": [
+            {
+                "title": "SNICH",
+                "properties": {
+                    "snich.alwaysAskPrimaryDisplayField": {
+                        "type": "boolean",
+                        "title": "Always ask for primary display field",
+                        "description": "Set to true if you want to always be asked to pick the primary display field when configuring new tables. Else we will default to using name if it exists. If name is not found we will still ask you to pick.",
+                        "default": false
+                    },
+                    "snich.syncedRecordNameSeparator": {
+                        "type": "string",
+                        "title": "Sycned Record Display Name Seperator",
+                        "description": "The seperator used when multiple fields are selected for synced record display names. NOTE: Please take into account your file systems restricted characters.",
+                        "default": "__"
+                    },
+                    "snich.logLevel": {
+                        "type": "string",
+                        "title": "Logging Level",
+                        "description": "Enable the level of logging you want. Picking a more detail log option will incldue the less detailed options \"above it\"",
+                        "enum": [
+                            "Debug",
+                            "Info",
+                            "Warn",
+                            "Error"
+                        ],
+                        "enumDescriptions": [
+                            "Debug: Extremely detailed. Intended for extension development. But can help identify edge case issues.",
+                            "Info: Moderately detailed. Can be useful for seeing what's going on under the hood without a bunch of noise.",
+                            "Warn: This is the Default log level. Typically warnings are used for things you should be doing instead, but functionality is not yet broken.",
+                            "Error: Least detailed. Use this if you only want to know when major issues occur."
+                        ],
+                        "default": "Error"
+                    },
+                    "snich.alwaysAskScope": {
+                        "type": "boolean",
+                        "title": "Always Ask for Application Scope (Future Planning, not yet implemented)",
+                        "description": "When syncing / pulling a record from ServiceNow do we always ask for the app scope? This will be used for filtering the record list when selecting a table to sync from. If false, we will show all files from all application scopes, always.",
+                        "default": false
+                    },
+                    "snich.createEmptyFiles": {
+                        "type": "string",
+                        "title": "Should we create files when the field data is empty?",
+                        "description": "If choosing not to sync empty files, a warning will be generated letting you know it was empty.",
+                        "enum": [
+                            "Yes",
+                            "No"
+                        ],
+                        "enumDescriptions": [
+                            "Yes: Create files with empty content.",
+                            "No: I like warning messages instead."
+                        ],
+                        "default": "Yes"
+                    },
+                    "snich.showSNApps": {
+                        "type": "boolean",
+                        "title": "Show sn_ applications",
+                        "description": "When using a command that asks for Application selection, do we show SN apps in the list?",
+                        "default": false
+                    },
+                    "snich.syncRecordMultiple": {
+                        "type": "boolean",
+                        "title": "Sync Record: Select Multiple",
+                        "description": "When using the Sync Record command, allow multiple files to be selected. Disable this if you are annoyed by having to checkbox a single record during selection.",
+                        "default": false
+                    }
+                }
+            }
+        ]
+    },
+    "scripts": {
+        "package": "vsce package",
+        "vscode:prepublish": "webpack --mode production",
+        "compile": "webpack --mode none",
+        "watch": "webpack --mode development --watch",
+        "test-compile": "tsc -p ./ && npm run compile"
+    },
+    "devDependencies": {
+        "@types/glob": "^7.1.1",
+        "@types/mocha": "^7.0.2",
+        "@types/node": "^13.11.0",
+        "@types/vscode": "^1.45.1",
+        "@typescript-eslint/eslint-plugin": "^2.30.0",
+        "@typescript-eslint/parser": "^2.30.0",
+        "eslint": "^6.8.0",
+        "glob": "^7.1.6",
+        "mocha": "^7.1.2",
+        "semver": "^7.3.2",
+        "ts-loader": "^7.0.5",
+        "typescript": "^3.9.3",
+        "vscode-test": "^1.4.0",
+        "webpack": "^4.43.0",
+        "webpack-cli": "^3.3.11"
+    },
+    "dependencies": {
+        "@types/needle": "^2.0.4",
+        "needle": "^2.5.0"
+    }
 }
