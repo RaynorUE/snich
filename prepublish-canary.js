@@ -7,14 +7,15 @@ const packDisplayName = 'S.N.I.C.H. Canary';
 const description = 'ServiceNow Integrated Code Helper - Canary. Get the latest as I build stuff ready to be tested! Provide feedback to integratenate@gmail.com';
 const icon = 'images/icon-canary.png';
 
+const release = process.argv.slice(2)[0];
 
 let updatePackageJSON = async function(){
     let packagePath = path.join('package.json');
     var packageJSON = await fs.readFile(packagePath);
     let package = JSON.parse(packageJSON.toString());
 
-    let newVer = sv.inc(package.canaryVersion, 'minor');
-    console.log(sv.clean(newVer));
+    let newVer = sv.inc(package.canaryVersion, release);
+
     package.version = newVer;
     package.canaryVersion = newVer;
 
