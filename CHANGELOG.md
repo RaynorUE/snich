@@ -2,6 +2,9 @@
 
 Welcome to the Change Log! Here is where you will find all the juicy details of the changes from version to version! Including minor versions!
 
+## [v1.0.6]
+- Added Canary Build and Extension on Marketplace. 
+
 ## [v1.0.4](#)
 
 ### Fixes
