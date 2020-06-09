@@ -13,7 +13,8 @@ let updatePackageJSON = async function(){
     var packageJSON = await fs.readFile(packagePath);
     let package = JSON.parse(packageJSON.toString());
 
-    let newVer = sv.inc(package.canaryVersion, 'prerelease', {includePrerelease:true,});
+    let newVer = sv.inc(package.canaryVersion, 'minor');
+    console.log(sv.clean(newVer));
     package.version = newVer;
     package.canaryVersion = newVer;
 
