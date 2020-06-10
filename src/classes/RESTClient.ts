@@ -2,20 +2,20 @@
 import * as needle from 'needle';
 import * as vscode from 'vscode';
 import { SystemLogHelper } from './LogHelper';
-import { OutgoingHttpHeaders } from 'http';
 import * as querystring from "querystring";
 import { InstanceConfig } from './InstanceConfigManager';
 import { snRecord } from '../myTypes/globals';
-
+import * as request from 'request-promise-native';
 
 
 export class RESTClient {
 
-    private needleOpts: needle.NeedleOptions = {
-        compressed:true,
+    private requestOpts: request.RequestPromiseOptions = {
+        gzip:true,
         json: true,
-        headers: <OutgoingHttpHeaders>{}
-        
+        headers: {
+            "User-Agent":"SNICH_REQUEST-PROMISE-NATIVE"
+        }
     };
     private instanceConfig: InstanceConfig;
     private logger: SystemLogHelper;
@@ -23,10 +23,11 @@ export class RESTClient {
     private lib: string = 'RESTClient';
     private authType: String = "basic";
     private alwaysFields: Array<string> = ["sys_scope","sys_scope.scope","sys_scope.name","sys_package","sys_package.name", "sys_package.id","sys_name","sys_id"];
-    private useProgress: Boolean = true;
+    //private useProgress: Boolean = true;
     private progressMessage: string = "";
 
     constructor(instanceConfig: InstanceConfig, logger?: SystemLogHelper) {
+        
         let func = 'constructor';
         this.logger = logger || new SystemLogHelper();
         this.instanceConfig = instanceConfig;
@@ -53,8 +54,9 @@ export class RESTClient {
 
         let buff = Buffer.from(password, "base64");
         let text = buff.toString('ascii');
-        this.needleOpts.username = username || "";
-        this.needleOpts.password = text || "";
+        this.requestOpts.auth = {};
+        this.requestOpts.auth.username = username || "";
+        this.requestOpts.auth.password = text || "";
         this.authType = 'basic';
 
         this.logger.info(this.lib, func, 'END');
@@ -64,19 +66,20 @@ export class RESTClient {
     setOAuth(clientID: string, clientSecret: string, username ? : string, password ? : string) {
         let func = "setOAuth";
         this.logger.info(this.lib, func, "START");
-        this.needleOpts.username = "";
-        this.needleOpts.password = "";
+        this.requestOpts.auth = {};
+        this.requestOpts.auth.username = "";
+        this.requestOpts.auth.password = "";
         this.authType = 'oauth';
         this.logger.info(this.lib, func, "END");
     }
 
     showProgress(message?:string){
         this.progressMessage = message || "";
-        this.useProgress = true;
+        //this.useProgress = true;
     }
 
     hideProgress(){
-        this.useProgress = false;
+        //this.useProgress = false;
     }
 
     getRecord(table: string, sys_id: string, fields:Array<string>, displayValue?:boolean, refLinks?:boolean) {
@@ -128,13 +131,13 @@ export class RESTClient {
         let func = "testConnection";
         
         let baseURL = this.instanceConfig.connection.url;
-        let url = baseURL + '/api/now/table/sys_user?sysparm_query=' + encodeURIComponent('user_name=' + this.instanceConfig.connection.auth.username);
+        let url = baseURL + '/api/now/table/sys_user?sysparm_query=' + encodeURIComponent('user_name=' + this.instanceConfig.connection.auth.username) + "&sysparm_fields=sys_id,user_name";
         this.logger.info(this.lib, func, 'Getting url: ' + url);
 
         let response = await this.get(url, `Testing connection for ${baseURL}`);
         this.logger.info(this.lib, func, 'Response body recieved:', response);
         
-        if(response && response.body && response.body.result && response.body.result.length && response.body.result.length > 0){
+        if(response && response.result && response.result.length && response.result.length > 0){
             vscode.window.showInformationMessage("Connection Successful!");
             return true;
         } else {
@@ -148,40 +151,26 @@ export class RESTClient {
         }
     }
 
-    private get(url: string, progressMessage: string) {
+    private async get(url: string, progressMessage: string) {
         let func = "get";
         this.logger.info(this.lib, func, 'START');
         if(this.progressMessage){
             progressMessage = this.progressMessage.toString();
             this.progressMessage = '';//clear it for next usage.
         }
-        if(this.useProgress){
-            return vscode.window.withProgress( < vscode.ProgressOptions > {
-                location: vscode.ProgressLocation.Notification,
-                title: progressMessage,
-                cancellable: false
-            }, (progress, token) => {
-    
-                return this.handleAuth().then(() => {
-                    this.logger.info(this.lib, func, 'Auth handled. Needleopts:', this.needleOpts );
-                    this.logger.info(this.lib, func, "Getting url:" + url);
-                    return needle('get', url, this.needleOpts).then((response) => {
-                        progress.report({
-                            increment: 100
-                        });
-                        this.logger.info(this.lib, func, "response received.", response);
-                        this.logger.info(this.lib, func, 'END');
-                        return response;
-                    });
-                }).catch((err) =>{
-                    console.log("error occured:", err);
-                });
-            });
-        } else {
+
+        await this.handleAuth();
+
+        var response = await request.get(url, this.requestOpts);
+        
+        this.logger.info(this.lib, func, '[REQUEST] Response was: ', response);
+        return response;
+
+    /*
             return this.handleAuth().then(() => {
-                this.logger.info(this.lib, func, 'Auth handled. Needleopts:', this.needleOpts );
+                this.logger.info(this.lib, func, 'Auth handled. requestOpts:', this.requestOpts );
                 this.logger.info(this.lib, func, "Getting url:" + url);
-                return needle('get', url, this.needleOpts).then((response) => {
+                return needle('get', url, this.requestOpts).then((response) => {
                     this.logger.info(this.lib, func, "response received.", response);
                     this.logger.info(this.lib, func, 'END');
                     return response;
@@ -189,7 +178,7 @@ export class RESTClient {
             }).catch((err) =>{
                 console.log("error occured:", err);
             });
-        }
+        }*/
         
     }
 
@@ -202,9 +191,10 @@ export class RESTClient {
         }, (progress, token) => {
 
             return this.handleAuth().then(() => {
-                this.logger.info(this.lib, func, 'Auth handled. Needleopts:', this.needleOpts );
+                this.logger.info(this.lib, func, 'Auth handled. requestOpts:', this.requestOpts );
                 this.logger.info(this.lib, func, "Posting url:" + url);
-                return needle('post', url, body, this.needleOpts).then((response) => {
+                return needle('post', url, body, {}).then((response) => {
+                //return needle('post', url, body, {this.requestOpts}).then((response) => {
                     progress.report({
                         increment: 100
                     });
@@ -226,9 +216,11 @@ export class RESTClient {
         }, (progress, token) => {
 
             return this.handleAuth().then(() => {
-                this.logger.info(this.lib, func, 'Auth handled. Needleopts:', this.needleOpts );
+                this.logger.info(this.lib, func, 'Auth handled. requestOpts:', this.requestOpts );
                 this.logger.info(this.lib, func, "Posting url:" + url);
-                return needle('put', url, body, this.needleOpts).then((response) => {
+                return needle('put', url, body, {}).then((response) => {
+
+                //return needle('put', url, body, this.requestOpts).then((response) => {
                     progress.report({
                         increment: 100
                     });
@@ -241,16 +233,17 @@ export class RESTClient {
         });
     }
 
-    private handleAuth() {
-        return new Promise((resolve, reject) => {
-            if (this.authType === 'basic') {
-                return resolve();  //needleOpts already taken care of since we'll be storing ID/PW and loading from instance options.
-            }
-
-            if (this.authType === 'oauth') {
-                this.processOAuth().then(() => {resolve();});
-            }
-        });
+    private async handleAuth() {
+        if(this.authType == 'basic'){
+            return new Promise((resolve, reject) => {
+                return resolve("");  //requestOpts already taken care of since we'll be storing ID/PW and loading from instance options.
+            });
+        } else if (this.authType === 'oauth') {
+            await this.processOAuth();
+            return "";
+        } else {
+            return "";
+        }
     }
     
     private processOAuth(getNew?:boolean):Promise<any> {
@@ -270,8 +263,8 @@ export class RESTClient {
             if(hadTokenFor < expiresIn && !getNew){
                 this.logger.info(this.lib, func, 'Token not yet expire! Using it.');
                 
-                if(this.needleOpts.headers){
-                    this.needleOpts.headers.authorization = "Bearer " + oauthData.token.access_token;
+                if(this.requestOpts.headers){
+                    this.requestOpts.headers.authorization = "Bearer " + oauthData.token.access_token;
                 }
                 this.logger.info(this.lib, func, 'END');
                 return resolve();
@@ -287,8 +280,8 @@ export class RESTClient {
                     if(authResponse.body && authResponse.body.access_token){
                         var tokenData = authResponse.body;
                         var authHeader = "Bearer " + tokenData.access_token;
-                        if(this.needleOpts.headers){
-                            this.needleOpts.headers.authorization = authHeader;
+                        if(this.requestOpts.headers){
+                            this.requestOpts.headers.authorization = authHeader;
                         }
                         this.instanceConfig.connection.auth.OAuth.token = tokenData;
                         this.instanceConfig.connection.auth.OAuth.lastRetrieved = Date.now();
@@ -347,10 +340,10 @@ export class RESTClient {
                             this.instanceConfig.connection.auth.OAuth.lastRetrieved = Date.now();
                             this.instanceConfig.connection.auth.OAuth.token = tokenData;
                             
-                            if(this.needleOpts.headers){
-                                this.needleOpts.headers.authorization = "Bearer " + tokenData.access_token;
+                            if(this.requestOpts.headers){
+                                this.requestOpts.headers.authorization = "Bearer " + tokenData.access_token;
                             }
-                            this.logger.info(this.lib, func, 'NeedleOptions have been set.', this.needleOpts);
+                            this.logger.info(this.lib, func, 'NeedleOptions have been set.', this.requestOpts);
                             this.logger.info(this.lib, func, 'END');
                             return resolve();
                             //new configMgmt().updateInstanceConfig(this.instancData);
