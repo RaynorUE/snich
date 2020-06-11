@@ -66,7 +66,7 @@ export function activate(context: vscode.ExtensionContext) {
 
         let selectedInstance = await instanceList.selectInstance();
         if(selectedInstance){
-            let client = new RESTClient(selectedInstance.getConfig(), logger);
+            let client = new RESTClient(selectedInstance, logger);
             await client.testConnection();
         }
         logger.info(lib, func, 'END', instanceList);

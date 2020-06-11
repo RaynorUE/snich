@@ -82,7 +82,7 @@ export class RESTClient {
         //this.useProgress = false;
     }
 
-    getRecord(table: string, sys_id: string, fields: Array<string>, displayValue?: boolean, refLinks?: boolean) {
+    async getRecord(table: string, sys_id: string, fields: Array<string>, displayValue?: boolean, refLinks?: boolean):Promise<snRecord> {
         displayValue = displayValue || false;
         refLinks = refLinks === undefined ? true : refLinks;
 
@@ -90,31 +90,34 @@ export class RESTClient {
 
         //setup URL
         let url = this.instanceConfig.connection.url + '/api/now/' + this.apiVersion + 'table/' + table + '/' + sys_id + '?sysparm_fields=' + fields + '&sysparm_exclude_reference_link=' + refLinks + '&sysparm_display_value=' + displayValue;
-        return this.get(url, 'Getting record. ' + table + '_' + sys_id)
-            .then((response: any) => {
-                var record: snRecord = { name: "", label: "", sys_id: "", sys_package: "", sys_scope: "", "sys_scope.name": "" };
-                if (response.body.result) {
-                    record = response.body.result;
-                }
-                return record;
-            });
+        let record:snRecord = await this.get(url, 'Getting record. ' + table + '_' + sys_id);
+
+        if(!record || !record.sys_id){
+            record = {label:"",name:"",sys_id:""};
+        }
+
+        return record;
     }
 
-    getRecords(table: string, encodedQuery: string, fields: Array<string>, displayValue?: boolean, refLinks?: boolean) {
+    async getRecords(table: string, encodedQuery: string, fields: Array<string>, displayValue?: boolean, refLinks?: boolean) {
         let func = 'getRecords';
         this.logger.info(this.lib, func, 'START');
         displayValue = displayValue || false;
         refLinks = refLinks === undefined ? true : refLinks;
         fields = fields.concat(this.alwaysFields);
-        let url = this.instanceConfig.connection.url + '/api/now/table/' + table + '?sysparm_fields=' + fields.toString() + '&sysparm_exclude_reference_link=' + refLinks + '&sysparm_display_value=' + displayValue + '&sysparm_query=' + encodedQuery;
-        return this.get(url, "Retrieving records based on url: " + url).then((response) => {
-            var recs: Array<snRecord> = [];
-            if (response && response.body) {
-                recs = response.body.result;
-            }
-            this.logger.info(this.lib, func, 'END');
-            return recs;
-        });
+        let url = this.instanceConfig.connection.url + '/api/now/table/' + table + '?sysparm_fields=' + fields.toString();
+        url+= '&sysparm_exclude_reference_link=' + refLinks;
+        url+= '&sysparm_display_value=' + displayValue;
+        url+= '&sysparm_query=' + encodedQuery;
+
+
+        let records:Array<snRecord> = await this.get(url, "Retrieving records based on url: " + url);
+
+        if(!records || !records.length){
+            records = [];
+        }
+
+        return records;
     }
 
     updateRecord(table: string, sys_id: string, body: object) {
@@ -271,7 +274,7 @@ export class RESTClient {
             reqOpts.gzip = true;
             reqOpts.json = true;
             reqOpts.form = {
-                grant_type: "password",
+                grant_type: "refresh_token",
                 client_id: oauthData.client_id,
                 client_secret: oauthData.client_secret,
                 refresh_token: oauthData.token.refresh_token
