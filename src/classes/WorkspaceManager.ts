@@ -501,7 +501,7 @@ export class WorkspaceManager{
                 let serverContent = "";
                 let serverContentHash = "";
                 
-                let client = new RESTClient(instance.getConfig());
+                let client = new RESTClient(instance);
                 let contentField = fileConfig.content_field;
                 let action = 'Overwrite (Server)'; //default to overwriting on server. This way if no differences we save to server.
                 let serverRecord:any = {};

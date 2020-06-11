@@ -31,7 +31,7 @@ export class SNFilePuller {
         }
 
         /** Setup REST Client */
-        let client = new RESTClient(selectedInstance.getConfig(), this.logger);
+        let client = new RESTClient(selectedInstance, this.logger);
         
         /** Make our calls for table selection. Why do we query for tables we pre-configured? 
          * Just incase the table has been deleted (or was never created!)
@@ -150,7 +150,7 @@ export class SNFilePuller {
         }
 
         //setup our rest client and grab the available application records.
-        client = new RESTClient(selectedInstance.getConfig());
+        client = new RESTClient(selectedInstance);
         let appRecords = await client.getRecords('sys_scope', 'name!=Global', ['name', 'scope', 'short_description']);
         
         if(!appRecords || appRecords.length === 0){

@@ -37,7 +37,7 @@ export class ConfiguredTables {
 
 
         //query instance for tables extending sys_metadata
-        client = new RESTClient(selectedInstance.getConfig());
+        client = new RESTClient(selectedInstance);
         let encodedQuery = 'super_class.nameINSTANCEOFsys_metadata';
         let tableRecs = await client.getRecords('sys_db_object', encodedQuery, ['name','label']);
         if(tableRecs.length === 0){
