@@ -24,7 +24,7 @@ export class RESTClient {
     private lib: string = 'RESTClient';
     private authType: String = "basic";
     private alwaysFields: Array<string> = ["sys_scope", "sys_scope.scope", "sys_scope.name", "sys_package", "sys_package.name", "sys_package.id", "sys_name", "sys_id"];
-    //private useProgress: Boolean = true;
+    private useProgress: Boolean = true;
     private progressMessage: string = "";
 
     constructor(instance: InstanceMaster, logger?: SystemLogHelper) {
@@ -75,14 +75,14 @@ export class RESTClient {
 
     showProgress(message?: string) {
         this.progressMessage = message || "";
-        //this.useProgress = true;
+        this.useProgress = true;
     }
 
     hideProgress() {
-        //this.useProgress = false;
+        this.useProgress = false;
     }
 
-    async getRecord(table: string, sys_id: string, fields: Array<string>, displayValue?: boolean, refLinks?: boolean):Promise<snRecord> {
+    async getRecord(table: string, sys_id: string, fields: Array<string>, displayValue?: boolean, refLinks?: boolean): Promise<snRecord> {
         displayValue = displayValue || false;
         refLinks = refLinks === undefined ? true : refLinks;
 
@@ -90,10 +90,13 @@ export class RESTClient {
 
         //setup URL
         let url = this.instanceConfig.connection.url + '/api/now/' + this.apiVersion + 'table/' + table + '/' + sys_id + '?sysparm_fields=' + fields + '&sysparm_exclude_reference_link=' + refLinks + '&sysparm_display_value=' + displayValue;
-        let record:snRecord = await this.get(url, 'Getting record. ' + table + '_' + sys_id);
+        let record: snRecord 
+        let response = await this.get(url, 'Getting record. ' + table + '_' + sys_id);
 
-        if(!record || !record.sys_id){
-            record = {label:"",name:"",sys_id:""};
+        if (!response || !response.result) {
+            record =  { label: "", name: "", sys_id: "" };
+        } else {
+            record = response.result;
         }
 
         return record;
@@ -106,14 +109,18 @@ export class RESTClient {
         refLinks = refLinks === undefined ? true : refLinks;
         fields = fields.concat(this.alwaysFields);
         let url = this.instanceConfig.connection.url + '/api/now/table/' + table + '?sysparm_fields=' + fields.toString();
-        url+= '&sysparm_exclude_reference_link=' + refLinks;
-        url+= '&sysparm_display_value=' + displayValue;
-        url+= '&sysparm_query=' + encodedQuery;
+        url += '&sysparm_exclude_reference_link=' + refLinks;
+        url += '&sysparm_display_value=' + displayValue;
+        url += '&sysparm_query=' + encodedQuery;
 
+        let records:Array<snRecord> = [];
+        let response = await this.get(url, "Retrieving records based on url: " + url);
 
-        let records:Array<snRecord> = await this.get(url, "Retrieving records based on url: " + url);
+        if (response.result) {
+            records = response.result; //when many records returned it's an array in the result property... 
+        }
 
-        if(!records || !records.length){
+        if (!records || !records.length) {
             records = [];
         }
 
@@ -162,12 +169,31 @@ export class RESTClient {
             this.progressMessage = '';//clear it for next usage.
         }
 
-        await this.handleAuth();
 
-        var response = await request.get(url, this.requestOpts);
+        if (this.useProgress) {
+            return await vscode.window.withProgress(<vscode.ProgressOptions>{ location: vscode.ProgressLocation.Notification, cancellable: false, title: "Communicating with ServiceNow" }, async (progress, token) => {
 
-        this.logger.info(this.lib, func, '[REQUEST] Response was: ', response);
-        return response;
+                await this.handleAuth();
+
+                progress.report({ message: progressMessage });
+                var response = await request.get(url, this.requestOpts);
+
+                this.logger.info(this.lib, func, '[REQUEST] Response was: ', response);
+                //progress.report({ increment: 100 });
+                this.logger.info(this.lib, func, "END");
+
+                return response;
+            });
+        } else {
+            await this.handleAuth();
+
+            var response = await request.get(url, this.requestOpts);
+
+            this.logger.info(this.lib, func, '[REQUEST] Response was: ', response);
+            this.logger.info(this.lib, func, "END");
+
+            return response;
+        }
 
     }
 
@@ -323,7 +349,7 @@ export class RESTClient {
 
             var connectionData = this.instanceConfig.connection;
 
-              let reqOpts: request.RequestPromiseOptions = {
+            let reqOpts: request.RequestPromiseOptions = {
                 gzip: true,
                 json: true,
                 form: {
@@ -332,7 +358,7 @@ export class RESTClient {
                     client_secret: connectionData.auth.OAuth.client_secret,
                     username: connectionData.auth.username,
                     password: enteredPwd || ""
-    
+
                 }
             }
             this.logger.debug(this.lib, func, `About to get oauth token at URL: ${oauthTokenURL} with reqOpts: `, reqOpts);

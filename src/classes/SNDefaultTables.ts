@@ -205,6 +205,7 @@ export class ConfiguredTables {
     }
 
     setFromConfigFile(tableData:ConfiguredTables){
+        this.tables = []; //clear it and use only what is in config file.
         tableData.tables.forEach((table) =>{
             var config = new TableConfig(table.name);
             config.setFromConfigFile(table);
@@ -293,10 +294,10 @@ export class ConfiguredTables {
         this.addTable(sys_ws_operation);
 
         //==== Fix Scripts =======
-        let sys_fix_script = new TableConfig('sys_fix_script');
-        sys_fix_script.setDisplayField('name');
-        sys_fix_script.addField('script', 'Script', 'js');
-        this.addTable(sys_fix_script);
+        let sys_script_fix = new TableConfig('sys_script_fix');
+        sys_script_fix.setDisplayField('name');
+        sys_script_fix.addField('script', 'Script', 'js');
+        this.addTable(sys_script_fix);
 
         //==== Scheduled Jobs =======
         let sysauto_script = new TableConfig('sysauto_script');

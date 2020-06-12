@@ -8,9 +8,13 @@ import { SNFilePuller } from './classes/SNRecordPuller';
 import { WorkspaceManager } from './classes/WorkspaceManager';
 import { TSDefinitionGenerator } from './classes/TSDefinitionGeneator';
 
+export const snichOutput = vscode.window.createOutputChannel('S.N.I.C.H.');
+
+
 // this method is called when your extension is activated
 // your extension is activated the very first time the command is executed
 export function activate(context: vscode.ExtensionContext) {
+    
     let lib = 'extension.ts';
 	let func = 'activate';
 	let logger:SystemLogHelper = new SystemLogHelper();
@@ -94,11 +98,17 @@ export function activate(context: vscode.ExtensionContext) {
 	vscode.commands.registerCommand('snich.application.load.all', async () => {
         let func = 'application.load.all';
         logger.info(lib, func, 'START', );
+        
         if(!instanceList.atLeastOneConfigured()){
             return;
         }
         let fp = new SNFilePuller(instanceList, logger);
         await fp.pullAllAppFiles();
+
+        setTimeout(function(){
+            //faking it for now. Need to fix "async function in tableData for loop..."
+            snichOutput.appendLine('All application files have been loaded. You may need to refresh your workspace file/folder list.');
+        }, 4000);
 
         logger.info(lib, func, 'END', instanceList);
 	});
@@ -117,7 +127,7 @@ export function activate(context: vscode.ExtensionContext) {
 		let filePuller = new SNFilePuller(instanceList, logger);
 		
         await filePuller.syncRecord();
-        logger.info(lib, func, 'START', instanceList);
+        logger.info(lib, func, 'END', instanceList);
 
 	});
     

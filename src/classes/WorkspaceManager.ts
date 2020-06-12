@@ -23,8 +23,6 @@ export class WorkspaceManager{
     readonly tableConfigFileName:string = "snich_table_config.json";
     readonly syncedFilesName:string = "snich_synced_files.json";
     readonly ignoreFiles:Array<string> = [this.configFileName, this.tableConfigFileName, this.syncedFilesName, 'jsconfig.json'];
-
-
     readonly ignoreFolders = ['@Types'];
 
     logger:SystemLogHelper;
@@ -34,8 +32,7 @@ export class WorkspaceManager{
         let func = 'constructor';
         this.logger = logger || new SystemLogHelper();
         this.logger.info(this.lib, func, 'START');
-        
-        
+                
         this.logger.info(this.lib, func, 'END');
     }
     
@@ -188,6 +185,8 @@ export class WorkspaceManager{
         let func = 'createSyncedFile';
         this.logger.info(this.lib, func, 'START', {instanceMaster:instance, tableConfig:table, snRecord:record});
         
+        let fsp = fs.promises;
+
         if(openFile === undefined){
             openFile = true;
         }
@@ -200,30 +199,40 @@ export class WorkspaceManager{
         
         let appPath = path.resolve(config.rootPath, appName);
         let rootPath = appPath.toString();
+        let finalRootFolderPath = '';
         
-        if(!fs.existsSync(appPath)){
-            this.logger.info(this.lib, func, 'App scope path does not exist. Creating:', appPath);
-            fs.mkdirSync(appPath);
+        //createAppPath if it doesn't exist.. 
+
+        try {
+            await fsp.mkdir(appPath);
+        } catch(err){
+            //do nothing
         }
         
-        
-        rootPath = path.resolve(rootPath, tableName);
-        if(!fs.existsSync(rootPath)){
-            this.logger.info(this.lib, func, "Creating tbale name folder:", rootPath);
-            fs.mkdirSync(rootPath);
+        let rootPath2 = path.resolve(rootPath, tableName);
+        try {
+            await fsp.mkdir(rootPath2);
+        } catch(err){
+            ///do nothing 
         }
+
+        finalRootFolderPath = rootPath2;
         
         if(table.fields.length > 1){
             this.logger.info(this.lib, func, 'Table definition has more than one field. Updating root path to be based on display value of record.');
-            rootPath = path.resolve(rootPath, table.getDisplayValue(record));
+            let rootPath3 = path.resolve(rootPath2, table.getDisplayValue(record).replace(/"|\<|\>|\?|\|\/|\\|:|\*/g, '_'));
+            finalRootFolderPath = rootPath3;
             multiFile = true;
             openFile = false;
+            
+            try {
+                await fsp.mkdir(rootPath3);
+            } catch(err){
+                //do nothing
+            }
         }
         
-        if(!fs.existsSync(rootPath)){
-            this.logger.info(this.lib, func, 'Path does not exist. Creating.');
-            fs.mkdirSync(rootPath);
-        }
+
         
         this.logger.info(this.lib, func, `Create file(s) in ${rootPath} based on table config:`, table);
         let settings = vscode.workspace.getConfiguration();
@@ -232,7 +241,8 @@ export class WorkspaceManager{
         
         table.fields.forEach(async (field) =>{
             //this.logger.debug(this.lib, func, 'Processing field:', field);
-            let fileName = table.getDisplayValue(record);
+            //sorry linux/mac users, you get clobbered by this too! :(
+            let fileName = table.getDisplayValue(record).replace(/"|\<|\>|\?|\|\/|\\|:|\*/g, '_');
             if(multiFile){
                 fileName = field.label;
             }
@@ -242,9 +252,9 @@ export class WorkspaceManager{
             
             
             if((createEmptyFiles === 'Yes' && !content) || content){
-                let fullPath = path.resolve(rootPath, file);
+                let fullPath = path.resolve(finalRootFolderPath, file);
                 this.logger.debug(this.lib, func, `Creating file at ${fullPath}`);
-                fs.writeFileSync(fullPath, content,'utf8');
+                await fsp.writeFile(fullPath, content);
                 syncedFiles.addFile(fullPath + "", instance.getConfig().name + "", field, record);
                 if(openFile){
                     this.logger.debug(this.lib, func, `Opening file found at: ${fullPath}`);
