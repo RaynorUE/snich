@@ -30,7 +30,8 @@ export class InstancesList {
         return this.lastSelected;
     }
     
-    getInstance(name:string){
+
+    getInstance(name:string):InstanceMaster{
         let foundInstance = new InstanceMaster();
         this.instances.forEach((instance, index) =>{
             if(instance.getName() === name){
