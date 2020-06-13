@@ -23,8 +23,6 @@ export class WorkspaceManager{
     readonly tableConfigFileName:string = "snich_table_config.json";
     readonly syncedFilesName:string = "snich_synced_files.json";
     readonly ignoreFiles:Array<string> = [this.configFileName, this.tableConfigFileName, this.syncedFilesName, 'jsconfig.json'];
-
-
     readonly ignoreFolders = ['@Types'];
 
     logger:SystemLogHelper;
@@ -34,8 +32,7 @@ export class WorkspaceManager{
         let func = 'constructor';
         this.logger = logger || new SystemLogHelper();
         this.logger.info(this.lib, func, 'START');
-        
-        
+                
         this.logger.info(this.lib, func, 'END');
     }
     
@@ -188,6 +185,8 @@ export class WorkspaceManager{
         let func = 'createSyncedFile';
         this.logger.info(this.lib, func, 'START', {instanceMaster:instance, tableConfig:table, snRecord:record});
         
+        let fsp = fs.promises;
+
         if(openFile === undefined){
             openFile = true;
         }
@@ -198,56 +197,72 @@ export class WorkspaceManager{
         let config = instance.getConfig();
         let syncedFiles = instance.getSyncedFiles();
         
-        let appPath = path.resolve(config.rootPath, appName);
+        let appPath = path.resolve(config.rootPath, this.fixPathForWindows(appName));
         let rootPath = appPath.toString();
+        let finalRootFolderPath = '';
         
-        if(!fs.existsSync(appPath)){
-            this.logger.info(this.lib, func, 'App scope path does not exist. Creating:', appPath);
-            fs.mkdirSync(appPath);
+        //this.logger.debug(this.lib, func, "rootPath:", rootPath);
+        
+        //createAppPath if it doesn't exist.. 
+
+        try {
+            await fsp.mkdir(appPath);
+        } catch(err){
+            //do nothing
         }
         
-        
-        rootPath = path.resolve(rootPath, tableName);
-        if(!fs.existsSync(rootPath)){
-            this.logger.info(this.lib, func, "Creating tbale name folder:", rootPath);
-            fs.mkdirSync(rootPath);
+        let rootPath2 = path.resolve(rootPath, this.fixPathForWindows(tableName));
+        //this.logger.debug(this.lib, func, "rootPath2:", rootPath2);
+        try {
+            await fsp.mkdir(rootPath2);
+        } catch(err){
+            ///do nothing 
         }
+
+        finalRootFolderPath = rootPath2;
         
         if(table.fields.length > 1){
-            this.logger.info(this.lib, func, 'Table definition has more than one field. Updating root path to be based on display value of record.');
-            rootPath = path.resolve(rootPath, table.getDisplayValue(record));
+            //this.logger.debug(this.lib, func, 'Table definition has more than one field. Updating root path to be based on display value of record.');
+            let rootPath3 = path.resolve(rootPath2, this.fixPathForWindows(table.getDisplayValue(record)));
+            //this.logger.debug(this.lib, func, "rootPath:", rootPath3);
+            finalRootFolderPath = rootPath3;
             multiFile = true;
             openFile = false;
+            
+            try {
+                await fsp.mkdir(rootPath3);
+            } catch(err){
+                //do nothing
+            }
         }
         
-        if(!fs.existsSync(rootPath)){
-            this.logger.info(this.lib, func, 'Path does not exist. Creating.');
-            fs.mkdirSync(rootPath);
-        }
+
         
-        this.logger.info(this.lib, func, `Create file(s) in ${rootPath} based on table config:`, table);
+        this.logger.info(this.lib, func, `Create file(s) in ${finalRootFolderPath} based on table config:`, table);
         let settings = vscode.workspace.getConfiguration();
         let createEmptyFiles = settings.get('snich.createEmptyFiles') || "Yes";
         
         
         table.fields.forEach(async (field) =>{
             //this.logger.debug(this.lib, func, 'Processing field:', field);
-            let fileName = table.getDisplayValue(record);
+            //sorry linux/mac users, you get clobbered by this too! :(
+            let fileName = this.fixPathForWindows(table.getDisplayValue(record));
             if(multiFile){
-                fileName = field.label;
+                fileName = this.fixPathForWindows(field.label);
             }
             
             let file = fileName + '.' + field.extention;
             let content = record[field.name];
             
+            //this.logger.debug(this.lib, func, "path before we go to create:", file);
             
             if((createEmptyFiles === 'Yes' && !content) || content){
-                let fullPath = path.resolve(rootPath, file);
+                let fullPath = path.resolve(finalRootFolderPath, this.fixPathForWindows(file));
                 this.logger.debug(this.lib, func, `Creating file at ${fullPath}`);
-                fs.writeFileSync(fullPath, content,'utf8');
+                await fsp.writeFile(fullPath, content);
                 syncedFiles.addFile(fullPath + "", instance.getConfig().name + "", field, record);
                 if(openFile){
-                    this.logger.debug(this.lib, func, `Opening file found at: ${fullPath}`);
+                    //this.logger.debug(this.lib, func, `Opening file found at: ${fullPath}`);
                     vscode.window.showTextDocument(vscode.Uri.file(fullPath));
                 }
             } else {
@@ -302,6 +317,8 @@ export class WorkspaceManager{
         let func = 'loadObservers';
         this.logger.info(this.lib, func, 'START');
         this.watchAppFileSave(instanceList);
+        this.logger.info(this.lib, func, 'END');
+
     }
     
     watchAppFileSave(instanceList:InstancesList){
@@ -339,9 +356,19 @@ export class WorkspaceManager{
                 let func = "waitUntilPromise";
                 //copy and rename our current file so that we have a .old to compare to in our onDidSaveEvent
                 let visibleEditors = vscode.window.visibleTextEditors || [];
-                if(visibleEditors && visibleEditors.length >1){
+                this.logger.debug(this.lib, func, "visible editors: ", visibleEditors);
+
+                //See if in compare window
+                let compareWindow = false;
+                visibleEditors.forEach((editor) => {
+                    if(editor.document.fileName.indexOf('compare_files_temp') > -1){
+                        compareWindow = true;
+                    }
+                })
+
+
+                if(compareWindow){
                     this.logger.debug(this.lib, func, "we are in the compare window. Do not do any of the dot-old stuff.");
-                    resolve();
                 } else {
                     let currentFSPath = document.uri.fsPath;
                     let extensionMatch = currentFSPath.match(/\.\w*$/);
@@ -388,7 +415,15 @@ export class WorkspaceManager{
             }
 
             let visibleEditors = vscode.window.visibleTextEditors || [];
-            if(visibleEditors && visibleEditors.length >1){
+            //See if in compare window
+            let compareWindow = false;
+            visibleEditors.forEach((editor) => {
+                if(editor.document.fileName.indexOf('compare_files_temp') > -1){
+                    compareWindow = true;
+                }
+            })
+
+            if(compareWindow){
                 this.logger.debug(this.lib, func, "we are in the compare window.");
                 await this.compareWithServer(document.uri.fsPath, document.getText(), instanceList, false);
             } else {
@@ -501,7 +536,7 @@ export class WorkspaceManager{
                 let serverContent = "";
                 let serverContentHash = "";
                 
-                let client = new RESTClient(instance.getConfig());
+                let client = new RESTClient(instance);
                 let contentField = fileConfig.content_field;
                 let action = 'Overwrite (Server)'; //default to overwriting on server. This way if no differences we save to server.
                 let serverRecord:any = {};
@@ -533,12 +568,20 @@ export class WorkspaceManager{
                     
                 }
                 
-                let regEx = new RegExp(path.sep.replace('\\', '\\\\') + '([a-zA-Z\.]*)$');
-                let fileNameMatch = fileConfig.fsPath.match(regEx);
+                //regex like: \\(.+\\)*(.+)\.(.+)$  replacing with our determined path replacer above..
+                let fileNameRegEx = new RegExp(replaceWithPath + '(.+' + replaceWithPath + ')*(.+)\\.(.+)$');
+
+                this.logger.debug(this.lib, func, "looking for file name with regex:" + fileNameRegEx);
+                let fileNameMatch = fileConfig.fsPath.match(fileNameRegEx);
+                this.logger.debug(this.lib, func, 'Matches:', fileNameMatch);
                 
                 let fileName = 'server_version.txt';
+
                 if(fileNameMatch && fileNameMatch.length > 1){
-                    fileName = 'server_version_' + fileNameMatch[1];
+                    fileName = 'server_version_' + fileNameMatch[2];
+                    if(fileNameMatch[3]){
+                        fileName += '.' + fileNameMatch[3]; //extension if exists.
+                    }
                 }
                 
                 let wsFolder = vscode.workspace.workspaceFolders ? vscode.workspace.workspaceFolders[0].uri.fsPath : "";
@@ -560,7 +603,7 @@ export class WorkspaceManager{
                         }
                         fs.writeFileSync(serverTempFilePath, serverContent);
                         if(onDemand){vscode.window.showWarningMessage('Content was different on server. Loading compare window!');}
-                        await vscode.commands.executeCommand('vscode.diff', vscode.Uri.file(serverTempFilePath),vscode.Uri.file(fileConfig.fsPath), "Server File <--> Local File");
+                        await vscode.commands.executeCommand('vscode.diff', vscode.Uri.file(serverTempFilePath),vscode.Uri.file(fileConfig.fsPath), "Server File <- || -> Local File");
                     }
                     
                 } else if(action === "Overwrite Local File"){
@@ -582,6 +625,10 @@ export class WorkspaceManager{
         } else {
             this.logger.info(this.lib, func, "Did not find any synced files");
         }
+    }
+
+    private fixPathForWindows(fsPath:string){
+        return fsPath.replace(/"|\<|\>|\?|\||\/|\\|:|\*/g, '_');
     }
 
 }

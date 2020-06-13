@@ -30,6 +30,7 @@ export class InstancesList {
         return this.lastSelected;
     }
     
+
     getInstance(name:string):InstanceMaster{
         let foundInstance = new InstanceMaster();
         this.instances.forEach((instance, index) =>{
@@ -140,8 +141,8 @@ export class InstancesList {
         this.logger.info(this.lib, func, 'Auth selection', authSelection);
         
         if(authSelection.value === 'basic'){
-            let username = await vscode.window.showInputBox(<vscode.InputBoxOptions>{prompt:"Enter User Name",ignoreFocusOut:true});
-            let password = await vscode.window.showInputBox(<vscode.InputBoxOptions>{prompt:"Enter Password",password:true,ignoreFocusOut:true});
+            let username = await vscode.window.showInputBox(<vscode.InputBoxOptions>{prompt:"Enter User Name (1/2)",ignoreFocusOut:true});
+            let password = await vscode.window.showInputBox(<vscode.InputBoxOptions>{prompt:"Enter Password (2/2)",password:true,ignoreFocusOut:true});
             
             if(!username || !password){
                 vscode.window.showWarningMessage('Instance confugration aborted. One or all Auth Details not provided.');
@@ -150,9 +151,9 @@ export class InstancesList {
             instanceMaster.setBasicAuth(username, password);
             
         } else if(authSelection.value === 'oauth'){
-            let clientID = await vscode.window.showInputBox(<vscode.InputBoxOptions>{prompt:"Enter Client ID",ignoreFocusOut:true});
-            let clientSecret = await vscode.window.showInputBox(<vscode.InputBoxOptions>{prompt:"Enter Client Secret"});
-            let username = await vscode.window.showInputBox(<vscode.InputBoxOptions>{prompt:"Enter Usename (You will be prompted for PW on first connection attempt).",ignoreFocusOut:true});
+            let clientID = await vscode.window.showInputBox(<vscode.InputBoxOptions>{prompt:"Enter Client ID (1/3)",ignoreFocusOut:true});
+            let clientSecret = await vscode.window.showInputBox(<vscode.InputBoxOptions>{prompt:"Enter Client Secret (2/3)", ignoreFocusOut:true});
+            let username = await vscode.window.showInputBox(<vscode.InputBoxOptions>{prompt:"Enter Usename (3/3).",ignoreFocusOut:true});
             
             if(!clientID || !clientSecret || !username){
                 vscode.window.showWarningMessage('Instance confugration aborted. One or all OAuth Details not provided.');
@@ -161,7 +162,7 @@ export class InstancesList {
             instanceMaster.setOAuth(clientID, clientSecret);
             instanceMaster.setUserName(username);
         }
-        let client = new RESTClient(instanceMaster.getConfig());
+        let client = new RESTClient(instanceMaster);
         let testResult = await client.testConnection();
         
         if(testResult){

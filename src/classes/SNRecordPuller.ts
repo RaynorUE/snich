@@ -5,6 +5,8 @@ import { RESTClient } from "./RESTClient";
 import * as vscode from 'vscode';
 import { WorkspaceManager } from "./WorkspaceManager";
 
+import {snichOutput} from '../extension';
+
 export class SNFilePuller {
     
     instanceList: InstancesList;
@@ -31,7 +33,7 @@ export class SNFilePuller {
         }
 
         /** Setup REST Client */
-        let client = new RESTClient(selectedInstance.getConfig(), this.logger);
+        let client = new RESTClient(selectedInstance, this.logger);
         
         /** Make our calls for table selection. Why do we query for tables we pre-configured? 
          * Just incase the table has been deleted (or was never created!)
@@ -39,6 +41,7 @@ export class SNFilePuller {
         let configuredTables = selectedInstance.tableConfig;
         let encodedQuery = 'nameIN' + configuredTables.tableNameList;
         let tableRecs:Array<snRecord> = await client.getRecords('sys_db_object', encodedQuery, ["name", "label"], true);
+        this.logger.debug(this.lib, func, "Table records returned: ", tableRecs);
         if(!tableRecs || tableRecs.length === 0){
             vscode.window.showWarningMessage('Attempted to get configured tables from instance and failed. Aborting sync record. See logs for detail.');
             return undefined;
@@ -150,7 +153,8 @@ export class SNFilePuller {
         }
 
         //setup our rest client and grab the available application records.
-        client = new RESTClient(selectedInstance.getConfig());
+        client = new RESTClient(selectedInstance);
+        
         let appRecords = await client.getRecords('sys_scope', 'name!=Global', ['name', 'scope', 'short_description']);
         
         if(!appRecords || appRecords.length === 0){
@@ -188,8 +192,14 @@ export class SNFilePuller {
         //await recordRecursor(selectedInstance, 0, appScope);
 
         let tables = selectedInstance.tableConfig.tables;
+
+        snichOutput.show();
+        snichOutput.appendLine('Loading all application files...');
+        
+        this.logger.info(this.lib, func, "About to process tables: ", tables);
         
         tables.forEach(async (tableConfig) => {
+            client.hideProgress();
             //build our fields to get from server for this table config.
             let fields = <Array<string>>[];
             fields.push(tableConfig.display_field);
@@ -204,22 +214,28 @@ export class SNFilePuller {
 
             let tableRecs = await client.getRecords(tableConfig.name, encodedQuery, fields);
             if(!tableRecs || tableRecs.length === 0){
-                vscode.window.showInformationMessage(`Did not find any records for table: ${tableConfig.label} [${tableConfig.name}]`);
+                snichOutput.appendLine(`Created 0 files for: ${tableConfig.label} [${tableConfig.name}] (No Records Found)`);
                 return false;
             }
 
+            let tableRecFileRequests:Array<Promise<any>> = [];
+
             if (tableRecs) {
-                tableRecs.forEach(async (record) => {
-                    await wsManager.createSyncedFile(selectedInstance, tableConfig, record, false);
+                
+                tableRecs.forEach((record) => {
+                    tableRecFileRequests.push(wsManager.createSyncedFile(selectedInstance, tableConfig, record, false));
                 });
-                vscode.window.showInformationMessage(`Created ${tableRecs.length} files for: ${tableConfig.label} [${tableConfig.name}]` );
-                wsManager.writeSyncedFiles(selectedInstance);
+
+                await Promise.all(tableRecFileRequests);
+                snichOutput.appendLine(`Created ${tableRecs.length} files for: ${tableConfig.label} [${tableConfig.name}]`);
             }
+
+            //this.logger.debug(this.lib, func, "About to write synced files!:", selectedInstance);
+            wsManager.writeSyncedFiles(selectedInstance);
+            client.showProgress();
         });
 
 
-        this.logger.info(this.lib, func, "About to write synced files!:", selectedInstance);
-        vscode.window.showInformationMessage('All application files have been loaded. You may need to refresh your workspace explorer.');
         this.logger.info(this.lib, func, 'END');
         return true;
         

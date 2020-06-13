@@ -7,16 +7,24 @@
             "type": "npm",
             "script": "watch",
             "presentation": {
-                "reveal": "never",
+                "reveal": "never"
             },
             "problemMatcher": [
                 "$ts-webpack-watch"
             ],
             "isBackground": true,
             "group": {
-				"kind": "build",
-				"isDefault": true
+                "kind": "build",
+                "isDefault": true
             }
+        },
+        {
+            "type": "npm",
+            "script": "compile",
+            "group": "build",
+            "problemMatcher": [],
+            "label": "npm: compile",
+            "detail": "webpack --mode development && node ./prepublish-canary.js patch"
         }
     ]
 }

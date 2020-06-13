@@ -4,9 +4,10 @@
     "displayName": "S.N.I.C.H. Canary",
     "description": "ServiceNow Integrated Code Helper - Canary. Get the latest as I build stuff ready to be tested! Provide feedback to integratenate@gmail.com",
     "icon": "images/icon-canary.png",
-    "version": "1.22.0",
+    "version": "1.21.59",
     "liveVersion": "1.1.0",
-    "canaryVersion": "1.22.0",
+    "canaryVersion": "1.21.59",
+
     "betaVersion": "1.0.6",
     "keywords": [
         "SNICH",
@@ -163,12 +164,13 @@
         "vscode:prepublish": "webpack --mode production",
         "compile": "webpack --mode development && node ./prepublish-canary.js patch",
         "watch": "webpack --mode development --watch",
-        "test-compile": "tsc -p ./ && npm run compile"
+        "test-compile": "webpack --mode development && node ./prepublish-canary.js patch"
     },
     "devDependencies": {
         "@types/glob": "^7.1.1",
         "@types/mocha": "^7.0.2",
         "@types/node": "^13.11.0",
+        "@types/request": "^2.48.5",
         "@types/vscode": "^1.45.1",
         "@typescript-eslint/eslint-plugin": "^2.30.0",
         "@typescript-eslint/parser": "^2.30.0",
@@ -184,6 +186,9 @@
     },
     "dependencies": {
         "@types/needle": "^2.0.4",
-        "needle": "^2.5.0"
+        "@types/request-promise-native": "^1.0.17",
+        "needle": "^2.5.0",
+        "request": "^2.88.2",
+        "request-promise-native": "^1.0.8"
     }
 }

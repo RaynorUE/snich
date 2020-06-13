@@ -132,18 +132,18 @@ export class SystemLogHelper {
             }
 
             if (obj) {
-                var objString = "";
+                /*var objString = "";
                 try{
                     objString = JSON.stringify(obj).toLowerCase(); //may throw error on circular objects.
                 } catch (err) {
                     objString = "";
                 }
-                
-                if(objString.indexOf('password') > -1 || objString.indexOf('pass') > -1 || objString.indexOf('pw') > -1){
+                */
+                /*if(objString.indexOf('password') > -1 || objString.indexOf('pass') > -1 || objString.indexOf('pw') > -1){
                   log(fullMsg, {log_exception:'Data to be logged may have contained a password. Not logging.'});
-                } else {
+                } else {*/
                     log(fullMsg, obj);
-                }
+                //}
             } else {
                 log(fullMsg);
             }

@@ -8,9 +8,13 @@ import { SNFilePuller } from './classes/SNRecordPuller';
 import { WorkspaceManager } from './classes/WorkspaceManager';
 import { TSDefinitionGenerator } from './classes/TSDefinitionGeneator';
 
+export const snichOutput = vscode.window.createOutputChannel('S.N.I.C.H.');
+
+
 // this method is called when your extension is activated
 // your extension is activated the very first time the command is executed
 export function activate(context: vscode.ExtensionContext) {
+    
     let lib = 'extension.ts';
 	let func = 'activate';
 	let logger:SystemLogHelper = new SystemLogHelper();
@@ -66,7 +70,7 @@ export function activate(context: vscode.ExtensionContext) {
 
         let selectedInstance = await instanceList.selectInstance();
         if(selectedInstance){
-            let client = new RESTClient(selectedInstance.getConfig(), logger);
+            let client = new RESTClient(selectedInstance, logger);
             await client.testConnection();
         }
         logger.info(lib, func, 'END', instanceList);
@@ -94,15 +98,22 @@ export function activate(context: vscode.ExtensionContext) {
 	vscode.commands.registerCommand('snich.application.load.all', async () => {
         let func = 'application.load.all';
         logger.info(lib, func, 'START', );
+        
         if(!instanceList.atLeastOneConfigured()){
             return;
         }
         let fp = new SNFilePuller(instanceList, logger);
         await fp.pullAllAppFiles();
 
+        setTimeout(function(){
+            //faking it for now. Need to fix "async function in tableData for loop..."
+            snichOutput.appendLine('All application files have been loaded. You may need to refresh your workspace file/folder list.');
+        }, 4000);
+
         logger.info(lib, func, 'END', instanceList);
 	});
     
+    //for loading app files we haven't retrieved yet... goal is to "not replace existing" and increase efficiency..?
 	vscode.commands.registerCommand('snich.application.load.new', () => {
         
 	});
@@ -117,7 +128,7 @@ export function activate(context: vscode.ExtensionContext) {
 		let filePuller = new SNFilePuller(instanceList, logger);
 		
         await filePuller.syncRecord();
-        logger.info(lib, func, 'START', instanceList);
+        logger.info(lib, func, 'END', instanceList);
 
 	});
     
@@ -153,12 +164,7 @@ export function activate(context: vscode.ExtensionContext) {
     logger.info(lib, func, "We have finished registering all commands. Extension fully activated!");
 
     let instancesForMessage = instanceList.getInstances();
-    let instanceNamesForMessage = '';
-    for(var i = 0; i < instancesForMessage.length; i++){
-        let instance = instancesForMessage[i];
-        instanceNamesForMessage += instance.getName() + ', ';
-    }
-    instanceNamesForMessage = instanceNamesForMessage.replace(/, $/, ''); //replace trailing comma.
+    let instanceNamesForMessage = instancesForMessage.join(', ');
 
     vscode.window.showInformationMessage('S.N.I.C.H has been activated with the following ServiceNow Instances:\n' + instanceNamesForMessage);
     logger.info(lib, func, "END");
