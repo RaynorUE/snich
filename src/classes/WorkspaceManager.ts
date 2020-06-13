@@ -197,9 +197,11 @@ export class WorkspaceManager{
         let config = instance.getConfig();
         let syncedFiles = instance.getSyncedFiles();
         
-        let appPath = path.resolve(config.rootPath, appName);
+        let appPath = path.resolve(config.rootPath, this.fixPathForWindows(appName));
         let rootPath = appPath.toString();
         let finalRootFolderPath = '';
+        
+        this.logger.debug(this.lib, func, "rootPath:", rootPath);
         
         //createAppPath if it doesn't exist.. 
 
@@ -209,7 +211,8 @@ export class WorkspaceManager{
             //do nothing
         }
         
-        let rootPath2 = path.resolve(rootPath, tableName);
+        let rootPath2 = path.resolve(rootPath, this.fixPathForWindows(tableName));
+        this.logger.debug(this.lib, func, "rootPath2:", rootPath2);
         try {
             await fsp.mkdir(rootPath2);
         } catch(err){
@@ -220,7 +223,8 @@ export class WorkspaceManager{
         
         if(table.fields.length > 1){
             this.logger.info(this.lib, func, 'Table definition has more than one field. Updating root path to be based on display value of record.');
-            let rootPath3 = path.resolve(rootPath2, table.getDisplayValue(record).replace(/"|\<|\>|\?|\|\/|\\|:|\*/g, '_'));
+            let rootPath3 = path.resolve(rootPath2, this.fixPathForWindows(table.getDisplayValue(record)));
+            this.logger.debug(this.lib, func, "rootPath:", rootPath3);
             finalRootFolderPath = rootPath3;
             multiFile = true;
             openFile = false;
@@ -234,7 +238,7 @@ export class WorkspaceManager{
         
 
         
-        this.logger.info(this.lib, func, `Create file(s) in ${rootPath} based on table config:`, table);
+        this.logger.info(this.lib, func, `Create file(s) in ${finalRootFolderPath} based on table config:`, table);
         let settings = vscode.workspace.getConfiguration();
         let createEmptyFiles = settings.get('snich.createEmptyFiles') || "Yes";
         
@@ -242,17 +246,18 @@ export class WorkspaceManager{
         table.fields.forEach(async (field) =>{
             //this.logger.debug(this.lib, func, 'Processing field:', field);
             //sorry linux/mac users, you get clobbered by this too! :(
-            let fileName = table.getDisplayValue(record).replace(/"|\<|\>|\?|\|\/|\\|:|\*/g, '_');
+            let fileName = this.fixPathForWindows(table.getDisplayValue(record));
             if(multiFile){
-                fileName = field.label;
+                fileName = this.fixPathForWindows(field.label);
             }
             
             let file = fileName + '.' + field.extention;
             let content = record[field.name];
             
+            this.logger.debug(this.lib, func, "path before we go to create:", file);
             
             if((createEmptyFiles === 'Yes' && !content) || content){
-                let fullPath = path.resolve(finalRootFolderPath, file);
+                let fullPath = path.resolve(finalRootFolderPath, this.fixPathForWindows(file));
                 this.logger.debug(this.lib, func, `Creating file at ${fullPath}`);
                 await fsp.writeFile(fullPath, content);
                 syncedFiles.addFile(fullPath + "", instance.getConfig().name + "", field, record);
@@ -592,6 +597,10 @@ export class WorkspaceManager{
         } else {
             this.logger.info(this.lib, func, "Did not find any synced files");
         }
+    }
+
+    private fixPathForWindows(fsPath:string){
+        return fsPath.replace(/"|\<|\>|\?|\||\/|\\|:|\*/g, '_');
     }
 
 }

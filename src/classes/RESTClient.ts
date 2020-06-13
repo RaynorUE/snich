@@ -1,5 +1,4 @@
 //https://github.com/tomas/needle
-import * as needle from 'needle';
 import * as vscode from 'vscode';
 import { SystemLogHelper } from './LogHelper';
 import { InstanceMaster, InstanceConfig } from './InstanceConfigManager';
@@ -116,7 +115,7 @@ export class RESTClient {
         let records:Array<snRecord> = [];
         let response = await this.get(url, "Retrieving records based on url: " + url);
 
-        if (response.result) {
+        if (response && response.result) {
             records = response.result; //when many records returned it's an array in the result property... 
         }
 
@@ -127,9 +126,17 @@ export class RESTClient {
         return records;
     }
 
-    updateRecord(table: string, sys_id: string, body: object) {
-        let url = this.instanceConfig.connection.url + '/api/now/table/' + table + '/' + sys_id;
-        return this.put(url, body, "Updating record at url:" + url);
+    async updateRecord(table: string, sys_id: string, body: object) {
+        let url = this.instanceConfig.connection.url + '/api/now/table/' + table + '/' + sys_id +"?sysparm_fields=sys_id";
+        let response = await this.put(url, body, "Updating record at url:" + url);
+
+        let record:snRecord = {label:"", name:"", sys_id:""};
+
+        if(response && response.result){
+            record = response.result
+        }
+
+        return record;
     }
 
     //unused...
@@ -171,15 +178,14 @@ export class RESTClient {
 
 
         if (this.useProgress) {
-            return await vscode.window.withProgress(<vscode.ProgressOptions>{ location: vscode.ProgressLocation.Notification, cancellable: false, title: "Communicating with ServiceNow" }, async (progress, token) => {
+            return await vscode.window.withProgress(<vscode.ProgressOptions>{ location: vscode.ProgressLocation.Notification, cancellable: false, title: "SNICH" }, async (progress, token) => {
 
                 await this.handleAuth();
 
                 progress.report({ message: progressMessage });
                 var response = await request.get(url, this.requestOpts);
 
-                this.logger.info(this.lib, func, '[REQUEST] Response was: ', response);
-                //progress.report({ increment: 100 });
+                this.logger.debug(this.lib, func, '[REQUEST] Response was: ', response);
                 this.logger.info(this.lib, func, "END");
 
                 return response;
@@ -189,7 +195,7 @@ export class RESTClient {
 
             var response = await request.get(url, this.requestOpts);
 
-            this.logger.info(this.lib, func, '[REQUEST] Response was: ', response);
+            this.logger.debug(this.lib, func, '[REQUEST] Response was: ', response);
             this.logger.info(this.lib, func, "END");
 
             return response;
@@ -197,55 +203,78 @@ export class RESTClient {
 
     }
 
-    private post(url: string, body: any, progressMessage: string) {
+    private async post(url: string, body: any, progressMessage: string) {
         let func = "post";
-        return vscode.window.withProgress(<vscode.ProgressOptions>{
-            location: vscode.ProgressLocation.Notification,
-            title: progressMessage,
-            cancellable: false
-        }, (progress, token) => {
+        this.logger.info(this.lib, func, 'START');
+        if(this.useProgress){
+            return vscode.window.withProgress(<vscode.ProgressOptions>{
+                location: vscode.ProgressLocation.Notification,
+                title: "SNICH",
+                cancellable: false
+            }, async (progress, token) => {
 
-            return this.handleAuth().then(() => {
-                this.logger.info(this.lib, func, 'Auth handled. requestOpts:', this.requestOpts);
-                this.logger.info(this.lib, func, "Posting url:" + url);
-                return needle('post', url, body, {}).then((response) => {
-                    //return needle('post', url, body, {this.requestOpts}).then((response) => {
-                    progress.report({
-                        increment: 100
-                    });
-                    this.logger.info(this.lib, func, "response received.", response);
-                    return response;
-                });
-            }).catch((err) => {
-                console.log("error occured:", err);
+                await this.handleAuth();
+
+                progress.report({ message: progressMessage });
+
+                this.requestOpts.body = body;
+                var response = await request.post(url, this.requestOpts);
+                this.requestOpts.body = null; //clear for next usage.
+                
+                this.logger.debug(this.lib, func, '[REQUEST] Response was: ', response);
+                this.logger.info(this.lib, func, "END");
+                
+                return response
             });
-        });
+        } else {
+            await this.handleAuth();
+
+            this.requestOpts.body = body;
+            var response = await request.post(url, this.requestOpts);
+            this.requestOpts.body = null; //clear for next usage.
+            
+            this.logger.debug(this.lib, func, '[REQUEST] Response was: ', response);
+            this.logger.info(this.lib, func, "END");
+            
+            return response
+        }
     }
 
-    private put(url: string, body: any, progressMessage: string) {
+    private async put(url: string, body: any, progressMessage: string) {
         let func = "post";
-        return vscode.window.withProgress(<vscode.ProgressOptions>{
-            location: vscode.ProgressLocation.Notification,
-            title: progressMessage,
-            cancellable: false
-        }, (progress, token) => {
+        this.logger.info(this.lib, func, 'START');
+        if(this.useProgress){
+            return vscode.window.withProgress(<vscode.ProgressOptions>{
+                location: vscode.ProgressLocation.Notification,
+                title: "SNICH",
+                cancellable: false
+            }, async (progress, token) => {
 
-            return this.handleAuth().then(() => {
-                this.logger.info(this.lib, func, 'Auth handled. requestOpts:', this.requestOpts);
-                this.logger.info(this.lib, func, "Posting url:" + url);
-                return needle('put', url, body, {}).then((response) => {
+                await this.handleAuth();
 
-                    //return needle('put', url, body, this.requestOpts).then((response) => {
-                    progress.report({
-                        increment: 100
-                    });
-                    this.logger.info(this.lib, func, "response received.", response);
-                    return response;
-                });
-            }).catch((err) => {
-                console.log("error occured:", err);
+                progress.report({ message: progressMessage });
+
+                this.requestOpts.body = body;
+                var response = await request.put(url, this.requestOpts);
+                this.requestOpts.body = null; //clear for next usage.
+                
+                this.logger.debug(this.lib, func, '[REQUEST] Response was: ', response);
+                this.logger.info(this.lib, func, "END");
+                
+                return response
             });
-        });
+        } else {
+            await this.handleAuth();
+
+            this.requestOpts.body = body;
+            var response = await request.post(url, this.requestOpts);
+            this.requestOpts.body = null; //clear for next usage.
+            
+            this.logger.debug(this.lib, func, '[REQUEST] Response was: ', response);
+            this.logger.info(this.lib, func, "END");
+            
+            return response
+        }
     }
 
     private async handleAuth() {
