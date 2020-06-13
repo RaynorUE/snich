@@ -201,7 +201,7 @@ export class WorkspaceManager{
         let rootPath = appPath.toString();
         let finalRootFolderPath = '';
         
-        this.logger.debug(this.lib, func, "rootPath:", rootPath);
+        //this.logger.debug(this.lib, func, "rootPath:", rootPath);
         
         //createAppPath if it doesn't exist.. 
 
@@ -212,7 +212,7 @@ export class WorkspaceManager{
         }
         
         let rootPath2 = path.resolve(rootPath, this.fixPathForWindows(tableName));
-        this.logger.debug(this.lib, func, "rootPath2:", rootPath2);
+        //this.logger.debug(this.lib, func, "rootPath2:", rootPath2);
         try {
             await fsp.mkdir(rootPath2);
         } catch(err){
@@ -222,9 +222,9 @@ export class WorkspaceManager{
         finalRootFolderPath = rootPath2;
         
         if(table.fields.length > 1){
-            this.logger.info(this.lib, func, 'Table definition has more than one field. Updating root path to be based on display value of record.');
+            //this.logger.debug(this.lib, func, 'Table definition has more than one field. Updating root path to be based on display value of record.');
             let rootPath3 = path.resolve(rootPath2, this.fixPathForWindows(table.getDisplayValue(record)));
-            this.logger.debug(this.lib, func, "rootPath:", rootPath3);
+            //this.logger.debug(this.lib, func, "rootPath:", rootPath3);
             finalRootFolderPath = rootPath3;
             multiFile = true;
             openFile = false;
@@ -254,7 +254,7 @@ export class WorkspaceManager{
             let file = fileName + '.' + field.extention;
             let content = record[field.name];
             
-            this.logger.debug(this.lib, func, "path before we go to create:", file);
+            //this.logger.debug(this.lib, func, "path before we go to create:", file);
             
             if((createEmptyFiles === 'Yes' && !content) || content){
                 let fullPath = path.resolve(finalRootFolderPath, this.fixPathForWindows(file));
@@ -262,7 +262,7 @@ export class WorkspaceManager{
                 await fsp.writeFile(fullPath, content);
                 syncedFiles.addFile(fullPath + "", instance.getConfig().name + "", field, record);
                 if(openFile){
-                    this.logger.debug(this.lib, func, `Opening file found at: ${fullPath}`);
+                    //this.logger.debug(this.lib, func, `Opening file found at: ${fullPath}`);
                     vscode.window.showTextDocument(vscode.Uri.file(fullPath));
                 }
             } else {
@@ -317,6 +317,8 @@ export class WorkspaceManager{
         let func = 'loadObservers';
         this.logger.info(this.lib, func, 'START');
         this.watchAppFileSave(instanceList);
+        this.logger.info(this.lib, func, 'END');
+
     }
     
     watchAppFileSave(instanceList:InstancesList){
@@ -354,9 +356,19 @@ export class WorkspaceManager{
                 let func = "waitUntilPromise";
                 //copy and rename our current file so that we have a .old to compare to in our onDidSaveEvent
                 let visibleEditors = vscode.window.visibleTextEditors || [];
-                if(visibleEditors && visibleEditors.length >1){
+                this.logger.debug(this.lib, func, "visible editors: ", visibleEditors);
+
+                //See if in compare window
+                let compareWindow = false;
+                visibleEditors.forEach((editor) => {
+                    if(editor.document.fileName.indexOf('compare_files_temp') > -1){
+                        compareWindow = true;
+                    }
+                })
+
+
+                if(compareWindow){
                     this.logger.debug(this.lib, func, "we are in the compare window. Do not do any of the dot-old stuff.");
-                    resolve();
                 } else {
                     let currentFSPath = document.uri.fsPath;
                     let extensionMatch = currentFSPath.match(/\.\w*$/);
@@ -403,7 +415,15 @@ export class WorkspaceManager{
             }
 
             let visibleEditors = vscode.window.visibleTextEditors || [];
-            if(visibleEditors && visibleEditors.length >1){
+            //See if in compare window
+            let compareWindow = false;
+            visibleEditors.forEach((editor) => {
+                if(editor.document.fileName.indexOf('compare_files_temp') > -1){
+                    compareWindow = true;
+                }
+            })
+
+            if(compareWindow){
                 this.logger.debug(this.lib, func, "we are in the compare window.");
                 await this.compareWithServer(document.uri.fsPath, document.getText(), instanceList, false);
             } else {
@@ -548,12 +568,20 @@ export class WorkspaceManager{
                     
                 }
                 
-                let regEx = new RegExp(path.sep.replace('\\', '\\\\') + '([a-zA-Z\.]*)$');
-                let fileNameMatch = fileConfig.fsPath.match(regEx);
+                //regex like: \\(.+\\)*(.+)\.(.+)$  replacing with our determined path replacer above..
+                let fileNameRegEx = new RegExp(replaceWithPath + '(.+' + replaceWithPath + ')*(.+)\\.(.+)$');
+
+                this.logger.debug(this.lib, func, "looking for file name with regex:" + fileNameRegEx);
+                let fileNameMatch = fileConfig.fsPath.match(fileNameRegEx);
+                this.logger.debug(this.lib, func, 'Matches:', fileNameMatch);
                 
                 let fileName = 'server_version.txt';
+
                 if(fileNameMatch && fileNameMatch.length > 1){
-                    fileName = 'server_version_' + fileNameMatch[1];
+                    fileName = 'server_version_' + fileNameMatch[2];
+                    if(fileNameMatch[3]){
+                        fileName += '.' + fileNameMatch[3]; //extension if exists.
+                    }
                 }
                 
                 let wsFolder = vscode.workspace.workspaceFolders ? vscode.workspace.workspaceFolders[0].uri.fsPath : "";
@@ -575,7 +603,7 @@ export class WorkspaceManager{
                         }
                         fs.writeFileSync(serverTempFilePath, serverContent);
                         if(onDemand){vscode.window.showWarningMessage('Content was different on server. Loading compare window!');}
-                        await vscode.commands.executeCommand('vscode.diff', vscode.Uri.file(serverTempFilePath),vscode.Uri.file(fileConfig.fsPath), "Server File <--> Local File");
+                        await vscode.commands.executeCommand('vscode.diff', vscode.Uri.file(serverTempFilePath),vscode.Uri.file(fileConfig.fsPath), "Server File <- || -> Local File");
                     }
                     
                 } else if(action === "Overwrite Local File"){

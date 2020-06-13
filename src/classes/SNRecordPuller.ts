@@ -230,7 +230,7 @@ export class SNFilePuller {
                 snichOutput.appendLine(`Created ${tableRecs.length} files for: ${tableConfig.label} [${tableConfig.name}]`);
             }
 
-            this.logger.info(this.lib, func, "About to write synced files!:", selectedInstance);
+            //this.logger.debug(this.lib, func, "About to write synced files!:", selectedInstance);
             wsManager.writeSyncedFiles(selectedInstance);
             client.showProgress();
         });

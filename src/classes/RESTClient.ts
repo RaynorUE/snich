@@ -335,13 +335,6 @@ export class RESTClient {
                 refresh_token: oauthData.token.refresh_token
             };
 
-            /*
-            var formEncodedParams = "grant_type=password&";
-            formEncodedParams += "client_id=" + encodeURIComponent(connectionData.auth.OAuth.client_id) + "&";
-            formEncodedParams += "client_secret=" + encodeURIComponent(connectionData.auth.OAuth.client_secret) + "&";
-            formEncodedParams += "refresh_token=" + encodeURIComponent(connectionData.auth.OAuth.token.refresh_token);
-            */
-
             var response = await request.post(oauthTokenURL, reqOpts);
             this.logger.debug(this.lib, func, "Response from post", response);
 

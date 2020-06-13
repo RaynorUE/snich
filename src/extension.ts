@@ -113,6 +113,7 @@ export function activate(context: vscode.ExtensionContext) {
         logger.info(lib, func, 'END', instanceList);
 	});
     
+    //for loading app files we haven't retrieved yet... goal is to "not replace existing" and increase efficiency..?
 	vscode.commands.registerCommand('snich.application.load.new', () => {
         
 	});
@@ -163,12 +164,7 @@ export function activate(context: vscode.ExtensionContext) {
     logger.info(lib, func, "We have finished registering all commands. Extension fully activated!");
 
     let instancesForMessage = instanceList.getInstances();
-    let instanceNamesForMessage = '';
-    for(var i = 0; i < instancesForMessage.length; i++){
-        let instance = instancesForMessage[i];
-        instanceNamesForMessage += instance.getName() + ', ';
-    }
-    instanceNamesForMessage = instanceNamesForMessage.replace(/, $/, ''); //replace trailing comma.
+    let instanceNamesForMessage = instancesForMessage.join(', ');
 
     vscode.window.showInformationMessage('S.N.I.C.H has been activated with the following ServiceNow Instances:\n' + instanceNamesForMessage);
     logger.info(lib, func, "END");
