@@ -168,6 +168,66 @@ export class RESTClient {
         }
     }
 
+    async runBackgroundScript(baseURI:string, script:string, scope:string, username:string, password:string){
+        let jar = request.jar();
+        
+        let headers = {
+            "Accept": "*/*",
+            "Connection": "keep-alive",
+            "Cache-Control": "max-age=0",
+            "Accept-Encoding": "gzip, deflate",
+            "Accept-Language": "en-US,en;q=0.8",
+            "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8"
+        };
+    
+        let loginOpts:request.RequestPromiseOptions = {
+            method: "POST",
+            followAllRedirects: true,
+            headers: headers,
+            gzip: true,
+            jar: jar,
+            form: {
+                user_name: username,
+                user_password: password,
+                remember_me: "true",
+                sys_action: "sysverb_login"
+            }
+        };
+    
+        let loginURL = baseURI + 'login.do';
+        
+        let loginResponse:string = await request.post(loginURL, loginOpts);
+    
+        //look for CK
+        let sysparm_ck = loginResponse.split("var g_ck = '")[1].split('\'')[0];
+    
+        if(sysparm_ck){
+            let evalOptions:request.RequestPromiseOptions = {
+                'method': 'POST',
+                "followAllRedirects": true,
+                "headers": headers,
+                "gzip": true,
+                "jar": jar,
+                'form': {
+                    "script": script,
+                    "sysparm_ck": sysparm_ck,
+                    "sys_scope": scope,
+                    "runscript": "Run script",
+                    "quota_managed_transaction": "on"
+                }
+            };
+            
+            let BSUrl = baseURI + 'sys.scripts.do';
+    
+            let evalResponse = request.post(BSUrl, evalOptions);
+    
+            if(evalResponse){
+                
+            }
+    
+        }
+    }
+
     private async get(url: string, progressMessage: string) {
         let func = "get";
         this.logger.info(this.lib, func, 'START');
