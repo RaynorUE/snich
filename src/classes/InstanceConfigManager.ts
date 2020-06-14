@@ -205,6 +205,7 @@ export class InstanceMaster {
                     type:"",
                     username:"",
                     password:"",
+                    storeBasicInMemory:false,
                     OAuth: {
                         client_id: "",
                         client_secret: "",
@@ -253,6 +254,16 @@ export class InstanceMaster {
         let pw = buff.toString('ascii');
         return pw;
     }
+
+    async askForBasicAuth(){
+        let username = await vscode.window.showInputBox(<vscode.InputBoxOptions>{prompt:"Enter User Name (1/2)",ignoreFocusOut:true});
+        let password = await vscode.window.showInputBox(<vscode.InputBoxOptions>{prompt:"Enter Password (2/2)",password:true,ignoreFocusOut:true});
+            
+            if(!username || !password){
+                vscode.window.showWarningMessage('Instance confugration aborted. One or all Auth Details not provided.');
+                return undefined;
+            }
+    }
     
     setBasicAuth(username:string, password:string){
         this.setUserName(username);
@@ -264,6 +275,11 @@ export class InstanceMaster {
         this.config.connection.auth.type = 'oauth';
         this.config.connection.auth.OAuth.client_id = client_id;
         this.config.connection.auth.OAuth.client_secret = client_secret;
+    }
+
+    askBasicAuthDetails(saveToDisk?:boolean){
+
+        
     }
     
     setURL(url:string){

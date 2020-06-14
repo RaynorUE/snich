@@ -27,6 +27,7 @@ interface InstanceConnectionData{
  */
 interface InstanceAuthData {
     type:string;
+    storeBasicInMemory:boolean;
     username: string;
     password: string;
     OAuth: InstanceOAuthData;
