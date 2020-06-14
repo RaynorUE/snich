@@ -141,27 +141,24 @@ export class InstancesList {
         this.logger.info(this.lib, func, 'Auth selection', authSelection);
         
         if(authSelection.value === 'basic'){
-            let username = await vscode.window.showInputBox(<vscode.InputBoxOptions>{prompt:"Enter User Name (1/2)",ignoreFocusOut:true});
-            let password = await vscode.window.showInputBox(<vscode.InputBoxOptions>{prompt:"Enter Password (2/2)",password:true,ignoreFocusOut:true});
-            
-            if(!username || !password){
-                vscode.window.showWarningMessage('Instance confugration aborted. One or all Auth Details not provided.');
+
+            let basicCredAsk = await instanceMaster.askForBasicAuth();
+
+            if(!basicCredAsk){
+                vscode.window.showWarningMessage('Instance confugration aborted. One or all Basic Auth Details not provided.');
                 return undefined;
             }
-            instanceMaster.setBasicAuth(username, password);
             
         } else if(authSelection.value === 'oauth'){
-            let clientID = await vscode.window.showInputBox(<vscode.InputBoxOptions>{prompt:"Enter Client ID (1/3)",ignoreFocusOut:true});
-            let clientSecret = await vscode.window.showInputBox(<vscode.InputBoxOptions>{prompt:"Enter Client Secret (2/3)", ignoreFocusOut:true});
-            let username = await vscode.window.showInputBox(<vscode.InputBoxOptions>{prompt:"Enter Usename (3/3).",ignoreFocusOut:true});
-            
-            if(!clientID || !clientSecret || !username){
+
+            let oauthCredAsk = await instanceMaster.askForOauth();
+            if(!oauthCredAsk){
                 vscode.window.showWarningMessage('Instance confugration aborted. One or all OAuth Details not provided.');
                 return undefined;
             }
-            instanceMaster.setOAuth(clientID, clientSecret);
-            instanceMaster.setUserName(username);
+
         }
+
         let client = new RESTClient(instanceMaster);
         let testResult = await client.testConnection();
         
@@ -205,7 +202,7 @@ export class InstanceMaster {
                     type:"",
                     username:"",
                     password:"",
-                    storeBasicInMemory:false,
+                    writeBasicToDisk:true,
                     OAuth: {
                         client_id: "",
                         client_secret: "",
@@ -255,33 +252,95 @@ export class InstanceMaster {
         return pw;
     }
 
-    async askForBasicAuth(){
+    getUserName(){
+        return this.config.connection.auth.username;
+    }
+
+    setClientSecret(secret:string){
+        this.config.connection.auth.OAuth.client_secret = secret;
+
+    }
+
+    setClientId(id:string){
+        this.config.connection.auth.OAuth.client_id = id;
+    }
+    
+
+    async askForBasicAuth():Promise<boolean> {
+        let func = 'askForBasicAuth';
+        this.logger.info(this.lib, func, "START");
+
         let username = await vscode.window.showInputBox(<vscode.InputBoxOptions>{prompt:"Enter User Name (1/2)",ignoreFocusOut:true});
         let password = await vscode.window.showInputBox(<vscode.InputBoxOptions>{prompt:"Enter Password (2/2)",password:true,ignoreFocusOut:true});
             
-            if(!username || !password){
-                vscode.window.showWarningMessage('Instance confugration aborted. One or all Auth Details not provided.');
-                return undefined;
-            }
-    }
-    
-    setBasicAuth(username:string, password:string){
+        if(!username || !password){
+            return false;
+        }
+
+        this.setAuthType('basic');
+        this.setWriteToDisk(true);
         this.setUserName(username);
         this.setPassword(password);
-        this.config.connection.auth.type = 'basic';
-    }
-    
-    setOAuth(client_id:string, client_secret:string){
-        this.config.connection.auth.type = 'oauth';
-        this.config.connection.auth.OAuth.client_id = client_id;
-        this.config.connection.auth.OAuth.client_secret = client_secret;
-    }
-
-    askBasicAuthDetails(saveToDisk?:boolean){
-
         
+
+        this.logger.info(this.lib, func, "END");
+        return true;
     }
-    
+
+    async askForOauth():Promise<boolean> {
+        var func = 'askForOauth';
+        this.logger.info(this.lib, func, 'START');
+        
+        let clientID = await vscode.window.showInputBox(<vscode.InputBoxOptions>{prompt:"Enter Client ID (1/3)",ignoreFocusOut:true});
+        let clientSecret = await vscode.window.showInputBox(<vscode.InputBoxOptions>{prompt:"Enter Client Secret (2/3)", ignoreFocusOut:true});
+        let username = await vscode.window.showInputBox(<vscode.InputBoxOptions>{prompt:"Enter Usename (3/3).",ignoreFocusOut:true});
+        
+        if(!clientID || !clientSecret || !username){
+            return false;
+        }
+
+        this.setAuthType('oauth');
+        this.setWriteToDisk(false);
+
+        this.setClientId(clientID);
+        this.setClientSecret(clientSecret);
+        this.setUserName(username);
+        this.logger.info(this.lib, func, 'END');
+        return true;
+    }
+
+
+    /**
+     * Ask for just the password and set internally. Based on auth type will save to disk or not.
+     */
+    async askForPassword():Promise<boolean> {
+        var func = 'askForPassword';
+        this.logger.info(this.lib, func, "START");
+
+        let password = await vscode.window.showInputBox(<vscode.InputBoxOptions>{prompt:`Enter password for ${this.getUserName()}:`,password:true,ignoreFocusOut:true});
+
+        if(!password){
+            vscode.window.showWarningMessage('Did not recieve password. Aborting.');
+            return false;
+        }
+
+        this.logger.info(this.lib, func, "END");
+        return true;
+    }
+
+    //
+    private setWriteToDisk(flag:boolean){
+        this.config.connection.auth.writeBasicToDisk = flag;
+    }
+
+    private setAuthType(authType:string){
+        this.config.connection.auth.type = authType;
+    }
+
+    getAuthType(){
+        return this.config.connection.auth.type;
+    }
+
     setURL(url:string){
         let func = 'setURL';
         this.logger.info(this.lib, func, 'START', );
