@@ -7,7 +7,8 @@ import { RESTClient } from './classes/RESTClient';
 import { SNFilePuller } from './classes/SNRecordPuller';
 import { WorkspaceManager } from './classes/WorkspaceManager';
 import { TSDefinitionGenerator } from './classes/TSDefinitionGeneator';
-
+import * as xml2js from 'xml2js';
+ 
 export const snichOutput = vscode.window.createOutputChannel('S.N.I.C.H.');
 
 
@@ -74,7 +75,132 @@ export function activate(context: vscode.ExtensionContext) {
             await client.testConnection();
         }
         logger.info(lib, func, 'END', instanceList);
-	});
+    });
+
+    /**
+     * Run a background script. *gasp*
+     */
+
+     vscode.commands.registerCommand('snich.application.run.background_script.global', async () =>{
+        let logger = new SystemLogHelper();
+        let func = 'snich.application.run.background_script';
+        logger.info(lib, func, 'START');
+
+        var selectedInstance = await instanceList.selectInstance();
+
+        let bsScript = "";
+
+        let activeEditor = vscode.window.activeTextEditor;
+        
+        if(activeEditor){
+            logger.info(lib, func, "selected text: ", activeEditor.selection)
+            let textSelection = activeEditor.selection;
+            let startPosition = new vscode.Position(textSelection.start.line, textSelection.start.character);
+            let endPosition = new vscode.Position(textSelection.end.line, textSelection.end.character);
+            let textSelectionRange = new vscode.Range(startPosition, endPosition)
+            bsScript = activeEditor.document.getText(textSelectionRange);
+            
+        } else {
+            logger.warn(lib, func, "could not determine active editor to run background script.")
+        }
+
+        if(bsScript){
+            await runScript(bsScript);
+        } else {
+            let bsAnswer = await vscode.window.showWarningMessage('No text Selected/Highlighted. Use all text in active editor.', `Go for it.`, `Don't ask me again.`, `Whoops. Nevermind.`);
+            let documentText = activeEditor?.document.getText() || "";
+            if(bsAnswer == `Go for it.`){
+                if(documentText){
+                    await runScript(documentText);
+                } else {
+                    vscode.window.showWarningMessage('Document is blank or no document open. Cannot run background scripts.');
+                }
+            }
+
+            if(bsAnswer == `Don't ask me again.`){
+                /**
+                 * @todo remember / find out how to update settings for a user. This might just be reading .vscode/settings.json for each instance?
+                 * @todo once we figure this out, remember to perform that check at the beginning :)
+                 */
+                if(documentText){
+                    await runScript(documentText);
+                } else {
+                    vscode.window.showWarningMessage('Document is blank or no document open. Cannot run background scripts.');
+                }
+            }
+        }
+
+
+        async function runScript(text:String){
+
+            var rClient = new RESTClient(selectedInstance, logger);
+
+            var scriptResult = await rClient.runBackgroundScript(bsScript, 'global', selectedInstance.getConfig().connection.auth.username, selectedInstance.getPassword());
+
+            let scriptResponseParts = scriptResult.match(/\<PRE\>.*\<\/PRE\>/);
+            if(scriptResponseParts && scriptResponseParts.length > 0){
+                xml2js.parseStringPromise(scriptResponseParts[0].toString().replace(/\<br\/\>/gi, '\n')).then((result) => {
+                    snichOutput.appendLine('=============== BACKGROUND SCRIPT EXECUTED (' + new Date().toLocaleDateString() + " " + new Date().toLocaleTimeString() + ') ===============\n');
+                    console.log('parse result: ', result);
+                    snichOutput.appendLine(result.PRE.toString());
+                    snichOutput.show();
+
+                });
+
+                let pan = vscode.window.createWebviewPanel("snichBSScript", selectedInstance.getName() + " - Result", {viewColumn: 1, preserveFocus:false});
+                pan.webview.html = scriptResult;
+            }
+        }
+
+        logger.info(lib, func, 'END');
+        
+     });
+
+    vscode.commands.registerCommand('snich.application.run.background_script.select_scope', async () =>{
+        let logger = new SystemLogHelper();
+        let func = 'snich.application.run.background_script';
+        logger.info(lib, func, 'START');
+
+        var selectedInstance = await instanceList.selectInstance();
+
+        /**
+         * @todo Need to add code to determine which application scope the file is in.
+         */
+
+        let bsScript = "";
+
+        let activeEditor = vscode.window.activeTextEditor;
+        if(activeEditor){
+            logger.info(lib, func, "selected text: ", activeEditor.selection)
+            let textSelection = activeEditor.selection;
+            let startPosition = new vscode.Position(textSelection.start.line, textSelection.start.character);
+            let endPosition = new vscode.Position(textSelection.end.line, textSelection.end.character);
+            let textSelectionRange = new vscode.Range(startPosition, endPosition)
+            bsScript = activeEditor.document.getText(textSelectionRange);
+            
+        } else {
+            logger.warn(lib, func, "could not determine active editor to run background script.")
+        }
+
+        if(bsScript){
+
+            var rClient = new RESTClient(selectedInstance, logger);
+
+            var scriptResult = await rClient.runBackgroundScript(bsScript, 'global', selectedInstance.getConfig().connection.auth.username, selectedInstance.getPassword());
+
+            logger.debug(lib, func, 'Background script result:', scriptResult);
+        } else {
+            vscode.window.showWarningMessage('Use all text in active editor.', `Go for it.`, `Don't ask me again.`, `Whoops. Nevermind.`);
+        }
+
+        logger.info(lib, func, 'END');
+        
+    });
+
+    
+    /**
+     * Table configuration
+     */
     
     vscode.commands.registerCommand('snich.instance.setup.new_table', async () => {
         let logger = new SystemLogHelper();
@@ -93,7 +219,11 @@ export function activate(context: vscode.ExtensionContext) {
         logger.info(lib, func, 'END', instanceList);
         
         
-	});
+    });
+    
+    /**
+     * Load all application files based on application selection. 
+     */
     
 	vscode.commands.registerCommand('snich.application.load.all', async () => {
         let func = 'application.load.all';
@@ -118,6 +248,9 @@ export function activate(context: vscode.ExtensionContext) {
         
 	});
     
+    /**
+     * Pull a single record from an instance.
+     */
 	vscode.commands.registerCommand('snich.instance.pull_record', async (folder) =>{
 		let logger = new SystemLogHelper();
 		let func = 'instance.pull_record';
@@ -132,6 +265,9 @@ export function activate(context: vscode.ExtensionContext) {
 
 	});
     
+    /**
+     * compare active editor with server
+     */
 	vscode.commands.registerCommand('snich.activeEditor.compare_with_server', () =>{
         let logger = new SystemLogHelper();
         let func = 'activeEditor.compare_with_server';

@@ -61,7 +61,7 @@ export class InstancesList {
     
     async selectInstance(){
         let qpItems: Array<SNQPItem> = [];
-        let selectedInstance = undefined;
+        let selectedInstance = new InstanceMaster();
         
         if(this.instances.length === 0){
             vscode.window.showErrorMessage('No instances configured. Please setup a new instance.');

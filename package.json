@@ -4,9 +4,9 @@
     "displayName": "S.N.I.C.H. Canary",
     "description": "ServiceNow Integrated Code Helper - Canary. Get the latest as I build stuff ready to be tested! Provide feedback to integratenate@gmail.com",
     "icon": "images/icon-canary.png",
-    "version": "1.22.0",
+    "version": "1.22.6",
     "liveVersion": "1.1.0",
-    "canaryVersion": "1.22.0",
+    "canaryVersion": "1.22.6",
     "betaVersion": "1.0.6",
     "keywords": [
         "SNICH",
@@ -57,6 +57,11 @@
     "main": "./dist/extension.js",
     "contributes": {
         "commands": [
+            {
+                "command": "snich.application.run.background_script.global",
+                "title": "Run Background Script (Global)",
+                "category": "SNICH"
+            },
             {
                 "command": "snich.setup.new_instance",
                 "title": "Setup New Instance",
@@ -186,8 +191,10 @@
     "dependencies": {
         "@types/needle": "^2.0.4",
         "@types/request-promise-native": "^1.0.17",
+        "@types/xml2js": "^0.4.5",
         "needle": "^2.5.0",
         "request": "^2.88.2",
-        "request-promise-native": "^1.0.8"
+        "request-promise-native": "^1.0.8",
+        "xml2js": "^0.4.23"
     }
 }

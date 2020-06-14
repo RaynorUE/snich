@@ -168,13 +168,21 @@ export class RESTClient {
         }
     }
 
-    async runBackgroundScript(baseURI:string, script:string, scope:string, username:string, password:string){
+    async runBackgroundScript(script:string, scope:string, username:string, password:string){
+        var func = 'runBackgroundScript';
+        this.logger.info(this.lib, func, 'START', {script:script, scope:scope, username:username, password:password});
+
         let jar = request.jar();
         
+        let baseURI = this.instanceConfig.connection.url + '/';
+
+        let response = "";
+
         let headers = {
             "Accept": "*/*",
             "Connection": "keep-alive",
             "Cache-Control": "max-age=0",
+            "User-Agent":"SNICH-BACKGROUND-SCRIPT-RUNNER",
             "Accept-Encoding": "gzip, deflate",
             "Accept-Language": "en-US,en;q=0.8",
             "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8"
@@ -196,11 +204,16 @@ export class RESTClient {
     
         let loginURL = baseURI + 'login.do';
         
+        this.logger.debug(this.lib, func, "About to make post to following:", {loginURL:loginURL, loginOpts:loginOpts});
         let loginResponse:string = await request.post(loginURL, loginOpts);
     
+        //this.logger.debug(this.lib, func, "loginResponse was: ", loginResponse);
+
         //look for CK
         let sysparm_ck = loginResponse.split("var g_ck = '")[1].split('\'')[0];
-    
+        
+        this.logger.debug(this.lib, func, "sysparm_ck was: ", sysparm_ck)
+
         if(sysparm_ck){
             let evalOptions:request.RequestPromiseOptions = {
                 'method': 'POST',
@@ -218,14 +231,16 @@ export class RESTClient {
             };
             
             let BSUrl = baseURI + 'sys.scripts.do';
-    
-            let evalResponse = request.post(BSUrl, evalOptions);
-    
-            if(evalResponse){
-                
+            this.logger.debug(this.lib, func, "About to make evalScript call with:", {BSUrl:BSUrl, evalOptions:evalOptions});
+            try{
+                response = await request.post(BSUrl, evalOptions);
+            } catch (e){
+                response = "";
             }
     
         }
+
+        return response;
     }
 
     private async get(url: string, progressMessage: string) {
