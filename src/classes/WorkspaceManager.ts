@@ -439,7 +439,6 @@ export class WorkspaceManager{
                     dotOldPath = currentFSPath.replace(/\.\w*$/, newExt);
                 }
                 this.logger.debug(this.lib, func, 'currentFSPath: ', currentFSPath);
-                this.logger.debug(this.lib, func, 'Deleted file: ' + dotOldPath);
                 await this.compareWithServer(document.uri.fsPath, document.getText(), instanceList, false, dotOldPath);
                 this.logger.debug(this.lib, func, "Deleting old file: " + dotOldPath);
                 fs.unlinkSync(dotOldPath);
@@ -541,7 +540,7 @@ export class WorkspaceManager{
                 
                 let client = new RESTClient(instance);
                 let contentField = fileConfig.content_field;
-                let action = 'Overwrite (Server)'; //default to overwriting on server. This way if no differences we save to server.
+                let action = 'Overwrite Server File'; //default to overwriting on server. This way if no differences we save to server.
                 let serverRecord:any = {};
                 if(!isCompareWindow){
                     serverRecord = await  client.getRecord(fileConfig.table, fileConfig.sys_id, [contentField]);
