@@ -7,9 +7,10 @@ import { InstanceMaster, SNSyncedFile } from "../../classes/InstanceConfigManage
 
 //========== SHARED ==============================
 interface SNApplication {
-    prefix:string;
-    label:string;
-    sys_id:string;
+    name:string,
+    sys_id:string,
+    sys_scope:string,
+    fsPath:string
 }
 
 //========== SHARED ==============================
@@ -103,5 +104,7 @@ interface snRecord {
 interface SNQPItem extends QuickPickItem {
     value:any;
 }
+
+
 
 //============ End ServiceNow Record Config =============

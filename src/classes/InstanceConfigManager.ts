@@ -77,6 +77,7 @@ export class InstancesList {
             //if we have a lastSelected instance config name.
             qpItems.push({ "label": this.lastSelected.getName(), "detail": "Instance URL: " + this.lastSelected.getURL(), value: this.lastSelected });
         }
+        
         this.instances.forEach((instance) => {
             if(instance.getName() !== this.lastSelected.getName()){
                 qpItems.push({ "label": instance.getName(), "detail": "Instance URL: " + instance.getURL(), value: instance });
@@ -179,9 +180,9 @@ export class InstancesList {
 
 export class InstanceMaster {
     
-    applications:Array<SNApplication>;
     tableConfig:ConfiguredTables;
     syncedFiles:SyncedFiles = new SyncedFiles();
+    settings:InstanceSettings = new InstanceSettings();
     private config:InstanceConfig;
     private logger:SystemLogHelper =  new SystemLogHelper();
     private lib = "InstanceMaster";
@@ -190,11 +191,11 @@ export class InstanceMaster {
         if(logger){
             this.logger = logger;
         }
-        this.applications = [];
         this.tableConfig = new ConfiguredTables();
         this.config = {
             name: "",
             rootPath: "",
+            applications: [],
             configPath: "",
             connection : {
                 url:"",
@@ -247,9 +248,92 @@ export class InstanceMaster {
     }
     
     getPassword(){
-        let buff = Buffer.from(this.config.connection.auth.password, "base64");
-        let pw = buff.toString('ascii');
+        let pw = '';
+        if(this.config.connection.auth.password){
+            let buff = Buffer.from(this.config.connection.auth.password, "base64");
+            pw = buff.toString('ascii');
+            
+        }
         return pw;
+    }
+
+    addApplication(name:string, sys_id:string, sys_scope:string, fsPath:string){
+        var func = 'addApplication';
+        this.logger.info(this.lib, func, "START");
+
+        //account for old config files.
+        if(!this.config.applications){
+            this.config.applications = [];
+        }
+
+        let incomingApp:SNApplication = {
+            name: name,
+            sys_id: sys_id,
+            sys_scope:sys_scope,
+            fsPath:fsPath
+        }
+
+        let addIt = true;
+        this.config.applications.forEach(application => {
+            if(application.sys_id == incomingApp.sys_id){
+                addIt = false;
+            }
+        })
+
+        if(addIt){
+            this.config.applications.push(incomingApp);
+            new WorkspaceManager(this.logger).writeInstanceConfig(this);
+        }
+
+        this.logger.info(this.lib, func, "END");
+        return incomingApp;
+    }
+
+    getApplicationById(sys_id:string):SNApplication | undefined{
+        var func = "getApplicationById";
+        this.logger.info(this.lib, func, "START");
+        //account for old config files.
+        if(!this.config.applications){
+            this.config.applications = [];
+        }
+
+        let res = undefined;
+
+        this.config.applications.forEach(application => {
+            if(application.sys_id == sys_id){
+                res = application;
+            }
+        })
+
+        this.logger.info(this.lib, func, "END");
+        return res;
+    }
+
+    /**
+     * checks to see if stored app FSPath is within the incoming fsPath
+     * @param fsPath The fsPath to see if we have a matching app for it
+     */
+    getApplicationByPath(fsPath:string):SNApplication | undefined{
+        let func = "getApplicationByPath";
+        this.logger.info(this.lib, func, "START");
+
+        //account for old config files.
+        if(!this.config.applications){
+            this.config.applications = [];
+        }
+
+        let res = undefined;
+
+        this.config.applications.forEach(application => {
+            if(fsPath.indexOf(application.fsPath) > -1){
+                res = application;
+            }
+        })
+
+        this.logger.info(this.lib, func, "END");
+
+        return res;
+
     }
 
     getUserName(){
@@ -313,11 +397,17 @@ export class InstanceMaster {
     /**
      * Ask for just the password and set internally. Based on auth type will save to disk or not.
      */
-    async askForPassword():Promise<boolean> {
+    async askForPassword(prompt?:string):Promise<boolean> {
         var func = 'askForPassword';
         this.logger.info(this.lib, func, "START");
 
-        let password = await vscode.window.showInputBox(<vscode.InputBoxOptions>{prompt:`Enter password for ${this.getUserName()}:`,password:true,ignoreFocusOut:true});
+        if(!prompt){
+            prompt = `Enter Local SN password for ${this.getUserName()} (If oAuth we will only store password for VSCode session):`
+        }
+
+        let password = await vscode.window.showInputBox(<vscode.InputBoxOptions>{prompt:prompt,password:true,ignoreFocusOut:true});
+        
+        this.setPassword(password || "");
 
         if(!password){
             vscode.window.showWarningMessage('Did not recieve password. Aborting.');
@@ -368,6 +458,28 @@ export class InstanceMaster {
     
     getConfig(){
         return this.config;
+    }
+    
+    
+    getUniqueAppScopes():Array<{label:string,sys_id:string}> {
+
+        let appScopes:Array<{label:string,sys_id:string}> = [];
+
+        this.syncedFiles.syncedFiles.forEach((syncedFile) =>{
+
+            let addScope = true;
+            appScopes.forEach((existingScope) =>{
+                if(existingScope.sys_id == syncedFile.sys_package){
+                    addScope = false;
+                }
+            })
+
+            if(addScope){
+                appScopes.push({label:syncedFile.sys_scope.toString(), sys_id:syncedFile.sys_package});
+            }
+        })
+
+        return appScopes; 
     }
 }
 
@@ -445,6 +557,7 @@ export class SyncedFiles {
             this.syncedFiles.push(syncedFile);
         }
     }
+
 }
 
 export interface InstanceConfig {
@@ -452,4 +565,26 @@ export interface InstanceConfig {
     configPath:string;
     rootPath:string;
     connection:InstanceConnectionData;
+    applications:Array<SNApplication>;
+}
+
+export class InstanceSettings {
+    
+    settings = {
+        backgroundScripts: {
+            alwaysAskWhenNoHighlight: true
+
+        }
+    }
+
+    constructor(){
+    }
+
+    setBSScriptAlwaysAsk(flag:boolean){
+        this.getBSScriptSettings().alwaysAskWhenNoHighlight = flag;
+    }
+
+    getBSScriptSettings(){
+        return this.settings.backgroundScripts;
+    }
 }

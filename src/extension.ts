@@ -8,6 +8,7 @@ import { SNFilePuller } from './classes/SNRecordPuller';
 import { WorkspaceManager } from './classes/WorkspaceManager';
 import { TSDefinitionGenerator } from './classes/TSDefinitionGeneator';
 import * as xml2js from 'xml2js';
+import { SNQPItem } from './myTypes/globals';
  
 export const snichOutput = vscode.window.createOutputChannel('S.N.I.C.H.');
 
@@ -101,55 +102,71 @@ export function activate(context: vscode.ExtensionContext) {
             bsScript = activeEditor.document.getText(textSelectionRange);
             
         } else {
-            logger.warn(lib, func, "could not determine active editor to run background script.")
+            vscode.window.showWarningMessage("Could not determine active editor to run background script. Please try again.");
+            return;
         }
 
         if(bsScript){
             await runScript(bsScript);
         } else {
-            let bsAnswer = await vscode.window.showWarningMessage('No text Selected/Highlighted. Use all text in active editor.', `Go for it.`, `Don't ask me again.`, `Whoops. Nevermind.`);
+
             let documentText = activeEditor?.document.getText() || "";
-            if(bsAnswer == `Go for it.`){
-                if(documentText){
-                    await runScript(documentText);
-                } else {
-                    vscode.window.showWarningMessage('Document is blank or no document open. Cannot run background scripts.');
+            logger.debug(lib, func, "DocumentText:", documentText);
+            if(selectedInstance.settings.getBSScriptSettings().alwaysAskWhenNoHighlight == false){
+                runScript(documentText);
+            } else {
+                let bsAnswer = await vscode.window.showWarningMessage('No text Selected/Highlighted. Use all text in active editor.', `Go for it.`, `Don't ask me again.`, `Whoops. Nevermind.`);
+                
+                if(bsAnswer == `Go for it.`){
+                    if(documentText){
+                        await runScript(documentText);
+                    } else {
+                        vscode.window.showWarningMessage('Document is blank or no document open. Cannot run background scripts.');
+                    }
+                }
+    
+                if(bsAnswer == `Don't ask me again.`){
+                    /**
+                     * @todo remember / find out how to update settings for a user. This might just be reading .vscode/settings.json for each instance?
+                     * @todo once we figure this out, remember to perform that check at the beginning :)
+                     */
+    
+                    selectedInstance.settings.setBSScriptAlwaysAsk(false);
+    
+                    if(documentText){
+                        await runScript(documentText);
+                    } else {
+                        vscode.window.showWarningMessage('Document is blank or no document open. Cannot run background scripts.');
+                    }
                 }
             }
 
-            if(bsAnswer == `Don't ask me again.`){
-                /**
-                 * @todo remember / find out how to update settings for a user. This might just be reading .vscode/settings.json for each instance?
-                 * @todo once we figure this out, remember to perform that check at the beginning :)
-                 */
-                if(documentText){
-                    await runScript(documentText);
-                } else {
-                    vscode.window.showWarningMessage('Document is blank or no document open. Cannot run background scripts.');
-                }
-            }
+           
         }
 
 
-        async function runScript(text:String){
+        async function runScript(text:string){
 
             var rClient = new RESTClient(selectedInstance, logger);
 
-            var scriptResult = await rClient.runBackgroundScript(bsScript, 'global', selectedInstance.getConfig().connection.auth.username, selectedInstance.getPassword());
+            var scriptResult = await rClient.runBackgroundScript(text, 'global', selectedInstance.getUserName(), selectedInstance.getPassword());
 
-            let scriptResponseParts = scriptResult.match(/\<PRE\>.*\<\/PRE\>/);
+            let scriptResponseParts = scriptResult.match(/\<PRE\>.*\<\/PRE\>/gi);
             if(scriptResponseParts && scriptResponseParts.length > 0){
-                xml2js.parseStringPromise(scriptResponseParts[0].toString().replace(/\<br\/\>/gi, '\n')).then((result) => {
-                    snichOutput.appendLine('=============== BACKGROUND SCRIPT EXECUTED (' + new Date().toLocaleDateString() + " " + new Date().toLocaleTimeString() + ') ===============\n');
+                xml2js.parseStringPromise(scriptResponseParts[0].toString().replace(/\<br\/\>/gi, '\n')).then((result:any) => {
+                    snichOutput.appendLine('=============== BACKGROUND SCRIPT EXECUTED (' + new Date().toLocaleDateString() + " " + new Date().toLocaleTimeString() + ') ===============');
                     console.log('parse result: ', result);
                     snichOutput.appendLine(result.PRE.toString());
                     snichOutput.show();
 
                 });
 
-                let pan = vscode.window.createWebviewPanel("snichBSScript", selectedInstance.getName() + " - Result", {viewColumn: 1, preserveFocus:false});
-                pan.webview.html = scriptResult;
+                
             }
+            //show webview regardless so long as we have a response..
+            let now = new Date().toLocaleString();
+            let pan = vscode.window.createWebviewPanel("snichBSScript", selectedInstance.getName() + " - Script Result (" + now + ")", {viewColumn: 1, preserveFocus:false});
+            pan.webview.html = scriptResult;
         }
 
         logger.info(lib, func, 'END');
@@ -168,10 +185,17 @@ export function activate(context: vscode.ExtensionContext) {
          */
 
         let bsScript = "";
+        let appScope = '';
 
         let activeEditor = vscode.window.activeTextEditor;
+
         if(activeEditor){
-            logger.info(lib, func, "selected text: ", activeEditor.selection)
+
+            let snApp = selectedInstance.getApplicationByPath(activeEditor.document.uri.fsPath);
+            
+            if(snApp && snApp.sys_id){
+                appScope = snApp.sys_id;
+            }
             let textSelection = activeEditor.selection;
             let startPosition = new vscode.Position(textSelection.start.line, textSelection.start.character);
             let endPosition = new vscode.Position(textSelection.end.line, textSelection.end.character);
@@ -179,18 +203,84 @@ export function activate(context: vscode.ExtensionContext) {
             bsScript = activeEditor.document.getText(textSelectionRange);
             
         } else {
-            logger.warn(lib, func, "could not determine active editor to run background script.")
+            vscode.window.showWarningMessage("Could not determine active editor to run background script. Please try again.");
+            return;
+        }
+
+        if(!appScope){
+            let appScopes = selectedInstance.getUniqueAppScopes();
+
+            let qpItems: Array<SNQPItem> = [];
+
+            appScopes.forEach((appScope) => {
+                qpItems.push({label:appScope.label, value:appScope.sys_id});
+            })
+
+            let qpAnswer = await vscode.window.showQuickPick(qpItems, {placeHolder:"Select app scope to run background script in. You can alleviate this by saving a .js file in the application folder.", ignoreFocusOut:true});
+
+            if(qpAnswer && qpAnswer.value){
+                appScope = qpAnswer.value; //sys_id of app
+            } else {
+                vscode.window.showWarningMessage("No app scope selected. Aborting Background Script.");
+                return;
+            }
+
         }
 
         if(bsScript){
+            await runScript(bsScript, appScope);
+        } else {
+
+            let documentText = activeEditor?.document.getText() || "";
+            if(selectedInstance.settings.getBSScriptSettings().alwaysAskWhenNoHighlight == false){
+                runScript(documentText, appScope);
+            } else {
+                let bsAnswer = await vscode.window.showWarningMessage('No text Selected/Highlighted. Use all text in active editor.', `Go for it.`, `Don't ask me again.`, `Whoops. Nevermind.`);
+                if(bsAnswer == `Go for it.`){
+                    if(documentText){
+                        await runScript(documentText, appScope);
+                    } else {
+                        vscode.window.showWarningMessage('Document is blank or no document open. Cannot run background scripts.');
+                    }
+                }
+    
+                if(bsAnswer == `Don't ask me again.`){
+                    /**
+                     * @todo remember / find out how to update settings for a user. This might just be reading .vscode/settings.json for each instance?
+                     * @todo once we figure this out, remember to perform that check at the beginning :)
+                     */
+    
+                    selectedInstance.settings.setBSScriptAlwaysAsk(false);
+    
+                    if(documentText){
+                        await runScript(documentText, appScope);
+                    } else {
+                        vscode.window.showWarningMessage('Document is blank or no document open. Cannot run background scripts.');
+                    }
+                }
+            }
+        }
+
+
+        async function runScript(text:string, scope:string){
 
             var rClient = new RESTClient(selectedInstance, logger);
 
-            var scriptResult = await rClient.runBackgroundScript(bsScript, 'global', selectedInstance.getConfig().connection.auth.username, selectedInstance.getPassword());
+            var scriptResult = await rClient.runBackgroundScript(text, scope, selectedInstance.getUserName(), selectedInstance.getPassword());
 
-            logger.debug(lib, func, 'Background script result:', scriptResult);
-        } else {
-            vscode.window.showWarningMessage('Use all text in active editor.', `Go for it.`, `Don't ask me again.`, `Whoops. Nevermind.`);
+            let scriptResponseParts = scriptResult.match(/\<PRE\>.*\<\/PRE\>/gi);
+            logger.debug(lib, func, 'Script response matches:', scriptResponseParts);
+            if(scriptResponseParts && scriptResponseParts.length > 0){
+                xml2js.parseStringPromise(scriptResponseParts[0].toString().replace(/\<br\/\>/gi, '\n')).then((result:any) => {
+                    snichOutput.appendLine('=============== BACKGROUND SCRIPT EXECUTED (' + new Date().toLocaleDateString() + " " + new Date().toLocaleTimeString() + ') ===============');
+                    snichOutput.appendLine(result.PRE.toString());
+                    snichOutput.show();
+
+                });
+            }
+            let now = new Date().toLocaleString();
+            let pan = vscode.window.createWebviewPanel("snichBSScript", selectedInstance.getName() + " - Script Result (" + now + ")", {viewColumn: 1, preserveFocus:false});
+            pan.webview.html = scriptResult;
         }
 
         logger.info(lib, func, 'END');

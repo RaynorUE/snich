@@ -145,6 +145,9 @@ export class WorkspaceManager{
         this.logger.info(this.lib, func, "START");
         
         let config = instance.getConfig();
+        if(!config.connection.auth.writeBasicToDisk){
+            config.connection.auth.password = '';
+        }
         let configJSONPath = path.resolve(config.configPath, this.configFileName);
         this.writeJSON(config, configJSONPath);
         this.logger.debug(this.lib, func, 'Saved instance config:', config);

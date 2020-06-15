@@ -4,9 +4,9 @@
     "displayName": "S.N.I.C.H. Canary",
     "description": "ServiceNow Integrated Code Helper - Canary. Get the latest as I build stuff ready to be tested! Provide feedback to integratenate@gmail.com",
     "icon": "images/icon-canary.png",
-    "version": "1.22.6",
+    "version": "1.22.34",
     "liveVersion": "1.1.0",
-    "canaryVersion": "1.22.6",
+    "canaryVersion": "1.22.34",
     "betaVersion": "1.0.6",
     "keywords": [
         "SNICH",
@@ -60,6 +60,11 @@
             {
                 "command": "snich.application.run.background_script.global",
                 "title": "Run Background Script (Global)",
+                "category": "SNICH"
+            },
+            {
+                "command": "snich.application.run.background_script.select_scope",
+                "title": "Run Background Script (Scoped)",
                 "category": "SNICH"
             },
             {
@@ -168,7 +173,7 @@
         "vscode:prepublish": "webpack --mode production",
         "compile": "webpack --mode development && node ./prepublish-canary.js patch",
         "watch": "webpack --mode development --watch",
-        "test-compile": "webpack --mode development && node ./prepublish-canary.js patch"
+        "test-compile": "webpack --mode development --watch && node ./prepublish-canary.js patch"
     },
     "devDependencies": {
         "@types/glob": "^7.1.1",

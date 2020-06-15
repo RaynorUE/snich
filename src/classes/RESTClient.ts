@@ -39,7 +39,7 @@ export class RESTClient {
         if (this.instanceConfig.connection.auth.type === 'oauth' && this.instanceConfig.connection.auth.OAuth) {
             this.setOAuth(this.instanceConfig.connection.auth.OAuth.client_id, this.instanceConfig.connection.auth.OAuth.client_secret);
         } else if (this.instanceConfig.connection.auth.type === 'basic') {
-            this.setBasicAuth(this.instanceConfig.connection.auth.username, this.instanceConfig.connection.auth.password);
+            this.setBasicAuth(this.instance.getUserName(), this.instance.getPassword());
         }
 
 
@@ -54,11 +54,9 @@ export class RESTClient {
             password: password ? 'not logged' : password
         });
 
-        let buff = Buffer.from(password, "base64");
-        let text = buff.toString('ascii');
         this.requestOpts.auth = {};
         this.requestOpts.auth.username = username || "";
-        this.requestOpts.auth.password = text || "";
+        this.requestOpts.auth.password = password || "";
         this.authType = 'basic';
 
         this.logger.info(this.lib, func, 'END');
@@ -145,11 +143,11 @@ export class RESTClient {
         this.post('', body, 'Creating new record!');
     }
 
-    async testConnection(attemptNumber?:number) {
+    async testConnection(attemptNumber?:number):Promise<boolean> {
         let func = "testConnection";
 
         let maxAttempts = 3;
-        if(!attemptNumber){
+        if(attemptNumber == undefined || attemptNumber == null){
             attemptNumber = 0;
         }
 
@@ -168,15 +166,15 @@ export class RESTClient {
         } else {
             if (response && response.statusCode) {
                 if (response.statusCode == 401) {
-                    let respMsg = `${response.statusCode} - ${response.statusMessage}`;
+                    let respMsg = `${response.message}`;
                     snichOutput.appendLine('Authorization Failed: ' + respMsg);
 
                     if(this.instance.getAuthType() == 'basic' && attemptNumber < maxAttempts){
                         await this.instance.askForBasicAuth();
-                        await this.testConnection(attemptNumber);
+                        return await this.testConnection(attemptNumber);
                     } else if(this.instance.getAuthType() == 'oauth' && attemptNumber< maxAttempts){
                         await this.instance.askForOauth();
-                        await this.testConnection(attemptNumber);
+                        return await this.testConnection(attemptNumber);
                     } else {
                         vscode.window.showErrorMessage(`Max attempts (${maxAttempts}) reached. Please validate account/config on instance: ${this.instance.getName()}`);
                         return false;
@@ -190,6 +188,7 @@ export class RESTClient {
                             snichOutput.show();
                         }
                     });
+                    return false;
                 }
             } else {
                 snichOutput.appendLine('Test Connection failed. Uknown Error. Full Stack:\n' + JSON.stringify(response));
@@ -208,6 +207,11 @@ export class RESTClient {
         this.logger.info(this.lib, func, 'START', { script: script, scope: scope, username: username, password: password });
 
         let jar = request.jar();
+
+        if(!password){
+            await this.instance.askForPassword();
+            password = this.instance.getPassword();
+        }
 
         let baseURI = this.instanceConfig.connection.url + '/';
 
@@ -261,17 +265,20 @@ export class RESTClient {
                     "sysparm_ck": sysparm_ck,
                     "sys_scope": scope,
                     "runscript": "Run script",
-                    "quota_managed_transaction": "on"
+                    "quota_managed_transaction": "on",
+                    "record_for_rollback":"on"
                 }
             };
 
-            let BSUrl = baseURI + 'sys.scripts.do';
+            let BSUrl = baseURI + 'sys.scripts.do?sysparm_transaction_scope=' + scope;
             this.logger.debug(this.lib, func, "About to make evalScript call with:", { BSUrl: BSUrl, evalOptions: evalOptions });
             try {
                 response = await request.post(BSUrl, evalOptions);
             } catch (e) {
-                response = "";
+                response = e;
             }
+
+            this.logger.debug(this.lib, func, "BS script result: ", response);
 
         }
 
@@ -291,6 +298,8 @@ export class RESTClient {
             return await vscode.window.withProgress(<vscode.ProgressOptions>{ location: vscode.ProgressLocation.Notification, cancellable: false, title: "SNICH" }, async (progress, token) => {
 
                 await this.handleAuth();
+
+                this.logger.debug(this.lib, func, 'requestOpts:', this.requestOpts);
 
                 progress.report({ message: progressMessage });
                 let response;
@@ -398,14 +407,22 @@ export class RESTClient {
     }
 
     private async handleAuth() {
+        let func = 'handleAuth';
+        this.logger.info(this.lib, func, 'START');
         if (this.authType == 'basic') {
             return new Promise((resolve, reject) => {
+                this.setBasicAuth(this.instance.getUserName(), this.instance.getPassword());
+                this.logger.info(this.lib, func, 'END');
+
                 return resolve("");  //requestOpts already taken care of since we'll be storing ID/PW and loading from instance options.
             });
         } else if (this.authType === 'oauth') {
             await this.processOAuth();
+            this.logger.info(this.lib, func, 'END');
+
             return "";
         } else {
+            this.logger.info(this.lib, func, 'END');
             return "";
         }
     }
