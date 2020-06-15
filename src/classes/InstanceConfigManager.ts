@@ -61,7 +61,7 @@ export class InstancesList {
     
     async selectInstance(){
         let qpItems: Array<SNQPItem> = [];
-        let selectedInstance = undefined;
+        let selectedInstance = new InstanceMaster();
         
         if(this.instances.length === 0){
             vscode.window.showErrorMessage('No instances configured. Please setup a new instance.');
@@ -77,6 +77,7 @@ export class InstancesList {
             //if we have a lastSelected instance config name.
             qpItems.push({ "label": this.lastSelected.getName(), "detail": "Instance URL: " + this.lastSelected.getURL(), value: this.lastSelected });
         }
+        
         this.instances.forEach((instance) => {
             if(instance.getName() !== this.lastSelected.getName()){
                 qpItems.push({ "label": instance.getName(), "detail": "Instance URL: " + instance.getURL(), value: instance });
@@ -141,27 +142,24 @@ export class InstancesList {
         this.logger.info(this.lib, func, 'Auth selection', authSelection);
         
         if(authSelection.value === 'basic'){
-            let username = await vscode.window.showInputBox(<vscode.InputBoxOptions>{prompt:"Enter User Name (1/2)",ignoreFocusOut:true});
-            let password = await vscode.window.showInputBox(<vscode.InputBoxOptions>{prompt:"Enter Password (2/2)",password:true,ignoreFocusOut:true});
-            
-            if(!username || !password){
-                vscode.window.showWarningMessage('Instance confugration aborted. One or all Auth Details not provided.');
+
+            let basicCredAsk = await instanceMaster.askForBasicAuth();
+
+            if(!basicCredAsk){
+                vscode.window.showWarningMessage('Instance confugration aborted. One or all Basic Auth Details not provided.');
                 return undefined;
             }
-            instanceMaster.setBasicAuth(username, password);
             
         } else if(authSelection.value === 'oauth'){
-            let clientID = await vscode.window.showInputBox(<vscode.InputBoxOptions>{prompt:"Enter Client ID (1/3)",ignoreFocusOut:true});
-            let clientSecret = await vscode.window.showInputBox(<vscode.InputBoxOptions>{prompt:"Enter Client Secret (2/3)", ignoreFocusOut:true});
-            let username = await vscode.window.showInputBox(<vscode.InputBoxOptions>{prompt:"Enter Usename (3/3).",ignoreFocusOut:true});
-            
-            if(!clientID || !clientSecret || !username){
+
+            let oauthCredAsk = await instanceMaster.askForOauth();
+            if(!oauthCredAsk){
                 vscode.window.showWarningMessage('Instance confugration aborted. One or all OAuth Details not provided.');
                 return undefined;
             }
-            instanceMaster.setOAuth(clientID, clientSecret);
-            instanceMaster.setUserName(username);
+
         }
+
         let client = new RESTClient(instanceMaster);
         let testResult = await client.testConnection();
         
@@ -182,9 +180,9 @@ export class InstancesList {
 
 export class InstanceMaster {
     
-    applications:Array<SNApplication>;
     tableConfig:ConfiguredTables;
     syncedFiles:SyncedFiles = new SyncedFiles();
+    settings:InstanceSettings = new InstanceSettings();
     private config:InstanceConfig;
     private logger:SystemLogHelper =  new SystemLogHelper();
     private lib = "InstanceMaster";
@@ -193,11 +191,11 @@ export class InstanceMaster {
         if(logger){
             this.logger = logger;
         }
-        this.applications = [];
         this.tableConfig = new ConfiguredTables();
         this.config = {
             name: "",
             rootPath: "",
+            applications: [],
             configPath: "",
             connection : {
                 url:"",
@@ -205,6 +203,7 @@ export class InstanceMaster {
                     type:"",
                     username:"",
                     password:"",
+                    writeBasicToDisk:true,
                     OAuth: {
                         client_id: "",
                         client_secret: "",
@@ -249,23 +248,189 @@ export class InstanceMaster {
     }
     
     getPassword(){
-        let buff = Buffer.from(this.config.connection.auth.password, "base64");
-        let pw = buff.toString('ascii');
+        let pw = '';
+        if(this.config.connection.auth.password){
+            let buff = Buffer.from(this.config.connection.auth.password, "base64");
+            pw = buff.toString('ascii');
+            
+        }
         return pw;
     }
+
+    addApplication(name:string, sys_id:string, sys_scope:string, fsPath:string){
+        var func = 'addApplication';
+        this.logger.info(this.lib, func, "START");
+
+        //account for old config files.
+        if(!this.config.applications){
+            this.config.applications = [];
+        }
+
+        let incomingApp:SNApplication = {
+            name: name,
+            sys_id: sys_id,
+            sys_scope:sys_scope,
+            fsPath:fsPath
+        }
+
+        let addIt = true;
+        this.config.applications.forEach(application => {
+            if(application.sys_id == incomingApp.sys_id){
+                addIt = false;
+            }
+        })
+
+        if(addIt){
+            this.config.applications.push(incomingApp);
+            new WorkspaceManager(this.logger).writeInstanceConfig(this);
+        }
+
+        this.logger.info(this.lib, func, "END");
+        return incomingApp;
+    }
+
+    getApplicationById(sys_id:string):SNApplication | undefined{
+        var func = "getApplicationById";
+        this.logger.info(this.lib, func, "START");
+        //account for old config files.
+        if(!this.config.applications){
+            this.config.applications = [];
+        }
+
+        let res = undefined;
+
+        this.config.applications.forEach(application => {
+            if(application.sys_id == sys_id){
+                res = application;
+            }
+        })
+
+        this.logger.info(this.lib, func, "END");
+        return res;
+    }
+
+    /**
+     * checks to see if stored app FSPath is within the incoming fsPath
+     * @param fsPath The fsPath to see if we have a matching app for it
+     */
+    getApplicationByPath(fsPath:string):SNApplication | undefined{
+        let func = "getApplicationByPath";
+        this.logger.info(this.lib, func, "START");
+
+        //account for old config files.
+        if(!this.config.applications){
+            this.config.applications = [];
+        }
+
+        let res = undefined;
+
+        this.config.applications.forEach(application => {
+            if(fsPath.indexOf(application.fsPath) > -1){
+                res = application;
+            }
+        })
+
+        this.logger.info(this.lib, func, "END");
+
+        return res;
+
+    }
+
+    getUserName(){
+        return this.config.connection.auth.username;
+    }
+
+    setClientSecret(secret:string){
+        this.config.connection.auth.OAuth.client_secret = secret;
+
+    }
+
+    setClientId(id:string){
+        this.config.connection.auth.OAuth.client_id = id;
+    }
     
-    setBasicAuth(username:string, password:string){
+
+    async askForBasicAuth():Promise<boolean> {
+        let func = 'askForBasicAuth';
+        this.logger.info(this.lib, func, "START");
+
+        let username = await vscode.window.showInputBox(<vscode.InputBoxOptions>{prompt:"Enter User Name (1/2)",ignoreFocusOut:true});
+        let password = await vscode.window.showInputBox(<vscode.InputBoxOptions>{prompt:"Enter Password (2/2)",password:true,ignoreFocusOut:true});
+            
+        if(!username || !password){
+            return false;
+        }
+
+        this.setAuthType('basic');
+        this.setWriteToDisk(true);
         this.setUserName(username);
         this.setPassword(password);
-        this.config.connection.auth.type = 'basic';
+        
+
+        this.logger.info(this.lib, func, "END");
+        return true;
     }
-    
-    setOAuth(client_id:string, client_secret:string){
-        this.config.connection.auth.type = 'oauth';
-        this.config.connection.auth.OAuth.client_id = client_id;
-        this.config.connection.auth.OAuth.client_secret = client_secret;
+
+    async askForOauth():Promise<boolean> {
+        var func = 'askForOauth';
+        this.logger.info(this.lib, func, 'START');
+        
+        let clientID = await vscode.window.showInputBox(<vscode.InputBoxOptions>{prompt:"Enter Client ID (1/3)",ignoreFocusOut:true});
+        let clientSecret = await vscode.window.showInputBox(<vscode.InputBoxOptions>{prompt:"Enter Client Secret (2/3)", ignoreFocusOut:true});
+        let username = await vscode.window.showInputBox(<vscode.InputBoxOptions>{prompt:"Enter Usename (3/3).",ignoreFocusOut:true});
+        
+        if(!clientID || !clientSecret || !username){
+            return false;
+        }
+
+        this.setAuthType('oauth');
+        this.setWriteToDisk(false);
+
+        this.setClientId(clientID);
+        this.setClientSecret(clientSecret);
+        this.setUserName(username);
+        this.logger.info(this.lib, func, 'END');
+        return true;
     }
-    
+
+
+    /**
+     * Ask for just the password and set internally. Based on auth type will save to disk or not.
+     */
+    async askForPassword(prompt?:string):Promise<boolean> {
+        var func = 'askForPassword';
+        this.logger.info(this.lib, func, "START");
+
+        if(!prompt){
+            prompt = `Enter Local SN password for ${this.getUserName()} (If oAuth we will only store password for VSCode session):`
+        }
+
+        let password = await vscode.window.showInputBox(<vscode.InputBoxOptions>{prompt:prompt,password:true,ignoreFocusOut:true});
+        
+        this.setPassword(password || "");
+
+        if(!password){
+            vscode.window.showWarningMessage('Did not recieve password. Aborting.');
+            return false;
+        }
+
+        this.logger.info(this.lib, func, "END");
+        return true;
+    }
+
+    //
+    private setWriteToDisk(flag:boolean){
+        this.config.connection.auth.writeBasicToDisk = flag;
+    }
+
+    private setAuthType(authType:string){
+        this.config.connection.auth.type = authType;
+    }
+
+    getAuthType(){
+        return this.config.connection.auth.type;
+    }
+
     setURL(url:string){
         let func = 'setURL';
         this.logger.info(this.lib, func, 'START', );
@@ -293,6 +458,28 @@ export class InstanceMaster {
     
     getConfig(){
         return this.config;
+    }
+    
+    
+    getUniqueAppScopes():Array<{label:string,sys_id:string}> {
+
+        let appScopes:Array<{label:string,sys_id:string}> = [];
+
+        this.syncedFiles.syncedFiles.forEach((syncedFile) =>{
+
+            let addScope = true;
+            appScopes.forEach((existingScope) =>{
+                if(existingScope.sys_id == syncedFile.sys_package){
+                    addScope = false;
+                }
+            })
+
+            if(addScope){
+                appScopes.push({label:syncedFile.sys_scope.toString(), sys_id:syncedFile.sys_package});
+            }
+        })
+
+        return appScopes; 
     }
 }
 
@@ -370,6 +557,7 @@ export class SyncedFiles {
             this.syncedFiles.push(syncedFile);
         }
     }
+
 }
 
 export interface InstanceConfig {
@@ -377,4 +565,26 @@ export interface InstanceConfig {
     configPath:string;
     rootPath:string;
     connection:InstanceConnectionData;
+    applications:Array<SNApplication>;
+}
+
+export class InstanceSettings {
+    
+    settings = {
+        backgroundScripts: {
+            alwaysAskWhenNoHighlight: true
+
+        }
+    }
+
+    constructor(){
+    }
+
+    setBSScriptAlwaysAsk(flag:boolean){
+        this.getBSScriptSettings().alwaysAskWhenNoHighlight = flag;
+    }
+
+    getBSScriptSettings(){
+        return this.settings.backgroundScripts;
+    }
 }

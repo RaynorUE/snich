@@ -145,6 +145,7 @@ export class SNFilePuller {
         this.logger.info(this.lib, func, 'START');
         
         let wsManager = new WorkspaceManager();
+
         
         let selectedInstance:InstanceMaster = await this.instanceList.selectInstance();
         if(!selectedInstance){
@@ -188,8 +189,12 @@ export class SNFilePuller {
 
         let appScope = appSelected.value.scope;
         let appSys = appSelected.value.sys_id;
+        let appName = appSelected.value.name;
+        let appFsPath = `${appName} (${appScope})`;
 
-        //await recordRecursor(selectedInstance, 0, appScope);
+        if(!selectedInstance.getApplicationById(appSys)){
+            selectedInstance.addApplication(appName, appSys, appScope, appFsPath);
+        };
 
         let tables = selectedInstance.tableConfig.tables;
 
