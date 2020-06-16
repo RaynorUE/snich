@@ -236,7 +236,7 @@ export class SNFilePuller {
             }
 
             //this.logger.debug(this.lib, func, "About to write synced files!:", selectedInstance);
-            wsManager.writeSyncedFiles(selectedInstance);
+            //wsManager.writeSyncedFiles(selectedInstance);
             client.showProgress();
         });
 

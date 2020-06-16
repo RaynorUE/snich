@@ -264,6 +264,7 @@ export class WorkspaceManager{
                 this.logger.debug(this.lib, func, `Creating file at ${fullPath}`);
                 await fsp.writeFile(fullPath, content);
                 syncedFiles.addFile(fullPath + "", instance.getConfig().name + "", field, record);
+                this.writeSyncedFiles(instance);
                 if(openFile){
                     //this.logger.debug(this.lib, func, `Opening file found at: ${fullPath}`);
                     vscode.window.showTextDocument(vscode.Uri.file(fullPath));
@@ -362,13 +363,7 @@ export class WorkspaceManager{
                 this.logger.debug(this.lib, func, "visible editors: ", visibleEditors);
 
                 //See if in compare window
-                let compareWindow = false;
-                visibleEditors.forEach((editor) => {
-                    if(editor.document.fileName.indexOf('compare_files_temp') > -1){
-                        compareWindow = true;
-                    }
-                })
-
+                let compareWindow = this.isEditorCompareWindow(visibleEditors);
 
                 if(compareWindow){
                     this.logger.debug(this.lib, func, "we are in the compare window. Do not do any of the dot-old stuff.");
@@ -391,13 +386,13 @@ export class WorkspaceManager{
             this.logger.info(this.lib, func, 'END');
         });
         
-        vscode.workspace.onDidSaveTextDocument(async (document) =>{
+        vscode.workspace.onDidSaveTextDocument(async (didSaveDocument) =>{
             let func = 'onDidSaveTextDocument';
-            this.logger.debug(this.lib, func, 'START', document);
+            this.logger.debug(this.lib, func, 'START', didSaveDocument);
 
             for(let i = 0; i < this.ignoreFolders.length; i++){
                 let folderName = this.ignoreFolders[i];
-                if(document.uri.fsPath.indexOf(folderName) > -1){
+                if(didSaveDocument.uri.fsPath.indexOf(folderName) > -1){
                     this.logger.info(this.lib, func, 'Folder is in exclusion list!');
                     this.logger.info(this.lib, func, 'END');
                     return;
@@ -406,13 +401,13 @@ export class WorkspaceManager{
 
             let isReservedFile = false;
             this.ignoreFiles.forEach((fileName) => {
-                if(document.uri.fsPath.indexOf(fileName) >-1){
+                if(didSaveDocument.uri.fsPath.indexOf(fileName) >-1){
                     isReservedFile = true;
                 }
             });
             
             if(isReservedFile){
-                this.logger.info(this.lib, func, 'File saved was not one to be transmitted', document.uri.fsPath);
+                this.logger.info(this.lib, func, 'File saved was not one to be transmitted', didSaveDocument.uri.fsPath);
                 this.logger.info(this.lib, func, 'END');
                 return;
             }
@@ -428,10 +423,11 @@ export class WorkspaceManager{
 
             if(compareWindow){
                 this.logger.debug(this.lib, func, "we are in the compare window.");
-                await this.compareWithServer(document.uri.fsPath, document.getText(), instanceList, false);
+                let currentFSPath = didSaveDocument.uri.fsPath;
+                await this.compareWithServer(currentFSPath, didSaveDocument.getText(), instanceList, false);
             } else {
                 this.logger.debug(this.lib, func, 'Is not compare window.');
-                let currentFSPath = document.uri.fsPath;
+                let currentFSPath = didSaveDocument.uri.fsPath;
                 let extensionMatch = currentFSPath.match(/\.\w*$/);
                 let dotOldPath = currentFSPath + '.old';
                 if(extensionMatch && extensionMatch.length > 0){
@@ -439,7 +435,7 @@ export class WorkspaceManager{
                     dotOldPath = currentFSPath.replace(/\.\w*$/, newExt);
                 }
                 this.logger.debug(this.lib, func, 'currentFSPath: ', currentFSPath);
-                await this.compareWithServer(document.uri.fsPath, document.getText(), instanceList, false, dotOldPath);
+                await this.compareWithServer(currentFSPath, didSaveDocument.getText(), instanceList, false, dotOldPath);
                 this.logger.debug(this.lib, func, "Deleting old file: " + dotOldPath);
                 fs.unlinkSync(dotOldPath);
             }
@@ -462,11 +458,7 @@ export class WorkspaceManager{
         this.logger.info(this.lib, func, 'START', {fsPath:fsPath, newContent:newContent});
 
         let visibleEditors = vscode.window.visibleTextEditors || [];
-        let isCompareWindow = false;
-        if(visibleEditors && visibleEditors.length >1){
-            //we are in the compare window... in which we'll want to just save this document and overwrite the server.
-            isCompareWindow = true; 
-        }
+        let isCompareWindow = this.isEditorCompareWindow(visibleEditors);
         
         
         let isReservedFile = false;
@@ -631,6 +623,17 @@ export class WorkspaceManager{
 
     private fixPathForWindows(fsPath:string){
         return fsPath.replace(/"|\<|\>|\?|\||\/|\\|:|\*/g, '_');
+    }
+
+    private isEditorCompareWindow(visibleEditors:Array<vscode.TextEditor>){
+        let isCompareWindow = false;
+        visibleEditors.forEach((editor) => {
+            if(editor.document.fileName.indexOf('compare_files_temp') > -1){
+                isCompareWindow = true;
+            }
+        })
+
+        return isCompareWindow;
     }
 
 }
