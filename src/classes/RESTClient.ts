@@ -149,6 +149,8 @@ export class RESTClient {
         let maxAttempts = 3;
         if(attemptNumber == undefined || attemptNumber == null){
             attemptNumber = 0;
+        } else {
+            attemptNumber++;
         }
 
         let baseURL = this.instanceConfig.connection.url;
@@ -263,7 +265,7 @@ export class RESTClient {
                 'form': {
                     "script": script,
                     "sysparm_ck": sysparm_ck,
-                    "sys_scope": scope,
+                    "sys_scope": scope, //sys_id of the scope... 
                     "runscript": "Run script",
                     "quota_managed_transaction": "on",
                     "record_for_rollback":"on"

@@ -181,7 +181,7 @@ export class InstancesList {
 export class InstanceMaster {
     
     tableConfig:ConfiguredTables;
-    syncedFiles:SyncedFiles = new SyncedFiles();
+    syncedFiles:SyncedFiles;
     settings:InstanceSettings = new InstanceSettings();
     private config:InstanceConfig;
     private logger:SystemLogHelper =  new SystemLogHelper();
@@ -191,6 +191,9 @@ export class InstanceMaster {
         if(logger){
             this.logger = logger;
         }
+
+        this.syncedFiles = new SyncedFiles(this.logger);
+
         this.tableConfig = new ConfiguredTables();
         this.config = {
             name: "",
@@ -521,7 +524,7 @@ export class SyncedFiles {
         this.logger.info(this.lib, func, `START`, {fsPath:fsPath, synced:this.syncedFiles});
         let fileConfig = <SNSyncedFile>{};
         this.syncedFiles.forEach((file, index) =>{
-            if(file.fsPath === fsPath){
+            if(file.fsPath == fsPath){
                 this.logger.debug(this.lib, func, "Found file:", file);
                 fileConfig = file;
                 index = this.syncedFiles.length;
