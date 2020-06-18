@@ -9,8 +9,6 @@ import { WorkspaceManager } from './classes/WorkspaceManager';
 import { TSDefinitionGenerator } from './classes/TSDefinitionGeneator';
 import * as xml2js from 'xml2js';
 import { SNQPItem } from './myTypes/globals';
-import * as http from 'http';
-import * as url from 'url';
  
 export const snichOutput = vscode.window.createOutputChannel('S.N.I.C.H.');
 
@@ -18,36 +16,6 @@ export const snichOutput = vscode.window.createOutputChannel('S.N.I.C.H.');
 // this method is called when your extension is activated
 // your extension is activated the very first time the command is executed
 export function activate(context: vscode.ExtensionContext) {
-    
-    var server = http.createServer(function (req, res) {
-
-        const oauthRedirectPath = /snich_oauth_redirect?.*/;
-
-        if(req.url == '/snich_oauth_redirect'){
-            //no query parameters supplied... throw error
-
-            let errObj = {
-                error:"No query parameters found. You've reached this page in error."
-            };
-            
-            res.writeHead(400, {
-                'Content-Length': JSON.stringify(errObj).length,
-                'Content-Type': 'application/json' 
-            });
-            
-            res.write(JSON.stringify(errObj))
-        } else if(req.url?.match(oauthRedirectPath)){
-            console.log('request is: req', req);
-            const queryObject = url.parse(req.url,true).query;
-            res.write('Please copy your oauth code into the prompt: ' + queryObject.code);
-            console.log(queryObject);
-        }
-
-        res.end();
-    });
-    server.listen(3939);
-    console.log('Server is running on port 3939');
-
 
     let lib = 'extension.ts';
 	let func = 'activate';
