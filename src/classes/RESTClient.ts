@@ -598,7 +598,7 @@ export class RESTClient {
 
         let oauthCode = '';
 
-        let redirectURI = 'http://localhost:62000';
+        let redirectURI = 'https://localhost:62000';
 
         let oauthAuthURL = vscode.Uri.parse(`${this.instance.getURL()}/oauth_auth.do?response_type=code&client_id=${connectionData.auth.OAuth.client_id}&state=${state}&redirect_url=${redirectURI}`, true);
         vscode.env.openExternal(oauthAuthURL);
