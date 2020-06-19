@@ -147,10 +147,16 @@ export class WorkspaceManager{
         let config = instance.getConfig();
         if(!config.connection.auth.writeBasicToDisk){
             config.connection.auth.password = '';
+            this.logger.debug(this.lib, func, "Set password to blank, since writeBasicToDisk is false.");
         }
-        let configJSONPath = path.resolve(config.configPath, this.configFileName);
-        this.writeJSON(config, configJSONPath);
-        this.logger.debug(this.lib, func, 'Saved instance config:', config);
+        //If no config path, nothing to write!
+        if(config.configPath){
+            let configJSONPath = path.resolve(config.configPath, this.configFileName);
+            this.writeJSON(config, configJSONPath);
+            this.logger.debug(this.lib, func, 'Saved instance config:', config);
+        } else {
+            this.logger.warn(this.lib, func, "Attempted to write instance config, but did not have a configPath");
+        }
         
         this.logger.info(this.lib, func, 'END');
     }
