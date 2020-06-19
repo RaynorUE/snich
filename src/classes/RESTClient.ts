@@ -6,10 +6,11 @@ import { snRecord } from '../myTypes/globals';
 import * as request from 'request-promise-native';
 import { WorkspaceManager } from './WorkspaceManager';
 import { snichOutput } from '../extension';
-import * as http from 'http';
+import * as https from 'https';
 import * as crypto from 'crypto';
 import * as url from 'url';
-
+import * as fs from 'fs';
+import * as path from 'path';
 
 export class RESTClient {
 
@@ -159,7 +160,7 @@ export class RESTClient {
         this.post('', body, 'Creating new record!');
     }
 
-    async testConnection(attemptNumber?: number): Promise<boolean> {
+    async testConnection(attemptNumber?: number, newInstance?:boolean): Promise<boolean> {
         let func = "testConnection";
 
         let maxAttempts = 3;
@@ -527,7 +528,7 @@ export class RESTClient {
             if (this.grantType == 'password') {
                 await this.getNewOAuthPasswordFlow();
             } else if (this.grantType == 'authorization_code') {
-                this.getNewOAuthAuthCodeFlow();
+                await this.getNewOAuthAuthCodeFlow();
             } else {
                 this.logger.error(this.lib, func, `Unknown grant type: ${this.grantType}`);
             }
@@ -604,11 +605,34 @@ export class RESTClient {
 
         this.logger.debug(this.lib, func, "Opened Browser!");
 
-        return await vscode.window.withProgress(<vscode.ProgressOptions>{ location: vscode.ProgressLocation.Notification, cancellable: false, title: "SNICH" }, async (progress, token) => {
-                this.logger.debug(this.lib, func, "Inside WithProgress START");
+        return await vscode.window.withProgress(<vscode.ProgressOptions>{ location: vscode.ProgressLocation.Notification, cancellable: true, title: "SNICH" }, async (progress, token) => {
+            progress.report({message:"Launching Browser for OAuth Prompt"});
+            this.logger.debug(this.lib, func, "Inside WithProgress START");
                 let httpServer = () => { return new Promise((resolve, reject) =>{
                     this.logger.info(this.lib, func, "Creating server");
-                    var server = http.createServer(function (req, res) {
+
+                    /**
+                     * @todo Pass along extension context or find a way to get the current extension context from here..? 
+                     */
+                    let snichCore = vscode.extensions.getExtension('integrateNate.snich');
+                    let snichCanary = vscode.extensions.getExtension('integrateNate.snich-canary');
+                    let extensionPath = '';
+                    if(snichCore){
+                        extensionPath = snichCore.extensionPath;
+                    } else if(snichCanary){
+                        extensionPath = snichCanary.extensionPath;
+                    }
+
+                    let keyPath = path.resolve(extensionPath, 'WebServer', 'ssl', 'key.pem');
+                    let certPath = path.resolve(extensionPath, 'WebServer', 'ssl', 'cert.pem');
+                    this.logger.info(this.lib, func, 'Key Path:', keyPath);
+                    this.logger.info(this.lib, func, 'certPath: ', certPath);
+                    let oauthServOptions = {
+                        key: fs.readFileSync(keyPath),
+                        cert: fs.readFileSync(certPath)
+                    };
+
+                    var server = https.createServer(oauthServOptions, function (req, res) {
 
                         console.log("Inside createServer callback function. Req : Res are:", {req:req, res:res});
                         const oauthRedirectPath = /snich_oauth_redirect?.*/;
@@ -655,6 +679,8 @@ export class RESTClient {
 
             this.logger.info(this.lib, func, "About to Await httpServer()");
             let result = await httpServer();
+
+            progress.report({message:"OAuth Code Recieved.", increment:100})    
 
             if(!result){
                 return false;
