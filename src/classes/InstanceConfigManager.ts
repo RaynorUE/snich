@@ -127,8 +127,9 @@ export class InstancesList {
         instanceMaster.setURL(enteredInstanceValue);
         
         let authOptions = <Array<SNQPItem>>[ 
-            {label:"Basic",description:"Use basic authentication. Password stored un-encrypted.", value:"basic"}, 
-            {label:"OAuth",description:"Use OAuth to authenticate. More Secure as PW is not stored.", value:"oauth"}
+            {label:"Basic",description:"Use basic authentication. Password stored un-encrypted.", value:"basic"},
+            {label:"OAuth (Preferred)", description:"Use OAuth to authenticate. SNICH never sees your username or password.", value:"oauth-authorization_code"},
+            {label:"OAuth (Legacy)",description:"Use OAuth to authenticate. SNICH sees your PW but we do not store.", value:"oauth"},
         ];
         
         let authSelection = await vscode.window.showQuickPick(authOptions, <vscode.QuickPickOptions>{placeHolder:"Select an authentcation option",ignoreFocusOut:true});
@@ -158,6 +159,12 @@ export class InstancesList {
                 return undefined;
             }
 
+        } else if(authSelection.value === 'oauth-authorization_code'){
+            let oauthCodeFlowCredAsk = await instanceMaster.askForOAuthAuthCodeFlow();
+            if(!oauthCodeFlowCredAsk){
+                vscode.window.showWarningMessage('Instance confugration aborted. One or all OAuth Details not provided.');
+                return undefined;
+            }
         }
 
         let client = new RESTClient(instanceMaster);
@@ -229,7 +236,7 @@ export class InstanceMaster {
     }
     
     setName(name:string){
-        let func = 'funcName';
+        let func = 'setName';
         this.logger.info(this.lib, func, 'START', );
         this.config.name = name;
         
@@ -396,6 +403,59 @@ export class InstanceMaster {
         return true;
     }
 
+    async askForOAuthAuthCodeFlow():Promise<boolean> {
+        let func = 'askForOAuthAuthCodeFlow';
+        this.logger.info(this.lib, func, 'START');
+        
+        let launchChoices:Array<vscode.QuickPickItem> = [
+            {
+                label:"Create New",
+                description: "Launch browser directly to form pre-filled with necessary bits on: " + this.getURL()
+            }, 
+            { 
+                label:"View Existing",
+                description:"I have an existing App Registry. Launch My browser directly to list of OAuth App Registrations." 
+            },
+            {
+                label:"I'm good.",
+                description: "I Have already setup an OAuth Application Registry and I have my Client ID and Client Secret handy."
+            }
+        ]
+
+        let launchToOAuthAppRegistry = await vscode.window.showQuickPick(launchChoices, {ignoreFocusOut:true, placeHolder:`OAuth Application Registry on ${this.getURL()}?`});
+
+        if(!launchToOAuthAppRegistry || !launchToOAuthAppRegistry.label){
+            this.logger.info(this.lib, func, "END");
+            return false;
+        }
+
+        if(launchToOAuthAppRegistry.label == 'Create New'){
+            let newAppQueryParams = 'sys_id=-1&sysparm_query=type=client^redirect_url=http://localhost:62000/snich_oauth_redirect^name=VSCode%20S.N.I.C.H.%20Users^logo_url=https://github.com/RaynorUE/snich/blob/master/images/icon-sn-oauth.PNG'; //?raw=true'
+            let appRegURL = vscode.Uri.parse(`${this.getURL()}/oauth_entity.do?${newAppQueryParams}`, true);
+            vscode.env.openExternal(appRegURL)
+        }
+
+        if(launchToOAuthAppRegistry.label == 'View Existing'){
+            let queryParams = 'sysparm_query=type=client';
+            let appRegURL = vscode.Uri.parse(`${this.getURL()}/oauth_entity_list.do?${queryParams}`, true);
+            vscode.env.openExternal(appRegURL)
+        }
+
+        let clientID = await vscode.window.showInputBox(<vscode.InputBoxOptions>{prompt:"Enter Client ID (1/2)",ignoreFocusOut:true});
+        let clientSecret = await vscode.window.showInputBox(<vscode.InputBoxOptions>{prompt:"Enter Client Secret (2/2)", ignoreFocusOut:true});
+        
+        if(!clientID || !clientSecret){
+            return false;
+        }
+
+        this.setAuthType('oauth-authorization_code');
+        this.setWriteToDisk(false);
+        this.setClientId(clientID);
+        this.setClientSecret(clientSecret);
+        this.logger.info(this.lib, func, 'END');
+        return true;
+    }
+
 
     /**
      * Ask for just the password and set internally. Based on auth type will save to disk or not.
@@ -414,6 +474,30 @@ export class InstanceMaster {
 
         if(!password){
             vscode.window.showWarningMessage('Did not recieve password. Aborting.');
+            return false;
+        }
+
+        this.logger.info(this.lib, func, "END");
+        return true;
+    }
+
+        /**
+     * Ask for just the password and set internally. Based on auth type will save to disk or not.
+     */
+    async askForUsername(prompt?:string):Promise<boolean> {
+        var func = 'askForUsername';
+        this.logger.info(this.lib, func, "START");
+
+        if(!prompt){
+            prompt = `Enter Local SN username for ${this.getURL()} (If oAuth we will only store username for VSCode session):`
+        }
+
+        let username = await vscode.window.showInputBox(<vscode.InputBoxOptions>{prompt:prompt,ignoreFocusOut:true});
+        
+        this.setUserName(username || "");
+
+        if(!username){
+            vscode.window.showWarningMessage('Did not recieve username. Aborting.');
             return false;
         }
 

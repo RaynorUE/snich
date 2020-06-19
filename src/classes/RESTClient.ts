@@ -6,7 +6,11 @@ import { snRecord } from '../myTypes/globals';
 import * as request from 'request-promise-native';
 import { WorkspaceManager } from './WorkspaceManager';
 import { snichOutput } from '../extension';
-
+import * as https from 'https';
+import * as crypto from 'crypto';
+import * as url from 'url';
+import * as fs from 'fs';
+import * as path from 'path';
 
 export class RESTClient {
 
@@ -23,6 +27,7 @@ export class RESTClient {
     private apiVersion: string = ''; //can be v1/, preparing for version ups when needed.
     private lib: string = 'RESTClient';
     private authType: String = "basic";
+    private grantType: String = "password";
     private alwaysFields: Array<string> = ["sys_scope", "sys_scope.scope", "sys_scope.name", "sys_package", "sys_package.name", "sys_package.id", "sys_name", "sys_id"];
     private useProgress: Boolean = true;
     private progressMessage: string = "";
@@ -37,7 +42,9 @@ export class RESTClient {
         this.instanceConfig = instance.getConfig();
 
         if (this.instanceConfig.connection.auth.type === 'oauth' && this.instanceConfig.connection.auth.OAuth) {
-            this.setOAuth(this.instanceConfig.connection.auth.OAuth.client_id, this.instanceConfig.connection.auth.OAuth.client_secret);
+            this.setOAuth();
+        } else if (this.instanceConfig.connection.auth.type === 'oauth-authorization_code' && this.instanceConfig.connection.auth.OAuth) {
+            this.setOAuthAuthCode();
         } else if (this.instanceConfig.connection.auth.type === 'basic') {
             this.setBasicAuth(this.instance.getUserName(), this.instance.getPassword());
         }
@@ -63,11 +70,21 @@ export class RESTClient {
 
     }
 
-    setOAuth(clientID: string, clientSecret: string, username?: string, password?: string) {
+    setOAuthAuthCode() {
+        let func = 'setOAuthAuthCode';
+        this.logger.info(this.lib, func, "START");
+        this.requestOpts.auth = {};
+        this.authType = 'oauth';
+        this.grantType = 'authorization_code';
+        this.logger.info(this.lib, func, "END");
+    }
+
+    setOAuth() {
         let func = "setOAuth";
         this.logger.info(this.lib, func, "START");
         this.requestOpts.auth = {};
         this.authType = 'oauth';
+        this.grantType = 'password';
         this.logger.info(this.lib, func, "END");
     }
 
@@ -143,11 +160,11 @@ export class RESTClient {
         this.post('', body, 'Creating new record!');
     }
 
-    async testConnection(attemptNumber?:number):Promise<boolean> {
+    async testConnection(attemptNumber?: number, newInstance?:boolean): Promise<boolean> {
         let func = "testConnection";
 
         let maxAttempts = 3;
-        if(attemptNumber == undefined || attemptNumber == null){
+        if (attemptNumber == undefined || attemptNumber == null) {
             attemptNumber = 0;
         } else {
             attemptNumber++;
@@ -158,7 +175,14 @@ export class RESTClient {
         let url = baseURL + '/api/now/table/sys_properties?sysparm_limit=1&sysparm_fields=sys_id';
         this.logger.info(this.lib, func, 'Getting url: ' + url);
 
-        let response = await this.get(url, `Testing connection for ${baseURL}`);
+        let response;
+
+        try {
+            response = await this.get(url, `Testing connection for ${baseURL}`);    
+        } catch(e){
+            response = e;
+        }
+        
 
         this.logger.info(this.lib, func, 'Response body recieved:', response);
 
@@ -171,11 +195,14 @@ export class RESTClient {
                     let respMsg = `${response.message}`;
                     snichOutput.appendLine('Authorization Failed: ' + respMsg);
 
-                    if(this.instance.getAuthType() == 'basic' && attemptNumber < maxAttempts){
+                    if (this.instance.getAuthType() == 'basic' && attemptNumber < maxAttempts) {
                         await this.instance.askForBasicAuth();
                         return await this.testConnection(attemptNumber);
-                    } else if(this.instance.getAuthType() == 'oauth' && attemptNumber< maxAttempts){
+                    } else if (this.instance.getAuthType() == 'oauth' && attemptNumber < maxAttempts) {
                         await this.instance.askForOauth();
+                        return await this.testConnection(attemptNumber);
+                    } else if (this.instance.getAuthType() == 'oauth-authorization_code') {
+                        await this.instance.askForOAuthAuthCodeFlow();
                         return await this.testConnection(attemptNumber);
                     } else {
                         vscode.window.showErrorMessage(`Max attempts (${maxAttempts}) reached. Please validate account/config on instance: ${this.instance.getName()}`);
@@ -210,7 +237,7 @@ export class RESTClient {
 
         let jar = request.jar();
 
-        if(!password){
+        if (!password) {
             await this.instance.askForPassword();
             password = this.instance.getPassword();
         }
@@ -268,7 +295,7 @@ export class RESTClient {
                     "sys_scope": scope, //sys_id of the scope... 
                     "runscript": "Run script",
                     "quota_managed_transaction": "on",
-                    "record_for_rollback":"on"
+                    "record_for_rollback": "on"
                 }
             };
 
@@ -442,11 +469,12 @@ export class RESTClient {
 
         let oauthTokenURL = this.instanceConfig.connection.url + '/oauth_token.do';
 
-
         let now = Date.now();
         let hadTokenFor = now - oauthData.lastRetrieved + 10000; //add 10000 milliseconds (10 seconds), to account for time sync issues, and making sure we attempt to get a new token BEFORE it actually expires.
         let expiresIn = oauthData.token.expires_in * 1000; //SN returns "Seconds" need this to be milliseconds for comparison
+
         this.logger.debug(this.lib, func, "oAuth Data about to be used.", { oauthData: oauthData, now: now, hadTokenFor: hadTokenFor, expiresIn: expiresIn });
+
         if (hadTokenFor < expiresIn && !getNew) {
             this.logger.info(this.lib, func, 'Token not yet expire! Using it.');
 
@@ -497,52 +525,203 @@ export class RESTClient {
         }
 
         if (getNew) {
-            this.logger.debug(this.lib, func, 'Attempting to get new Access token.');
-            let prompt = `Refresh token expired. Please Enter password for ${this.instanceConfig.connection.auth.username} on: ${this.instanceConfig.connection.url}. We do not store your password. If using 2FA/OTP enter your 2FA/OTP code at the end of your password.`;
-            if (!this.instanceConfig.connection.auth.OAuth.token.access_token) {
-                //first time setup
-                prompt = `Enter password for ${this.instanceConfig.connection.auth.username} on: ${this.instanceConfig.connection.url}. We do not store this value. If using 2FA/OTP enter your 2FA/OTP code at the end of your password.`;
+            if (this.grantType == 'password') {
+                await this.getNewOAuthPasswordFlow();
+            } else if (this.grantType == 'authorization_code') {
+                await this.getNewOAuthAuthCodeFlow();
+            } else {
+                this.logger.error(this.lib, func, `Unknown grant type: ${this.grantType}`);
             }
+        }
+        this.logger.info(this.lib, func, "END");
+    }
 
-            let enteredPwd = await vscode.window.showInputBox(<vscode.InputBoxOptions>{ prompt: prompt, password: true, ignoreFocusOut: true });
+    private async getNewOAuthPasswordFlow() {
+        let func = 'getNewOAuthPasswordFlow'
 
-            this.logger.debug(this.lib, func, "asked user for password. Proceeding to attempt to auth.",);
+        let oauthTokenURL = this.instanceConfig.connection.url + '/oauth_token.do';
 
-            var connectionData = this.instanceConfig.connection;
+        this.logger.debug(this.lib, func, 'Attempting to get new Access token.');
+        let prompt = `Refresh token expired. Please Enter password for ${this.instanceConfig.connection.auth.username} on: ${this.instanceConfig.connection.url}. We do not store your password. If using 2FA/OTP enter your 2FA/OTP code at the end of your password.`;
+        if (!this.instanceConfig.connection.auth.OAuth.token.access_token) {
+            //first time setup
+            prompt = `Enter password for ${this.instanceConfig.connection.auth.username} on: ${this.instanceConfig.connection.url}. We do not store this value. If using 2FA/OTP enter your 2FA/OTP code at the end of your password.`;
+        }
 
-            let reqOpts: request.RequestPromiseOptions = {
-                gzip: true,
-                json: true,
-                form: {
-                    grant_type: "password",
-                    client_id: connectionData.auth.OAuth.client_id,
-                    client_secret: connectionData.auth.OAuth.client_secret,
-                    username: connectionData.auth.username,
-                    password: enteredPwd || ""
+        let enteredPwd = await vscode.window.showInputBox(<vscode.InputBoxOptions>{ prompt: prompt, password: true, ignoreFocusOut: true });
 
-                }
-            }
-            this.logger.debug(this.lib, func, `About to get oauth token at URL: ${oauthTokenURL} with reqOpts: `, reqOpts);
-            let tokenData = await request.post(oauthTokenURL, reqOpts);
-            this.logger.debug(this.lib, func, "oauthToken response: ", tokenData);
-            if (tokenData && tokenData.access_token) {
+        this.logger.debug(this.lib, func, "asked user for password. Proceeding to attempt to auth.",);
 
-                this.instanceConfig.connection.auth.OAuth.lastRetrieved = Date.now();
-                this.instanceConfig.connection.auth.OAuth.token = tokenData;
+        var connectionData = this.instanceConfig.connection;
 
-                this.requestOpts.auth = {
-                    bearer: tokenData.access_token
-                };
-
-                this.logger.info(this.lib, func, 'RequestOpts have been set.', this.requestOpts);
-
-                this.instance.setConfig(this.instanceConfig);
-                new WorkspaceManager(this.logger).writeInstanceConfig(this.instance);
-                this.logger.info(this.lib, func, 'END');
-                return '';
+        let reqOpts: request.RequestPromiseOptions = {
+            gzip: true,
+            json: true,
+            form: {
+                grant_type: "password",
+                client_id: connectionData.auth.OAuth.client_id,
+                client_secret: connectionData.auth.OAuth.client_secret,
+                username: connectionData.auth.username,
+                password: enteredPwd || ""
 
             }
+        }
+        this.logger.debug(this.lib, func, `About to get oauth token at URL: ${oauthTokenURL} with reqOpts: `, reqOpts);
+        let tokenData = await request.post(oauthTokenURL, reqOpts);
+        this.logger.debug(this.lib, func, "oauthToken response: ", tokenData);
+        if (tokenData && tokenData.access_token) {
+
+            this.instanceConfig.connection.auth.OAuth.lastRetrieved = Date.now();
+            this.instanceConfig.connection.auth.OAuth.token = tokenData;
+
+            this.requestOpts.auth = {
+                bearer: tokenData.access_token
+            };
+
+            this.logger.info(this.lib, func, 'RequestOpts have been set.', this.requestOpts);
+
+            this.instance.setConfig(this.instanceConfig);
+            new WorkspaceManager(this.logger).writeInstanceConfig(this.instance);
+            this.logger.info(this.lib, func, 'END');
+            return '';
 
         }
+    }
+
+    private async getNewOAuthAuthCodeFlow() {
+        let func = 'getNewOAuthAuthCodeFlow';
+        this.logger.info(this.lib, func, "START");
+
+        let connectionData = this.instanceConfig.connection;
+
+        let state = crypto.randomBytes(16).toString("hex");
+
+        let oauthCode = '';
+
+        let redirectURI = 'http://localhost:62000';
+
+        let oauthAuthURL = vscode.Uri.parse(`${this.instance.getURL()}/oauth_auth.do?response_type=code&client_id=${connectionData.auth.OAuth.client_id}&state=${state}&redirect_url=${redirectURI}`, true);
+        vscode.env.openExternal(oauthAuthURL);
+
+        this.logger.debug(this.lib, func, "Opened Browser!");
+
+        return await vscode.window.withProgress(<vscode.ProgressOptions>{ location: vscode.ProgressLocation.Notification, cancellable: true, title: "SNICH" }, async (progress, token) => {
+            progress.report({message:"Launching Browser for OAuth Prompt"});
+            this.logger.debug(this.lib, func, "Inside WithProgress START");
+                let httpServer = () => { return new Promise((resolve, reject) =>{
+                    this.logger.info(this.lib, func, "Creating server");
+
+                    /**
+                     * @todo Pass along extension context or find a way to get the current extension context from here..? 
+                     */
+                    let snichCore = vscode.extensions.getExtension('integrateNate.snich');
+                    let snichCanary = vscode.extensions.getExtension('integrateNate.snich-canary');
+                    let extensionPath = '';
+                    if(snichCore){
+                        extensionPath = snichCore.extensionPath;
+                    } else if(snichCanary){
+                        extensionPath = snichCanary.extensionPath;
+                    }
+
+                    let keyPath = path.resolve(extensionPath, 'WebServer', 'ssl', 'key.pem');
+                    let certPath = path.resolve(extensionPath, 'WebServer', 'ssl', 'cert.pem');
+                    this.logger.info(this.lib, func, 'Key Path:', keyPath);
+                    this.logger.info(this.lib, func, 'certPath: ', certPath);
+                    let oauthServOptions = {
+                        key: fs.readFileSync(keyPath),
+                        cert: fs.readFileSync(certPath)
+                    };
+
+                    var server = https.createServer(oauthServOptions, function (req, res) {
+
+                        console.log("Inside createServer callback function. Req : Res are:", {req:req, res:res});
+                        const oauthRedirectPath = /snich_oauth_redirect?.*/;
+                
+                        if(req.url == '/snich_oauth_redirect'){
+                            //no query parameters supplied... throw error
+                            let errObj = {
+                                error:"No query parameters found. You've reached this page in error."
+                            };
+                            
+                            res.writeHead(400, {
+                                'Content-Length': JSON.stringify(errObj).length,
+                                'Content-Type': 'application/json' 
+                            });
+                            
+                            res.write(JSON.stringify(errObj))
+                            server.close();
+                            vscode.window.showErrorMessage('Failed oauth configuration. Please retry instance setup again.');
+                            resolve(false);
+                        } else if(req.url?.match(oauthRedirectPath)){
+                            console.log('Inside oauthRedirect with code!');
+                            const queryObject = url.parse(req.url,true).query;
+                            
+                            if(queryObject.code && queryObject.state == state){
+                                oauthCode = queryObject.code.toString();
+                                res.write('OAuth Code Recieved by SNICH VSCode Extension. Please close this window.');
+                                resolve(true);
+                            } else {
+                                res.write('Some error occured. Please retry instance setup again.');
+                                vscode.window.showErrorMessage('Failed oauth configuration. Please retry instance setup again.');
+                                resolve(false);
+                            }
+                            
+                        }
+                        
+                        console.log('Ending response.');
+                        res.end();
+                    });
+                    
+                    server.listen(62000);
+                    this.logger.info(this.lib, func, 'Server is running on port 62000');
+                })
+            }
+
+            this.logger.info(this.lib, func, "About to Await httpServer()");
+            let result = await httpServer();
+
+            progress.report({message:"OAuth Code Recieved.", increment:100})    
+
+            if(!result){
+                return false;
+            }
+    
+            if(result){
+    
+                let oauthTokenURL = this.instanceConfig.connection.url + '/oauth_token.do';
+                let reqOpts: request.RequestPromiseOptions = {
+                    gzip: true,
+                    json: true,
+                    form: {
+                        grant_type: "authorization_code",
+                        client_id: connectionData.auth.OAuth.client_id,
+                        client_secret: connectionData.auth.OAuth.client_secret,
+                        code: oauthCode,
+                        redirect_uri: redirectURI
+                        }
+                }
+                this.logger.debug(this.lib, func, `About to get oauth token at URL: ${oauthTokenURL} with reqOpts: `, reqOpts);
+    
+                let tokenData = await request.post(oauthTokenURL, reqOpts);
+                this.logger.debug(this.lib, func, "oauthToken response: ", tokenData);
+                if (tokenData && tokenData.access_token) {
+        
+                    this.instanceConfig.connection.auth.OAuth.lastRetrieved = Date.now();
+                    this.instanceConfig.connection.auth.OAuth.token = tokenData;
+        
+                    this.requestOpts.auth = {
+                        bearer: tokenData.access_token
+                    };
+        
+                    this.logger.info(this.lib, func, 'RequestOpts have been set.', this.requestOpts);
+        
+                    this.instance.setConfig(this.instanceConfig);
+                    new WorkspaceManager(this.logger).writeInstanceConfig(this.instance);
+                    this.logger.info(this.lib, func, 'END');
+                    return '';
+        
+                }
+            }
+        });
     }
 }
