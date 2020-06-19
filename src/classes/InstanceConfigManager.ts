@@ -430,7 +430,7 @@ export class InstanceMaster {
         }
 
         if(launchToOAuthAppRegistry.label == 'Create New'){
-            let newAppQueryParams = 'sys_id=-1&sysparm_query=type=client^redirect_url=http://localhost:62000/snich_oauth_redirect^name=VSCode%20S.N.I.C.H.%20Users^logo_url=https://github.com/RaynorUE/snich/blob/master/images/icon-sn-oauth.PNG'; //?raw=true'
+            let newAppQueryParams = 'sys_id=-1&sysparm_query=type=client^redirect_url=https://localhost:62000/snich_oauth_redirect^name=VSCode%20S.N.I.C.H.%20Users^logo_url=https://github.com/RaynorUE/snich/blob/master/images/icon-sn-oauth.PNG%3Fraw=true'; //?raw=true'
             let appRegURL = vscode.Uri.parse(`${this.getURL()}/oauth_entity.do?${newAppQueryParams}`, true);
             vscode.env.openExternal(appRegURL)
         }
