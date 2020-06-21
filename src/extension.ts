@@ -10,6 +10,7 @@ import { TSDefinitionGenerator } from './classes/TSDefinitionGeneator';
 import * as xml2js from 'xml2js';
 import { SNQPItem } from './myTypes/globals';
 import { WebBrowser } from './classes/WebBrowser';
+import { ExtensionMgmt } from './classes/ExtensionMgmt';
  
 export const snichOutput = vscode.window.createOutputChannel('S.N.I.C.H.');
 
@@ -30,6 +31,10 @@ export function activate(context: vscode.ExtensionContext) {
         deactivate();
         return false;
     }
+
+    //see if we've upgraded!
+
+    new ExtensionMgmt(context).handleUpgrade();
 
     //load observers for our workspace.
     wsManager.loadObservers(instanceList);
