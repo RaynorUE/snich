@@ -479,9 +479,7 @@ export class WorkspaceManager{
             this.logger.info(this.lib, func, 'END');
             return;
         }
-        //@todo --- Need to figure out how to find the .vscode folder... i think if we take the file path down to the WSfolder, then get the next
-        //position will give us this instance, and then the .vscode from there... I think we will be able to use some regex to get this. 
-        
+
         let wsFolder = <vscode.WorkspaceFolder>{};
         if(vscode.workspace.workspaceFolders){
             wsFolder = vscode.workspace.workspaceFolders[0];

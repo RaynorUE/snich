@@ -28,4 +28,11 @@ let updatePackageJSON = async function(){
 
 }
 
+let moveFiles = async function(){
+    await fs.unlink('README.md');
+    await fs.copyFile('README-canary.md', 'README.md');
+}
+
 updatePackageJSON();
+
+moveFiles();

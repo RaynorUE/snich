@@ -4,9 +4,9 @@
     "displayName": "S.N.I.C.H. Canary",
     "description": "ServiceNow Integrated Code Helper - Canary. Get the latest as I build stuff ready to be tested! Provide feedback to integratenate@gmail.com",
     "icon": "images/icon-canary.png",
-    "version": "1.30.0",
+    "version": "1.30.20",
     "liveVersion": "1.1.0",
-    "canaryVersion": "1.30.0",
+    "canaryVersion": "1.30.18",
     "betaVersion": "1.0.6",
     "keywords": [
         "SNICH",
@@ -57,6 +57,11 @@
     "main": "./dist/extension.js",
     "contributes": {
         "commands": [
+            {
+                "command": "snich.application.open_file.in.service_now",
+                "title": "Open File in Browser (ServiceNow)",
+                "category": "SNICH"
+            },
             {
                 "command": "snich.application.run.background_script.global",
                 "title": "Run Background Script (Global)",

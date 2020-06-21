@@ -9,6 +9,8 @@ import { WorkspaceManager } from './classes/WorkspaceManager';
 import { TSDefinitionGenerator } from './classes/TSDefinitionGeneator';
 import * as xml2js from 'xml2js';
 import { SNQPItem } from './myTypes/globals';
+import { WebBrowser } from './classes/WebBrowser';
+import { ExtensionMgmt } from './classes/ExtensionMgmt';
  
 export const snichOutput = vscode.window.createOutputChannel('S.N.I.C.H.');
 
@@ -29,6 +31,10 @@ export function activate(context: vscode.ExtensionContext) {
         deactivate();
         return false;
     }
+
+    //see if we've upgraded!
+
+    new ExtensionMgmt(context).handleUpgrade();
 
     //load observers for our workspace.
     wsManager.loadObservers(instanceList);
@@ -76,6 +82,34 @@ export function activate(context: vscode.ExtensionContext) {
             await client.testConnection();
         }
         logger.info(lib, func, 'END', instanceList);
+    });
+
+    vscode.commands.registerCommand('snich.application.open_file.in.service_now', async() =>{
+
+        let activeEditor = vscode.window.activeTextEditor;
+        if(!activeEditor){
+            vscode.window.showWarningMessage('No active editor. Unable to open in ServiceNow');
+            return;
+        }
+
+        let fsPath = activeEditor.document.uri.fsPath;
+
+        let instance = instanceList.getInstanceByFilePath(fsPath);
+        if(!instance){
+            vscode.window.showWarningMessage('Does not look like file in active editor is a SNICH file. Unable to determine instance.');
+            return;
+        }
+
+        let syncedFiles = instance.getSyncedFiles();
+        let syncedFile = syncedFiles.getFileByPath(fsPath);
+        if(!syncedFile || !syncedFile.sys_package){
+            vscode.window.showWarningMessage('Not a synced file. Unable to determine to open.');
+            return;
+        }
+
+        let wb = new WebBrowser(instance);
+        wb.openFile(syncedFile.table, syncedFile.sys_id, syncedFile.sys_package);
+
     });
 
     /**
@@ -140,8 +174,6 @@ export function activate(context: vscode.ExtensionContext) {
                     }
                 }
             }
-
-           
         }
 
 

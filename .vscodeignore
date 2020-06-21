@@ -12,3 +12,7 @@ tsconfig.json
 webpack.config.json
 prepublish-beta.js
 prepublish-live.js
+README-canary.md
+README-live.md
+README-insiders.md
+ext_version.json

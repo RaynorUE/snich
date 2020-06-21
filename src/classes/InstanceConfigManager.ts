@@ -4,6 +4,7 @@ import { SNApplication, InstanceConnectionData, SNQPItem, snTableField } from '.
 import { WorkspaceManager} from './WorkspaceManager';
 import * as vscode from 'vscode';
 import { ConfiguredTables } from './SNDefaultTables';
+import * as path from 'path';
 
 export class InstancesList {
     private instances: Array<InstanceMaster> = [];
@@ -56,6 +57,48 @@ export class InstancesList {
             return false;
         } else {
             return true;
+        }
+    }
+
+    /**
+     * Try to find an instance by the filePath of a file.
+     * @param fsPath File path to try and figure out the instsance configuration from.
+     */
+    getInstanceByFilePath(fsPath:string):InstanceMaster | undefined{
+        let func = 'getInstanceByFilePath';
+
+        let wsFolder = <vscode.WorkspaceFolder>{};
+        if(vscode.workspace.workspaceFolders){
+            wsFolder = vscode.workspace.workspaceFolders[0];
+        }
+        
+        //escace path components...
+        let replaceWithPath = "/";
+        if(path.sep === "\\"){
+            replaceWithPath = "\\\\";
+        }
+        
+        let regexPreparedPath = wsFolder.uri.fsPath.replace(new RegExp("\\" + path.sep, 'g'), replaceWithPath) + replaceWithPath + "(.*?)" + replaceWithPath + "(\\w*)"; 
+        this.logger.debug(this.lib, func, 'RegexPreparedPath', regexPreparedPath);
+        
+        let InstanceAppComponents = new RegExp(regexPreparedPath);
+        this.logger.debug(this.lib, func, 'InstanceAppComponents', InstanceAppComponents.toString());
+        
+        let matches = fsPath.match(InstanceAppComponents);
+        this.logger.debug(this.lib, func, 'Matches:', matches);
+        
+        if(!matches || matches.length === 0 || !matches[1]){
+            this.logger.error(this.lib, func, `Couldn't determine instance on save. Matched values:`, matches);
+            return;
+        }
+        
+        let instanceName = matches[1]; //2nd grouping will be instance name;
+        let instance = this.getInstance(instanceName);
+        if(!instance.getName){
+            this.logger.error(this.lib, func, `Attempted to get instance by name [${instanceName}] and did not find it in our list of configured instances.`);
+            return;
+        } else { 
+            return instance;
         }
     }
     
