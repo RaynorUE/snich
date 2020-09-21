@@ -1,5 +1,6 @@
 import { RESTClient } from '../RESTClient';
 import { InstanceMaster, InstancePreferenceMap } from '../InstanceConfigManager'
+import { WebBrowser } from '../WebBrowser';
 
 export class SNPreferencesManager {
 
@@ -46,6 +47,25 @@ export class SNPreferencesManager {
             throw new Error('Unable to find preference data on instance!. ' + JSON.stringify(prefMap));
         }
         return prefValue;
+    }
+
+    /**
+     * Will go through all preferences in the preference map for the provided instance and clear the stored values.
+     * @param instance The instance we are clearing the stored preferences for.
+     */
+    async clearStoredPreferences(instance:InstanceMaster) {
+        
+    }
+
+    /**
+     * Will open a window in default browser to the list of stored SNICH preferences for the instance provided.
+     * @param instance The instance to open the preferences for
+     */
+    async openPreferenceListInInstance(instance:InstanceMaster){
+
+        let prefUrl = `${instance.getURL()}/sys_user_preference_list.do?sysparm_query=nameLIKEvscode.extension.snich`;
+        let wb = new WebBrowser(instance);
+        wb.open(prefUrl);
     }
 }
 
