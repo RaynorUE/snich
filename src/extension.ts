@@ -192,9 +192,10 @@ export function activate(context: vscode.ExtensionContext) {
             if(scriptResponseParts && scriptResponseParts.length > 0){
                 xml2js.parseStringPromise(scriptResponseParts[0].toString().replace(/\<br\/\>/gi, '\n')).then((result:any) => {
                     snichOutput.appendLine('=============== BACKGROUND SCRIPT EXECUTED (' + new Date().toLocaleDateString() + " " + new Date().toLocaleTimeString() + ') ===============');
-                    console.log('parse result: ', result);
                     snichOutput.appendLine(result.PRE.toString());
-                    snichOutput.show();
+                    
+                    //will hold off showing this for now and rely on webview..
+                    //snichOutput.show();
 
                 });
 
@@ -311,7 +312,9 @@ export function activate(context: vscode.ExtensionContext) {
                 xml2js.parseStringPromise(scriptResponseParts[0].toString().replace(/\<br\/\>/gi, '\n')).then((result:any) => {
                     snichOutput.appendLine('=============== BACKGROUND SCRIPT EXECUTED (' + new Date().toLocaleDateString() + " " + new Date().toLocaleTimeString() + ') ===============');
                     snichOutput.appendLine(result.PRE.toString());
-                    snichOutput.show();
+                    
+                    //not showing for now. Will still exist in the logs though!                    
+                    //snichOutput.show();
 
                 });
             }
