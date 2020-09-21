@@ -78,7 +78,7 @@ export class InstancesList {
             replaceWithPath = "\\\\";
         }
         
-        let regexPreparedPath = wsFolder.uri.fsPath.replace(new RegExp("\\" + path.sep, 'g'), replaceWithPath) + replaceWithPath + "(.*?)" + replaceWithPath + "(\\w*)"; 
+        let regexPreparedPath = wsFolder.uri.fsPath.replace(new RegExp("\\" + path.sep, 'g'), replaceWithPath).replace(/\(/g, '\\(').replace(/\)/g, '\\)') + replaceWithPath + "(.*?)" + replaceWithPath + "(\\w*)"; 
         this.logger.debug(this.lib, func, 'RegexPreparedPath', regexPreparedPath);
         
         let InstanceAppComponents = new RegExp(regexPreparedPath);

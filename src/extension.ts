@@ -85,14 +85,18 @@ export function activate(context: vscode.ExtensionContext) {
     });
 
     vscode.commands.registerCommand('snich.application.open_file.in.service_now', async() =>{
-
+        let logger = new SystemLogHelper();
+        var func = 'application.open_file.in.service_now';
+        logger.info(lib, func, 'START');
         let activeEditor = vscode.window.activeTextEditor;
+
         if(!activeEditor){
             vscode.window.showWarningMessage('No active editor. Unable to open in ServiceNow');
             return;
         }
 
         let fsPath = activeEditor.document.uri.fsPath;
+        logger.debug(lib, func, 'fsPath:', fsPath);
 
         let instance = instanceList.getInstanceByFilePath(fsPath);
         if(!instance){
@@ -109,6 +113,7 @@ export function activate(context: vscode.ExtensionContext) {
 
         let wb = new WebBrowser(instance);
         wb.openFile(syncedFile.table, syncedFile.sys_id, syncedFile.sys_package);
+        logger.info(lib, func, "END");
 
     });
 
