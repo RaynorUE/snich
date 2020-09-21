@@ -156,8 +156,16 @@ export class RESTClient {
     }
 
     //unused...
-    createRecord(table: string, sys_id: string, body: object) {
-        this.post('', body, 'Creating new record!');
+    async createRecord(table: string, body: object): Promise<snRecord> {
+        var postURL = `${this.instanceConfig.connection.url}/api/now/table/${table}`;
+        let postResponse = await this.post(postURL, body, `Creating ${table} record.`);
+
+        let record: snRecord = { label: "", name: "", sys_id: "" };
+        if(postResponse && postResponse.result){
+            record = postResponse.result;
+        }
+
+        return record;
     }
 
     async testConnection(attemptNumber?: number, newInstance?:boolean): Promise<boolean> {

@@ -242,6 +242,8 @@ export class InstanceMaster {
             this.logger = logger;
         }
 
+        this.setDefaultPrefMap();
+
         this.syncedFiles = new SyncedFiles(this.logger);
 
         this.tableConfig = new ConfiguredTables();
@@ -250,6 +252,10 @@ export class InstanceMaster {
             rootPath: "",
             applications: [],
             configPath: "",
+            preferences: {
+                list: [],
+                prefMap: []
+            },
             connection : {
                 url:"",
                 auth: {
@@ -387,6 +393,11 @@ export class InstanceMaster {
 
         return res;
 
+    }
+
+    setDefaultPrefMap(){
+        //right now just the one... but maybe more over time?
+        this.config.preferences.prefMap.push({name:"vscode.extension.snich.table_config", filename:"snich_table_config.json", description: "Used to store your unique preference config for the S.N.I.C.H. VSCODE extension."})
     }
 
     getUserName(){
@@ -694,8 +705,23 @@ export interface InstanceConfig {
     name:string;
     configPath:string;
     rootPath:string;
+    preferences: {
+        prefMap:Array<InstancePreferenceMap>;
+        list:Array<InstancePreference>;
+    }
     connection:InstanceConnectionData;
     applications:Array<SNApplication>;
+}
+
+export interface InstancePreferenceMap {
+    name:string;
+    filename:string;
+    description:string;
+}
+
+export interface InstancePreference {
+    sys_id:string;
+    name:string;
 }
 
 export class InstanceSettings {
@@ -717,4 +743,14 @@ export class InstanceSettings {
     getBSScriptSettings(){
         return this.settings.backgroundScripts;
     }
+}
+
+
+declare interface sys_user_preference {
+    sys_id?:string;
+    user:string;
+    name:string;
+    value:string;
+    type?:"integer" | "reference" | "string" | "boolean";
+    description?:string;
 }
