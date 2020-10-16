@@ -5,6 +5,7 @@ import { WorkspaceManager} from './WorkspaceManager';
 import * as vscode from 'vscode';
 import { ConfiguredTables } from './SNDefaultTables';
 import * as path from 'path';
+import { SNPreferencesManager } from './preferences/SNPreferencesManager';
 
 export class InstancesList {
     private instances: Array<InstanceMaster> = [];
@@ -214,10 +215,21 @@ export class InstancesList {
         let testResult = await client.testConnection();
         
         if(testResult){
-            this.addInstance(instanceMaster);
+            //see if we have the config file preferences available and pre-set those..
+
+            let snPrefMgr = new SNPreferencesManager(this.logger);
             let wsManager = new WorkspaceManager(this.logger);
+            let prefMap = instanceMaster.getPrefMapByFileName(wsManager.tableConfigFileName);
+            if(prefMap){
+                let snPrefValue = await snPrefMgr.getPreferenceValue(instanceMaster, prefMap, instanceMaster.getUserName());
+                if(snPrefValue){
+                    instanceMaster.tableConfig.setFromConfigFile(JSON.parse(snPrefValue));
+                }
+            }
+
             wsManager.setupNewInstance(instanceMaster);
             this.logger.info(this.lib, func, 'END');
+            this.addInstance(instanceMaster);
             return true;
         } else {
             vscode.window.showErrorMessage('Instance Configuration Failed. Please attempt to setup new instance again. See log for details.');
@@ -233,7 +245,37 @@ export class InstanceMaster {
     tableConfig:ConfiguredTables;
     syncedFiles:SyncedFiles;
     settings:InstanceSettings = new InstanceSettings();
-    private config:InstanceConfig;
+    private config:InstanceConfig = {
+        name: "",
+        rootPath: "",
+        applications: [],
+        configPath: "",
+        preferences: {
+            list: [],
+            prefMap: []
+        },
+        connection : {
+            url:"",
+            auth: {
+                type:"",
+                username:"",
+                password:"",
+                writeBasicToDisk:true,
+                OAuth: {
+                    client_id: "",
+                    client_secret: "",
+                    lastRetrieved: 0,
+                    token: {
+                        access_token:"",
+                        expires_in: 0,
+                        refresh_token:"",
+                        scope:"",
+                        token_type:""
+                    }
+                }
+            }
+        }
+    };
     private logger:SystemLogHelper =  new SystemLogHelper();
     private lib = "InstanceMaster";
     
@@ -242,42 +284,11 @@ export class InstanceMaster {
             this.logger = logger;
         }
 
-        this.setDefaultPrefMap();
-
+        
         this.syncedFiles = new SyncedFiles(this.logger);
-
         this.tableConfig = new ConfiguredTables();
-        this.config = {
-            name: "",
-            rootPath: "",
-            applications: [],
-            configPath: "",
-            preferences: {
-                list: [],
-                prefMap: []
-            },
-            connection : {
-                url:"",
-                auth: {
-                    type:"",
-                    username:"",
-                    password:"",
-                    writeBasicToDisk:true,
-                    OAuth: {
-                        client_id: "",
-                        client_secret: "",
-                        lastRetrieved: 0,
-                        token: {
-                            access_token:"",
-                            expires_in: 0,
-                            refresh_token:"",
-                            scope:"",
-                            token_type:""
-                        }
-                    }
-                }
-            }
-        };
+
+        this.setDefaultPrefMap();
     }
 
     getSyncedFiles(){
@@ -398,6 +409,22 @@ export class InstanceMaster {
     setDefaultPrefMap(){
         //right now just the one... but maybe more over time?
         this.config.preferences.prefMap.push({name:"vscode.extension.snich.table_config", filename:"snich_table_config.json", description: "Used to store your unique preference config for the S.N.I.C.H. VSCODE extension."})
+    }
+
+    getPrefMapByFileName(fileName:string):InstancePreferenceMap | undefined{
+        let prefMap;
+        let prefMaps = this.getPrefMapList();
+        prefMaps.forEach((prefMapEntry:InstancePreferenceMap) => {
+            if(prefMapEntry.filename == fileName){
+                prefMap = prefMapEntry;
+            }
+        })
+        
+        return prefMap;
+    }
+
+    getPrefMapList():Array<InstancePreferenceMap>{
+        return this.config.preferences.prefMap;
     }
 
     getUserName(){

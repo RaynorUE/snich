@@ -120,6 +120,12 @@ export class RESTClient {
     async getRecords(table: string, encodedQuery: string, fields: Array<string>, displayValue?: boolean, refLinks?: boolean) {
         let func = 'getRecords';
         this.logger.info(this.lib, func, 'START');
+        this.logger.debug(this.lib, func, 'table: ', table);
+        this.logger.debug(this.lib, func, 'encodedQuery: ', encodedQuery);
+        this.logger.debug(this.lib, func, 'fields: ', fields);
+        this.logger.debug(this.lib, func, 'displayValue: ', displayValue);
+        this.logger.debug(this.lib, func, 'refLinks: ', refLinks);
+        
         displayValue = displayValue || false;
         refLinks = refLinks === undefined ? true : refLinks;
         fields = fields.concat(this.alwaysFields);
@@ -142,8 +148,12 @@ export class RESTClient {
         return records;
     }
 
-    async updateRecord(table: string, sys_id: string, body: object) {
-        let url = this.instanceConfig.connection.url + '/api/now/table/' + table + '/' + sys_id + "?sysparm_fields=sys_id";
+    async updateRecord(table: string, sys_id: string, body: object, fields?: Array<string>) {
+        if(!fields){
+            //to keep from updates echoing back to much info... Must pass in fields to override..
+            fields = ['sys_id'];
+        }
+        let url = `${this.instanceConfig.connection.url}/api/now/table/${table}/${sys_id}?sysparm_fields=${fields.toString()}`;
         let response = await this.put(url, body, "Updating record at url:" + url);
 
         let record: snRecord = { label: "", name: "", sys_id: "" };
@@ -156,8 +166,12 @@ export class RESTClient {
     }
 
     //unused...
-    async createRecord(table: string, body: object): Promise<snRecord> {
-        var postURL = `${this.instanceConfig.connection.url}/api/now/table/${table}`;
+    async createRecord(table: string, body: object, fields?:Array<string>): Promise<snRecord> {
+        if(!fields){
+            //to keep from creates echoing back to much info... Must pass in fields to override..
+            fields = ['sys_id'];
+        }
+        var postURL = `${this.instanceConfig.connection.url}/api/now/table/${table}?sysparm_fields=${fields.toString()}`;
         let postResponse = await this.post(postURL, body, `Creating ${table} record.`);
 
         let record: snRecord = { label: "", name: "", sys_id: "" };

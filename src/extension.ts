@@ -39,6 +39,10 @@ export function activate(context: vscode.ExtensionContext) {
     //load observers for our workspace.
     wsManager.loadObservers(instanceList);
     wsManager.loadWorkspaceInstances(instanceList);
+
+    /**
+     * @todo this is being a bit cloberry... I think this "Activate" function is being ran everytime an action is called..? hrrm...
+     */
     new TSDefinitionGenerator().loadSNTypeDefinitions(context);
 
     //check current log setting and option to reset...
