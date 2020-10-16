@@ -17,10 +17,21 @@ This is too long and you're not gonna read it? No problem. We've got some "under
 
 >__Tip:__ Everything is done through the command pallete (Ctrl+Shift+P, or CMD+Shift+P on macs). Once launching the command pallete type in SNICH to see a list of all the available commands. 
 
-# [NEW! Open File in Browser (ServiceNow)]()
+# [NEW! Save and Load TableConfig to/from sys_user_preference (ServiceNow)]()
+Now when configuring a new instance, we will reach out to the sys_user_preference table and look for a preference for you and your table config unique to that instance.
+
+## Benefits
+- When configuring a new table, will sync your entire table config to a user preference: vscode.extension.snich.table_config
+- Then, when you need to wipe out your Instance folder and start over (For any reason) you won't lose you configured tables!
+- In short... 
+    - "Setup new instance" - Checks for existing user preference and pulls config if available. If not available, creates the standard table config and syncs to your instance/preference
+    - Then when configuring new tables, we ensure to keep that sys_user_preference in sync!
+    
+
+# [Open File in Browser (ServiceNow)]()
 You can now open the Active file in ServiceNow! Will Launch your default web browser directly to the record. Passing along the application scope so you don't get that pesky prompt about switching scopes!
 
-# [NEW! OAuth "Code Flow" fully supported!]()
+# [OAuth "Code Flow" fully supported!]()
 Originally, the OAuth mechanism didn't work consistently and even more so I still had to store your **username** AND snich "saw" your **password** A security hole I honestly want nothing to do with, but understand it's a necessity in some cases (like background scripts currently).
 
 For regular SNICH usage (everything but background scripts) the Authorization Code OAuth flow is now supported!
