@@ -621,7 +621,11 @@ export class InstanceMaster {
     }
     
     setConfig(config:InstanceConfig){
-        this.config = config;
+        //using spread operator to ensure we are merging whatever was saved with the new structure. 
+        const currentConfig = this.config;
+        const newConfig = {...currentConfig, ...config};
+
+        this.config = newConfig;
     }
     
     getConfig(){
