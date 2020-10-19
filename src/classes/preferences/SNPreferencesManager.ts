@@ -60,7 +60,7 @@ export class SNPreferencesManager {
             let pref:any = prefExists[0];
             prefValue = pref.value;
         } else {
-            throw new Error('Unable to find preference data on instance!. ' + JSON.stringify(prefMap));
+            this.logger.warn(this.lib, func, 'Unable to find preference data on instance!. ' + JSON.stringify(prefMap));
         }
         this.logger.info(this.lib, func, "LEAVING");
         return prefValue;
