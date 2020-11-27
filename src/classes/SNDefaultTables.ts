@@ -128,7 +128,7 @@ export class ConfiguredTables {
                         
                         return vscode.window.showInputBox(<vscode.InputBoxOptions>{placeHolder:"Suggestions: js, html, css, txt", prompt:"Enter the file extension for Field [Type]: " + selectedField.column_label + ' [' + selectedField.internal_type + ']', ignoreFocusOut:true}).then((extension) => {
                             if(extension){
-                                extension = extension.replace(/\./g, ''); //replace any periods with nothing.
+                                extension = extension.replace(/^\./g, ''); //replace if it starts with a . (since we are adding that)
                                 tableConfig.addField(selectedField.element, selectedField.column_label, extension);
                                 this.logger.debug(this.lib, func, 'Added field to table config.', tableConfig);
                             }
