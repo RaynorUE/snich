@@ -4,9 +4,9 @@
     "displayName": "S.N.I.C.H. Canary",
     "description": "ServiceNow Integrated Code Helper - Canary. Get the latest as I build stuff ready to be tested! Provide feedback to integratenate@gmail.com",
     "icon": "images/icon-canary.png",
-    "version": "1.36.2",
+    "version": "1.37.0",
     "liveVersion": "1.1.0",
-    "canaryVersion": "1.36.2",
+    "canaryVersion": "1.37.0",
     "betaVersion": "1.0.6",
     "keywords": [
         "SNICH",
