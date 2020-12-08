@@ -173,8 +173,8 @@ export class InstancesList {
         let authOptions = <Array<SNQPItem>>[
             { label: "Basic", description: "Use basic authentication. Password stored un-encrypted.", value: "basic" },
             { label: "OAuth (Preferred)", description: "Use OAuth to authenticate. SNICH never sees your username or password.", value: "oauth-authorization_code" },
-            { label: "OAuth (Legacy)", description: "Use OAuth to authenticate. SNICH sees your PW but we do not store.", value: "oauth" },
         ];
+        //{ label: "OAuth (Legacy)", description: "Use OAuth to authenticate. SNICH sees your PW but we do not store.", value: "oauth" },
 
         let authSelection = await vscode.window.showQuickPick(authOptions, <vscode.QuickPickOptions>{ placeHolder: "Select an authentcation option", ignoreFocusOut: true });
 
@@ -532,7 +532,7 @@ export class InstanceMaster {
         }
 
         if (launchToOAuthAppRegistry.label == 'Create New') {
-            let newAppQueryParams = 'sys_id=-1&sysparm_query=type=client^redirect_url=https://localhost:62000/snich_oauth_redirect^name=VSCode%20S.N.I.C.H.%20Users^logo_url=https://github.com/RaynorUE/snich/blob/master/images/icon-sn-oauth.PNG%3Fraw=true'; //?raw=true'
+            let newAppQueryParams = 'sys_id=-1&sysparm_query=type=client^redirect_url=https://localhost:62000/snich_oauth_redirect^name=VSCode%20S.N.I.C.H.%20Users^logo_url=https://github.com/RaynorUE/snich/blob/master/images/icon-sn-oauth.PNG%3Fraw=true&sysparm_transaction_scope=global'; //?raw=true'
             let appRegURL = vscode.Uri.parse(`${this.getURL()}/oauth_entity.do?${newAppQueryParams}`, true);
             vscode.env.openExternal(appRegURL)
         }
