@@ -335,7 +335,6 @@ export function activate(context: vscode.ExtensionContext) {
     /**
      * Table configuration
      */
-    
     vscode.commands.registerCommand('snich.instance.setup.new_table', async () => {
         let logger = new SystemLogHelper();
         let func = 'snich.instance.setup.new_table';
@@ -356,12 +355,32 @@ export function activate(context: vscode.ExtensionContext) {
     });
     
     /**
+     * Load all files from a given "Package". This primarily for 'global' scoped apps.
+     */
+    vscode.commands.registerCommand('snich.sys_package.load.all', async () => {
+        let func = 'sys_package_load.all';
+        logger.info(lib, func, 'START');
+
+        if(!instanceList.atLeastOneConfigured()){
+            return;
+        }
+
+        let fp = new SNFilePuller(instanceList, logger);
+        await fp.pullAllPackageFiles();
+        setTimeout(function(){
+            //faking it for now. Need to fix "async function in tableData for loop..."
+            snichOutput.appendLine('All Package files have been loaded. You may need to refresh your workspace file/folder list.');
+        }, 4000);
+
+    });
+   
+
+    /**
      * Load all application files based on application selection. 
      */
-    
 	vscode.commands.registerCommand('snich.application.load.all', async () => {
         let func = 'application.load.all';
-        logger.info(lib, func, 'START', );
+        logger.info(lib, func, 'START');
         
         if(!instanceList.atLeastOneConfigured()){
             return;
@@ -388,7 +407,7 @@ export function activate(context: vscode.ExtensionContext) {
 	vscode.commands.registerCommand('snich.instance.pull_record', async (folder) =>{
 		let logger = new SystemLogHelper();
 		let func = 'instance.pull_record';
-        logger.info(lib, func, 'START', );
+        logger.info(lib, func, 'START');
         if(!instanceList.atLeastOneConfigured()){
             return;
         }
