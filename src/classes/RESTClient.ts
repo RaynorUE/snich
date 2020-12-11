@@ -336,7 +336,7 @@ export class RESTClient {
         return response;
     }
 
-    private async get(url: string, progressMessage: string) {
+    async get(url: string, progressMessage: string) {
         let func = "get";
         this.logger.info(this.lib, func, 'START');
         if (this.progressMessage) {

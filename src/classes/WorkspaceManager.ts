@@ -205,7 +205,7 @@ export class WorkspaceManager {
     * @param record - The record details to create. 
     * @param openFile  - Open file or not. Default: True
     */
-    async createSyncedFile(instance: InstanceMaster, table: TableConfig, record: any, openFile?: boolean) {
+    async createSyncedFile(instance: InstanceMaster, table: TableConfig, record: any, openFile?: boolean, scopeNameField?: string, scopeIdField?: string) {
         let func = 'createSyncedFile';
         this.logger.info(this.lib, func, 'START', { instanceMaster: instance, tableConfig: table, snRecord: record });
 
@@ -215,7 +215,15 @@ export class WorkspaceManager {
             openFile = true;
         }
 
-        let appName = record['sys_scope.name'] + ' (' + record['sys_scope.scope'] + ')';
+        if(!scopeNameField){
+            scopeNameField = 'sys_scope.name';
+        }
+
+        if(!scopeIdField){
+            scopeIdField = 'sys_scope.scope';
+        }
+
+        let appName = record[scopeNameField] + ' (' + record[scopeIdField] + ')';
         let tableName = table.name;
         let multiFile = false;
         let config = instance.getConfig();
