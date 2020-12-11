@@ -319,7 +319,7 @@ export class InstanceMaster {
     setName(name: string) {
         let func = 'setName';
         this.logger.info(this.lib, func, 'START',);
-        this.config.name = name;
+        this.config.name = name.replace(':', '_');
 
         this.logger.info(this.lib, func, 'END');
     }
