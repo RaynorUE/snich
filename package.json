@@ -4,9 +4,9 @@
     "displayName": "S.N.I.C.H. Canary",
     "description": "ServiceNow Integrated Code Helper - Canary. Get the latest as I build stuff ready to be tested! Provide feedback to integratenate@gmail.com",
     "icon": "images/icon-canary.png",
-    "version": "1.41.0",
+    "version": "1.41.3",
     "liveVersion": "1.1.0",
-    "canaryVersion": "1.41.0",
+    "canaryVersion": "1.41.3",
     "betaVersion": "1.0.6",
     "keywords": [
         "SNICH",
@@ -188,10 +188,13 @@
     "devDependencies": {
         "@types/glob": "^7.1.1",
         "@types/mocha": "^7.0.2",
+        "@types/needle": "^2.0.4",
         "@types/node": "^13.11.0",
         "@types/request": "^2.48.5",
+        "@types/request-promise-native": "^1.0.17",
         "@types/uuid": "^8.0.0",
         "@types/vscode": "^1.45.1",
+        "@types/xml2js": "^0.4.5",
         "@typescript-eslint/eslint-plugin": "^2.30.0",
         "@typescript-eslint/parser": "^2.30.0",
         "eslint": "^6.8.0",
@@ -201,11 +204,8 @@
         "ts-loader": "^7.0.5",
         "typescript": "^3.9.3",
         "vscode-test": "^1.4.0",
-        "webpack": "^4.43.0",
-        "webpack-cli": "^3.3.11",
-        "@types/needle": "^2.0.4",
-        "@types/request-promise-native": "^1.0.17",
-        "@types/xml2js": "^0.4.5"
+        "webpack": "^5.51.1",
+        "webpack-cli": "^3.3.11"
     },
     "dependencies": {
         "http": "0.0.1-security",
