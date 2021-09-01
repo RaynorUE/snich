@@ -6,6 +6,7 @@ import * as vscode from 'vscode';
 import { WorkspaceManager } from "./WorkspaceManager";
 
 import { snichOutput } from '../extension';
+import { URLSearchParams } from "url";
 
 export class SNFilePuller {
 
@@ -263,18 +264,34 @@ export class SNFilePuller {
         //setup our rest client and grab the available sys_package records.
         client = new RESTClient(selectedInstance);
         
-        let packageRecQuery = `active=true^sys_package.sys_class_name!=sys_store_app`;
-        packageRecQuery += `^ORsys_package.sys_class_name=NULL^sys_package.sys_class_name!=sys_app`;
-        packageRecQuery += `^ORsys_package.sys_class_name=NULL^sys_package.name!=Global`;
-        packageRecQuery += `^ORsys_package.name=NULL`;
+        
+
+        let packageRecQuery = [
+            `sys_package.sys_class_name!=sys_store_app`,
+            `sys_package.sys_class_name=NULL^sys_package.name!=Global`,
+            `sys_package.name=NULL`
+        ];
+        
+
+        var fullQuery = [
+            `active=true`,
+            `sys_package.nameISNOTEMPTY`,
+            packageRecQuery.join('^OR')
+        ];
+
         
         //let appRecords = await client.getRecords('sys_package', packageRecQuery, ['name', 'source']);
         
         //its rough, but we need to use the /stats call to grab all the unique application files.. since sys_package is not accessible via web services /facepalm
 
         var packageQueryURL = selectedInstance.getURL() + '/api/now/stats/sys_metadata';
-        packageQueryURL += '?sysparm_query=sys_scope%3Dglobal%5Esys_package.nameISNOTEMPTY^' + packageRecQuery + '&sysparm_count=true&sysparm_group_by=sys_package.source,sys_package&sysparm_display_value=all'
-        var packageResult = await client.get(packageQueryURL, 'Retrieving Sys_package list.');
+        var urlParams = new URLSearchParams();
+        urlParams.append('sysparm_query', fullQuery.join('^'));
+        urlParams.append('sysparm_count', 'true');
+        urlParams.append('sysparm_group_by', 'sys_package.source,sys_package'),
+        urlParams.append('sysparm_display_value', 'all');
+
+        var packageResult = await client.get(packageQueryURL + '?' + urlParams.toString(), 'Retrieving Sys_package list.');
 
         if(!packageResult || !packageResult.result){
             vscode.window.showWarningMessage('Load all package files aborted. Did not find any packages for the selected instance.');
