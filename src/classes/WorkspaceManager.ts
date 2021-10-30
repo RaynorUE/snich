@@ -335,7 +335,7 @@ export class WorkspaceManager {
         if (!activeEditor) {
             vscode.window.showWarningMessage('No actived text editor to compare against server file.');
             return new Promise((resolve, reject) => {
-                resolve();
+                resolve([]);
             }).then(() => { });
         }
 
@@ -409,7 +409,7 @@ export class WorkspaceManager {
                     fs.copyFileSync(currentFSPath, dotOldPath);
                 }
                 this.logger.info(this.lib, func, "END");
-                resolve();
+                resolve([]);
             }));
 
             this.logger.info(this.lib, func, 'END');

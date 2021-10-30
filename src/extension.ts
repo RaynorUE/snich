@@ -11,6 +11,7 @@ import * as xml2js from 'xml2js';
 import { SNQPItem } from './myTypes/globals';
 import { WebBrowser } from './classes/WebBrowser';
 import { ExtensionMgmt } from './classes/ExtensionMgmt';
+import { ExceptionFileOpener } from './classes/ExceptionFileOpener';
  
 export const snichOutput = vscode.window.createOutputChannel('S.N.I.C.H.');
 
@@ -55,6 +56,9 @@ export function activate(context: vscode.ExtensionContext) {
         }
     }(logger));
 
+    vscode.commands.registerCommand('snich.open_file_by.sn_file_path', async() =>{
+        new ExceptionFileOpener().openSNFilePath();
+    });
     
     /**
      * Setup New Instance
