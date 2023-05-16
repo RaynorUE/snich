@@ -1,4 +1,3 @@
-//https://github.com/tomas/needle
 import * as vscode from 'vscode';
 import { SystemLogHelper } from './LogHelper';
 import { InstanceMaster, InstanceConfig } from './InstanceConfigManager';
@@ -325,7 +324,7 @@ export class RESTClient {
             this.logger.debug(this.lib, func, "About to make evalScript call with:", { BSUrl: BSUrl, evalOptions: evalOptions });
             try {
                 response = await request.post(BSUrl, evalOptions);
-            } catch (e) {
+            } catch (e:any) {
                 response = e;
             }
 
