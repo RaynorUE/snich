@@ -335,6 +335,7 @@ export class TableConfig{
     fields:Array<snTableField> = [];
     children:Array<TableConfig> = [];
     additional_display_fields:Array<string> = [];
+    group_by:string[] = [];
     
     constructor(name:string){
         this.name = name;
@@ -346,6 +347,10 @@ export class TableConfig{
     
     setDisplayField(fieldName:string){
         this.display_field = fieldName;
+    }
+
+    addGroupBy(fieldName: string){
+        this.group_by.push(fieldName);
     }
 
     addDisplayField(fieldName:string){
