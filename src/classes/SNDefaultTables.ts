@@ -220,6 +220,7 @@ export class ConfiguredTables {
         sys_script.setDisplayField('name');
         sys_script.addDisplayField('when');
         sys_script.addField('script', 'Script', 'js');
+        sys_script.addGroupBy('collection');
         this.addTable(sys_script);
         
         //==== sp_widget ========
@@ -239,6 +240,7 @@ export class ConfiguredTables {
         let sp_angular_provider = new TableConfig('sp_angular_provider');
         sp_angular_provider.setDisplayField('name');
         sp_angular_provider.addDisplayField('type');
+        sp_angular_provider.addGroupBy('type');
         sp_angular_provider.addField('script', 'Client Script', 'js');
         this.addTable(sp_angular_provider);
 
@@ -276,6 +278,7 @@ export class ConfiguredTables {
         sys_ui_action.addDisplayField('table');
         sys_ui_action.addDisplayField('sys_id');
         sys_ui_action.addField('script', 'Script', 'js');
+        sys_ui_action.addGroupBy('table');
         this.addTable(sys_ui_action);
 
         //==== Client Script =======
@@ -284,6 +287,7 @@ export class ConfiguredTables {
         sys_script_client.addDisplayField('table');
         sys_script_client.addDisplayField('type');
         sys_script_client.addField('script', 'Script', 'js');
+        sys_script_client.addGroupBy('table');
         this.addTable(sys_script_client);
         
         //==== Scripted REST Resource =======
@@ -291,6 +295,8 @@ export class ConfiguredTables {
         sys_ws_operation.setDisplayField('name');
         sys_ws_operation.addDisplayField('http_method');
         sys_ws_operation.addField('operation_script', 'Script', 'js');
+        sys_ws_operation.addGroupBy('web_service_definition');
+        sys_ws_operation.addGroupBy('http_method');
         this.addTable(sys_ws_operation);
 
         //==== Fix Scripts =======
@@ -306,13 +312,14 @@ export class ConfiguredTables {
         this.addTable(sysauto_script);
 
         //==== Record Producer =======
-        let sys_cat_item_producer = new TableConfig('sysauto_script');
+        let sys_cat_item_producer = new TableConfig('sc_cat_item_producer');
         sys_cat_item_producer.setDisplayField('name');
+        sys_cat_item_producer.addGroupBy('table_name');
         sys_cat_item_producer.addField('script', 'Script', 'js');
         this.addTable(sys_cat_item_producer);
         
         //==== MID Server Script Include =======
-        let ecc_agent_script_include = new TableConfig('sysauto_script');
+        let ecc_agent_script_include = new TableConfig('ecc_agent_script_include');
         ecc_agent_script_include.setDisplayField('name');
         ecc_agent_script_include.addField('script', 'Script', 'js');
         this.addTable(ecc_agent_script_include);
