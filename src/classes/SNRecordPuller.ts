@@ -210,6 +210,8 @@ export class SNFilePuller {
             let fields = <Array<string>>[];
             fields.push(tableConfig.display_field);
             fields = fields.concat(tableConfig.additional_display_fields);
+            fields = fields.concat(tableConfig.getGroupBy());
+            this.logger.debug(this.lib, func, "group by: " + tableConfig.getGroupBy());
             tableConfig.fields.forEach((field) => {
                 fields.push(field.name);
             });
@@ -233,7 +235,7 @@ export class SNFilePuller {
                 });
 
                 await Promise.all(tableRecFileRequests);
-                snichOutput.appendLine(`Created ${tableRecs.length} files for: ${tableConfig.label} [${tableConfig.name}]`);
+                snichOutput.appendLine(`Created ${tableRecs.length} files for: ${tableConfig.label} [${tableConfig.name}] | [${tableConfig.getGroupBy()}]`);
             }
 
             //this.logger.debug(this.lib, func, "About to write synced files!:", selectedInstance);

@@ -238,7 +238,7 @@ export class InstancesList {
                     if (!existingTable.name) {
                         this.logger.debug(this.lib, func, 'Typescript Definition table does not exist, creating! ' + tableRec.name);
                         var tConfig = new TableConfig(tableRec.name);
-                        tConfig.addDisplayField('name');
+                        tConfig.addGroupBy('generated_from_table');
                         tConfig.addField('definition', 'Definition', 'd.ts');
                         tConfig.setLabel('TypeScript Definition');
                         instanceMaster.tableConfig.addTable(tConfig);

@@ -1,5 +1,5 @@
 import { snTableField, SNQPItem, snRecord } from "../myTypes/globals";
-import { InstanceMaster} from "./InstanceConfigManager";
+import { InstanceMaster } from "./InstanceConfigManager";
 import { RESTClient } from "./RESTClient";
 import * as vscode from "vscode";
 import { SystemLogHelper } from "./LogHelper";
@@ -7,30 +7,30 @@ import { WorkspaceManager } from "./WorkspaceManager";
 
 
 export class ConfiguredTables {
-    tables:Array<TableConfig> = [];
-    tableNameList:Array<string> = [];
-    private logger:SystemLogHelper;
-    private lib:string = 'SyncedTableManager';
-    
-    constructor(tableData?:ConfiguredTables, logger?:SystemLogHelper){
+    tables: Array<TableConfig> = [];
+    tableNameList: Array<string> = [];
+    private logger: SystemLogHelper;
+    private lib: string = 'SyncedTableManager';
+
+    constructor(tableData?: ConfiguredTables, logger?: SystemLogHelper) {
         this.logger = logger || new SystemLogHelper();
         let func = 'constructor';
         this.logger.info(this.lib, func, 'START');
-        
-        if(tableData){
+
+        if (tableData) {
             this.setFromConfigFile(tableData);
         } else {
             this.setupCommon();
         }
-        
+
         this.logger.info(this.lib, func, 'END');
     }
-    
+
     /**
     * Configure a new Table to be synced for a given instance.
     * @return Returns modified instance that was selected. 
     */
-    async syncNew(selectedInstance:InstanceMaster){
+    async syncNew(selectedInstance: InstanceMaster) {
         let func = 'syncNew';
         this.logger.info(this.lib, func, 'START');
         let client = <RESTClient>{};
@@ -39,24 +39,24 @@ export class ConfiguredTables {
         //query instance for tables extending sys_metadata
         client = new RESTClient(selectedInstance);
         let encodedQuery = 'super_class.nameINSTANCEOFsys_metadata';
-        let tableRecs = await client.getRecords('sys_db_object', encodedQuery, ['name','label']);
-        if(tableRecs.length === 0){
+        let tableRecs = await client.getRecords('sys_db_object', encodedQuery, ['name', 'label']);
+        if (tableRecs.length === 0) {
             vscode.window.showWarningMessage('Attempted to get tables from instance, but no tables extending sys_metadata were found. See logs for details.');
             return undefined;
         }
 
         //have them select a table..
-        let tableQPItems = <Array<SNQPItem>>[];
-        tableRecs.forEach((table:snRecord) =>{
+        let tableQPItems: SNQPItem[] = [];
+        tableRecs.forEach((table: snRecord) => {
             let label = table.label;
-            if(selectedInstance.tableConfig.tableNameList.indexOf(table.name) > -1){
+            if (selectedInstance.tableConfig.tableNameList.indexOf(table.name) > -1) {
                 label = table.label + ' |=> Table Config Exists. Continuing Will Overwrite Existing Configuration.';
             }
-            tableQPItems.push({"label":label, "detail": table.name + ' - ' + table.sys_scope, value:table});
+            tableQPItems.push({ "label": label, "detail": table.name + ' - ' + table.sys_scope, value: table });
         });
 
-        let selectedTable = await vscode.window.showQuickPick(tableQPItems, {placeHolder:"Select a table to configure for syncing", ignoreFocusOut:true, matchOnDetail:true, matchOnDescription:true});
-        if(!selectedTable){
+        let selectedTable = await vscode.window.showQuickPick(tableQPItems, { placeHolder: "Select a table to configure for syncing", ignoreFocusOut: true, matchOnDetail: true, matchOnDescription: true });
+        if (!selectedTable) {
             vscode.window.showWarningMessage('No table selectd. Aborting new table config.');
             return false;
         }
@@ -65,69 +65,80 @@ export class ConfiguredTables {
         tableConfig.setLabel(selectedTable.value.label);
         let dicRecs = await this.getTableFields(tableConfig.name, client);
 
-        if(!dicRecs.length){
+        if (!dicRecs.length) {
             vscode.window.showWarningMessage(`Attempted to get dictionary entries for table [${tableConfig.name}] and none were found! Aborting table configuration.`);
             return;
         }
-        
+
         this.logger.info(this.lib, func, "Dictionary records received. Building QPItems");
         let dicQPItems = <Array<SNQPItem>>[];
         let missingNameField = true;
         let primaryDisplayField = 'name';
-        dicRecs.forEach((dic:snRecord) => {
-            if(dic.element === 'name'){
+        dicRecs.forEach((dic: snRecord) => {
+            if (dic.element === 'name') {
                 missingNameField = false;
             }
-            dicQPItems.push({"label":dic.column_label || "", "detail": dic.element + ' - ' + dic.internal_type, value:dic});
+            dicQPItems.push({ "label": dic.column_label || "", "detail": dic.element + ' - ' + dic.internal_type, value: dic });
         });
 
-            
+
         let settings = vscode.workspace.getConfiguration();
         let multiFieldNameSep = settings.get('snich.syncedRecordNameSeparator') || "^";
         let alwaysAskPrimField = settings.get('snich.alwaysAskPrimaryDisplayField') || false;
+        let selectedPrimeDisplayField: SNQPItem | undefined = dicQPItems.filter((item) => item.value.element == primaryDisplayField)[0];
 
-        if(alwaysAskPrimField || missingNameField){
-             let selectedPrimeDisplayField:any = await vscode.window.showQuickPick(dicQPItems, <vscode.QuickPickOptions>{ placeHolder:"Select field to use for file name.", ignoreFocusOut:true, matchOnDetail:true, matchOnDescription:true});
-             if(!selectedPrimeDisplayField){
+        if (alwaysAskPrimField || missingNameField) {
+            selectedPrimeDisplayField = await vscode.window.showQuickPick(dicQPItems, <vscode.QuickPickOptions>{ placeHolder: "Select field to use for file name.", ignoreFocusOut: true, matchOnDetail: true, matchOnDescription: true });
+            if (!selectedPrimeDisplayField) {
                 vscode.window.showWarningMessage('No Field selected as primary for file name generation. Aborting Table configuration');
-                 return;
-             }
+                return;
+            }
 
-             primaryDisplayField = selectedPrimeDisplayField.value.element;
+            primaryDisplayField = selectedPrimeDisplayField.value.element;
         }
 
         tableConfig.setDisplayField(primaryDisplayField);
-        
-        let selectedAdditionalDisplayFields:any = await vscode.window.showQuickPick(dicQPItems, <vscode.QuickPickOptions>{ placeHolder:"Additional fields for file name generation. Will use seperator in settings (currently: " + multiFieldNameSep + ")", ignoreFocusOut:true, matchOnDetail:true, matchOnDescription:true, canPickMany:true});
-        let selectedSyncFields:any = await vscode.window.showQuickPick(dicQPItems, <vscode.QuickPickOptions>{placeHolder:"Select all fields of data you want to sync.", ignoreFocusOut:true, matchOnDetail:true, matchOnDescription:true, canPickMany:true});
 
-        if(selectedAdditionalDisplayFields && selectedAdditionalDisplayFields.length > 0){
-            selectedAdditionalDisplayFields.forEach((selectedOption:SNQPItem) => {
-                let selectedField = selectedOption.value;
-                tableConfig.addDisplayField(selectedField.element);
+        let selectedAdditionalDisplayFields = await this.pickField("Field for file name generation. Will use seperator in settings (currently: " + multiFieldNameSep + ")", dicQPItems, [selectedPrimeDisplayField], false, true);
+        let groupByfields = await this.pickField("Field to group these records by. Will create subfolders, in order, based on selections.", dicQPItems, [], true, true);
+        let selectedSyncFields = await this.pickField("Field of data you want to sync.", dicQPItems, [], true, true);
+        
+
+        if (selectedAdditionalDisplayFields && selectedAdditionalDisplayFields.length > 0) {
+            selectedAdditionalDisplayFields.forEach((selectedOption: SNQPItem) => {
+                if (selectedOption.value.element != primaryDisplayField) {
+                    let selectedField = selectedOption.value;
+                    tableConfig.addDisplayField(selectedField.element);
+                }
             });
         }
 
-        if(!selectedSyncFields || selectedSyncFields.length === 0){
+        if (!selectedSyncFields || selectedSyncFields.length === 0) {
             vscode.window.showWarningMessage('No data fields to syncselected. Aborting Table configuration');
             return;
         }
-        
+
+        if(groupByfields && groupByfields.length > 0){
+            groupByfields.forEach((selectedItem) => {
+                tableConfig.addGroupBy(selectedItem.value.element);
+            })
+        }
+
         this.logger.info(this.lib, func, "Selected fields:", selectedSyncFields);
-        if(selectedSyncFields.length > 0){
-            let extensionAsker = async (selectedPosition:number) => {
+        if (selectedSyncFields.length > 0) {
+            let extensionAsker = async (selectedPosition: number) => {
                 let func = 'extensionAsker';
-                
-                this.logger.info(this.lib,func, 'START', {position:selectedPosition, fieldsLength:selectedSyncFields.length});
-                
-                return new Promise((resolve, reject) =>{
-                    if(selectedPosition < selectedSyncFields.length){
+
+                this.logger.info(this.lib, func, 'START', { position: selectedPosition, fieldsLength: selectedSyncFields.length });
+
+                return new Promise((resolve, reject) => {
+                    if (selectedPosition < selectedSyncFields.length) {
                         let selectedField = selectedSyncFields[selectedPosition].value;
-                        
+
                         this.logger.debug(this.lib, func, "Selected Field:", selectedField);
-                        
-                        return vscode.window.showInputBox(<vscode.InputBoxOptions>{placeHolder:"Suggestions: js, html, css, txt", prompt:"Enter the file extension for Field [Type]: " + selectedField.column_label + ' [' + selectedField.internal_type + ']', ignoreFocusOut:true}).then((extension) => {
-                            if(extension){
+
+                        return vscode.window.showInputBox(<vscode.InputBoxOptions>{ placeHolder: "Suggestions: js, html, css, txt", prompt: "Enter the file extension for Field [Type]: " + selectedField.column_label + ' [' + selectedField.internal_type + ']', ignoreFocusOut: true }).then((extension) => {
+                            if (extension) {
                                 extension = extension.replace(/^\./g, ''); //replace if it starts with a . (since we are adding that)
                                 tableConfig.addField(selectedField.element, selectedField.column_label, extension);
                                 this.logger.debug(this.lib, func, 'Added field to table config.', tableConfig);
@@ -137,7 +148,7 @@ export class ConfiguredTables {
                             resolve(extensionAsker(selectedPosition));
                         });
                     } else {
-                        this.logger.info(this.lib, func, 'No more fields to get extensions for!');                        
+                        this.logger.info(this.lib, func, 'No more fields to get extensions for!');
                         resolve(true);
                     }
                 });
@@ -148,39 +159,77 @@ export class ConfiguredTables {
         this.addTable(tableConfig);
         let wsMgr = new WorkspaceManager(this.logger);
         wsMgr.writeTableConfig(selectedInstance);
-        vscode.window.showInformationMessage('Table added to configuration.', 'Sync New Record').then((choice) =>{
-            if(choice === "Sync New Record"){
+        vscode.window.showInformationMessage('Table added to configuration.', 'Sync New Record').then((choice) => {
+            if (choice === "Sync New Record") {
                 vscode.commands.executeCommand('snich.instance.pull_record');
             }
         });
         this.logger.info(this.lib, func, 'END');
     }
 
-    async getTableFields (tableName:String, RESTClient:RESTClient){
-        let func = 'getTableFields';
-        this.logger.info(this.lib, func, 'START', );
+    async pickField(placeHolder: string, dicQPItems: SNQPItem[], pickedItems?: SNQPItem[], firstPick = false, canPickMany = false): Promise<SNQPItem[]> {
+        let func = 'pickField';
+        this.logger.info(this.lib, func, 'START');
 
-        let tableFields:Array<any> = [];
+        if (!pickedItems) {
+            pickedItems = [];
+        }
+
+        let pickMoreFields;
+
+        if (firstPick) {
+            pickMoreFields = true;
+        } else if (canPickMany) {
+            let yesNo: SNQPItem[] = [{ label: "Yes", value: true, alwaysShow: true }, { label: "No", value: false, alwaysShow: true }]
+            var fieldsSoFar = pickedItems.map((item) => {
+                return item.value.element;
+            })
+            let pickMoreFieldsAnswer = await vscode.window.showQuickPick(yesNo, <vscode.QuickPickOptions>{ placeHolder: `Pick additional ${placeHolder}? Selected so far: [${fieldsSoFar.length > 0 ? fieldsSoFar.join(', ') : "NONE"}]`, ignoreFocusOut: true, matchOnDetail: true, matchOnDescription: true });
+            if (pickMoreFieldsAnswer) {
+                pickMoreFields = pickMoreFieldsAnswer.value;
+            }
+        }
+
+        if (pickMoreFields) {
+            let newItem = await vscode.window.showQuickPick(dicQPItems, <vscode.QuickPickOptions>{ placeHolder: `Pick ${placeHolder}`, ignoreFocusOut: true, matchOnDetail: true, matchOnDescription: true });
+            if (newItem) {
+                pickedItems.push(newItem);
+            }
+            return await this.pickField(placeHolder, dicQPItems, pickedItems, false, canPickMany);
+        }
+
+        this.logger.info(this.lib, func, 'END');
+        return pickedItems;
+
+
+
+    }
+
+    async getTableFields(tableName: String, RESTClient: RESTClient) {
+        let func = 'getTableFields';
+        this.logger.info(this.lib, func, 'START');
+
+        let tableFields: Array<any> = [];
         /**
          * @todo Need to solve this dependency on PAUtils() at some point. Not a fan of it... As not everyone has PA turned on (Depending on age of installation)
          */
-        let includeParents = "javascript:new PAUtils().getTableAncestors('"+tableName+"')";
+        let includeParents = "javascript:new PAUtils().getTableAncestors('" + tableName + "')";
         let dicQuery = 'name=' + includeParents + '^elementISNOTEMPTY^ORDERBYlabel';
-        var dicRecs = await RESTClient.getRecords('sys_dictionary', dicQuery, ['column_label','element','name', 'internal_type']);
-        
-        if(dicRecs.length === 0){
+        var dicRecs = await RESTClient.getRecords('sys_dictionary', dicQuery, ['column_label', 'element', 'name', 'internal_type']);
+
+        if (dicRecs.length === 0) {
             return tableFields;
         }
 
         this.logger.info(this.lib, func, 'END');
         return dicRecs;
-        
+
     }
 
-    getTable(tableName:String){
+    getTable(tableName: String) {
         var selectedTable = <TableConfig>{};
-        this.tables.forEach((table) =>{
-            if(table.name === tableName){
+        this.tables.forEach((table) => {
+            if (table.name === tableName) {
                 selectedTable = table;
             }
         });
@@ -188,25 +237,25 @@ export class ConfiguredTables {
         return selectedTable;
     }
 
-    addTable(table:TableConfig){
+    addTable(table: TableConfig) {
         this.tableNameList.push(table.name);
         let existingIndex = -1;
-        this.tables.forEach((existingTable, index) =>{
-            if(existingTable.name === table.name){
+        this.tables.forEach((existingTable, index) => {
+            if (existingTable.name === table.name) {
                 existingIndex = index;
             }
         });
-        if(existingIndex > -1){
+        if (existingIndex > -1) {
             this.tables[existingIndex] = table;
         } else {
             this.tables.push(table);
         }
-        
+
     }
 
-    setFromConfigFile(tableData:ConfiguredTables){
+    setFromConfigFile(tableData: ConfiguredTables) {
         this.tables = []; //clear it and use only what is in config file.
-        tableData.tables.forEach((table) =>{
+        tableData.tables.forEach((table) => {
             var config = new TableConfig(table.name);
             config.setFromConfigFile(table);
             this.tables.push(config);
@@ -214,7 +263,7 @@ export class ConfiguredTables {
         this.tableNameList = tableData.tableNameList;
     }
 
-    setupCommon(){
+    setupCommon() {
         //==== sys_script ======
         let sys_script = new TableConfig('sys_script');
         sys_script.setDisplayField('name');
@@ -222,7 +271,7 @@ export class ConfiguredTables {
         sys_script.addField('script', 'Script', 'js');
         sys_script.addGroupBy('collection');
         this.addTable(sys_script);
-        
+
         //==== sp_widget ========
         let sp_widget = new TableConfig('sp_widget');
         sp_widget.setLabel('Widget');
@@ -250,7 +299,7 @@ export class ConfiguredTables {
         sp_ng_template.addDisplayField('id');
         sp_ng_template.addField('template', 'Template', 'html');
         this.addTable(sp_ng_template);
-        
+
         //==== script include ========
 
         let sys_script_include = new TableConfig('sys_script_include');
@@ -289,7 +338,7 @@ export class ConfiguredTables {
         sys_script_client.addField('script', 'Script', 'js');
         sys_script_client.addGroupBy('table');
         this.addTable(sys_script_client);
-        
+
         //==== Scripted REST Resource =======
         let sys_ws_operation = new TableConfig('sys_ws_operation');
         sys_ws_operation.setDisplayField('name');
@@ -317,7 +366,7 @@ export class ConfiguredTables {
         sys_cat_item_producer.addGroupBy('table_name');
         sys_cat_item_producer.addField('script', 'Script', 'js');
         this.addTable(sys_cat_item_producer);
-        
+
         //==== MID Server Script Include =======
         let ecc_agent_script_include = new TableConfig('ecc_agent_script_include');
         ecc_agent_script_include.setDisplayField('name');
@@ -330,90 +379,95 @@ export class ConfiguredTables {
         sys_ui_macro.setDisplayField('name');
         sys_ui_macro.addField('xml', 'Xml', 'xml');
         this.addTable(sys_ui_macro);
-        
+
     }
-    
+
 }
 
-export class TableConfig{
-    name:string = "";
-    label:string = "";
-    display_field:string = "name";
-    fields:Array<snTableField> = [];
-    children:Array<TableConfig> = [];
-    additional_display_fields:Array<string> = [];
-    group_by:string[] = [];
-    
-    constructor(name:string){
+export class TableConfig {
+    name: string = "";
+    label: string = "";
+    display_field: string = "name";
+    fields: Array<snTableField> = [];
+    children: Array<TableConfig> = [];
+    additional_display_fields: Array<string> = [];
+    group_by: string[] = [];
+
+    constructor(name: string) {
         this.name = name;
     }
-    
-    setLabel(label:string){
+
+    setLabel(label: string) {
         this.label = label;
     }
-    
-    setDisplayField(fieldName:string){
+
+    setDisplayField(fieldName: string) {
         this.display_field = fieldName;
     }
 
-    addGroupBy(fieldName: string){
+    addGroupBy(fieldName: string) {
         this.group_by.push(fieldName);
     }
 
-    addDisplayField(fieldName:string){
-        if(!fieldName){
+    getGroupBy(){
+        return this.group_by;
+    }
+
+    addDisplayField(fieldName: string) {
+        if (!fieldName) {
             //do nothing
             return;
         }
 
         var fieldFound = false;
-        this.additional_display_fields.forEach((displayField) =>{
-            if(displayField === fieldName){
+        this.additional_display_fields.forEach((displayField) => {
+            if (displayField === fieldName) {
                 fieldFound = true;
             }
         });
-        
-        if(!fieldFound){
+
+        if (!fieldFound) {
             this.additional_display_fields.push(fieldName);
         }
     }
 
-    setAdditionalDisplayFields(fieldNames:Array<string>){
+    setAdditionalDisplayFields(fieldNames: Array<string>) {
         this.additional_display_fields = fieldNames;
     }
-    
-    addField(name:string, label:string, extension:string){
+
+    addField(name: string, label: string, extension: string) {
         this.fields.push(<snTableField>{
-            table:this.name,
+            table: this.name,
             name: name,
             label: label,
             extention: extension
         });
     }
-    
-    addChildTable(tableConfig:TableConfig){
+
+    addChildTable(tableConfig: TableConfig) {
         this.children.push(tableConfig);
     }
 
     //will get display value based on record passed in.
-    getDisplayValue(record:any){
+    getDisplayValue(record: any) {
         var dv = record[this.display_field] || "";
-        
-        if(this.additional_display_fields && this.additional_display_fields.length && this.additional_display_fields.length > 0){
+
+        if (this.additional_display_fields && this.additional_display_fields.length && this.additional_display_fields.length > 0) {
 
             let settings = vscode.workspace.getConfiguration();
             let multiFieldNameSep = settings.get('snich.syncedRecordNameSeparator') || "^";
-            this.additional_display_fields.forEach((fieldName) =>{
+            this.additional_display_fields.forEach((fieldName) => {
                 dv += multiFieldNameSep + record[fieldName];
             });
         }
         return dv;
     }
 
-    setFromConfigFile(table:any){
+    setFromConfigFile(table: any) {
         this.setLabel(table.label);
         this.setDisplayField(table.display_field);
         this.setAdditionalDisplayFields(table.additional_display_fields);
+        this.group_by = table.group_by;
         this.fields = table.fields;
         this.children = table.children;
     }

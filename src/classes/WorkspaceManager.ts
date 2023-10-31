@@ -228,6 +228,9 @@ export class WorkspaceManager {
         let multiFile = false;
         let config = instance.getConfig();
         let syncedFiles = instance.getSyncedFiles();
+        let groupBys = table.getGroupBy().map((columnName) => {
+            return record[columnName];
+        })
 
         let appPath = path.resolve(config.rootPath, this.fixPathForWindows(appName));
         let rootPath = appPath.toString();
@@ -249,6 +252,16 @@ export class WorkspaceManager {
             await fsp.mkdir(rootPath2);
         } catch (err) {
             ///do nothing 
+        }
+
+        for(let i = 0; i < groupBys.length; i++){
+            let groupBy = groupBys[i];
+            rootPath2 = path.resolve(rootPath2, this.fixPathForWindows(groupBy));
+            try {
+                await fsp.mkdir(rootPath2);
+            } catch (err) {
+                ///do nothing 
+            }
         }
 
         finalRootFolderPath = rootPath2;
