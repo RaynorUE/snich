@@ -335,7 +335,7 @@ export class WorkspaceManager {
         if (!activeEditor) {
             vscode.window.showWarningMessage('No actived text editor to compare against server file.');
             return new Promise((resolve, reject) => {
-                resolve(undefined);
+                resolve([]);
             }).then(() => { });
         }
 
@@ -409,6 +409,9 @@ export class WorkspaceManager {
                     fs.copyFileSync(currentFSPath, dotOldPath);
                 }
                 this.logger.info(this.lib, func, "END");
+                //This was in another branch to fix something here.. 73-find-by-exception-report--specificall
+                //resolve([]);
+                //Canary
                 var position0 = new vscode.Position(0,0);
                 var textRange = new vscode.Range(position0, position0);
                 resolve([new vscode.TextEdit(textRange, "")]);

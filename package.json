@@ -4,9 +4,9 @@
     "displayName": "S.N.I.C.H. Canary",
     "description": "ServiceNow Integrated Code Helper - Canary. Get the latest as I build stuff ready to be tested! Provide feedback to integratenate@gmail.com",
     "icon": "images/icon-canary.png",
-    "version": "1.42.0",
+    "version": "1.42.1",
     "liveVersion": "1.1.0",
-    "canaryVersion": "1.42.0",
+    "canaryVersion": "1.42.1",
     "betaVersion": "1.0.6",
     "keywords": [
         "SNICH",
@@ -48,6 +48,11 @@
     "main": "./dist/extension.js",
     "contributes": {
         "commands": [
+            {
+                "command": "snich.open_file_by.sn_file_path",
+                "title": "Open File by SN File Path (such as in an Exception / Error Log)",
+                "category": "SNICH"
+            },
             {
                 "command": "snich.sys_package.load.all",
                 "title": "Load all Files from SN Package",
