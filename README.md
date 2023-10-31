@@ -5,8 +5,6 @@ Hello there! This is the Canary branch of the populare SNICH VScode Extension. I
 
 <a href="https://developer.servicenow.com"><img src="https://badgen.net/badge/Supported%20ServiceNow%20Versions/Madrid%20%7C%20New York%20%7C%20Orlando%20%7C%20Paris/"/></a>
 
-<img src="https://vsmarketplacebadge.apphb.com/version-short/integrateNate.snich-canary.svg"/> <img src="https://vsmarketplacebadge.apphb.com/installs/integrateNate.snich-canary.svg
-"/> <img src="https://vsmarketplacebadge.apphb.com/rating-short/integrateNate.snich-canary.svg"/>
 
 
 # [TL;NGR]()
