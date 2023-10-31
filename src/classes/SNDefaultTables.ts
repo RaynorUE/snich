@@ -1,4 +1,4 @@
-import { snTableField, SNQPItem, snRecord } from "../myTypes/globals";
+import { snTableField, SNQPItem, snRecord, snRecordDVAll } from "../myTypes/globals";
 import { InstanceMaster } from "./InstanceConfigManager";
 import { RESTClient } from "./RESTClient";
 import * as vscode from "vscode";
@@ -7,8 +7,10 @@ import { WorkspaceManager } from "./WorkspaceManager";
 
 
 export class ConfiguredTables {
+    version: number = 2;
     tables: Array<TableConfig> = [];
     tableNameList: Array<string> = [];
+    private table_upgraded: boolean = false;
     private logger: SystemLogHelper;
     private lib: string = 'SyncedTableManager';
 
@@ -21,6 +23,7 @@ export class ConfiguredTables {
             this.setFromConfigFile(tableData);
         } else {
             this.setupCommon();
+            this.upgradeV1toV2();
         }
 
         this.logger.info(this.lib, func, 'END');
@@ -39,7 +42,7 @@ export class ConfiguredTables {
         //query instance for tables extending sys_metadata
         client = new RESTClient(selectedInstance);
         let encodedQuery = 'super_class.nameINSTANCEOFsys_metadata';
-        let tableRecs = await client.getRecords('sys_db_object', encodedQuery, ['name', 'label']);
+        let tableRecs = await client.getRecords<snRecord>('sys_db_object', encodedQuery, ['name', 'label']);
         if (tableRecs.length === 0) {
             vscode.window.showWarningMessage('Attempted to get tables from instance, but no tables extending sys_metadata were found. See logs for details.');
             return undefined;
@@ -99,10 +102,31 @@ export class ConfiguredTables {
 
         tableConfig.setDisplayField(primaryDisplayField);
 
-        let selectedAdditionalDisplayFields = await this.pickField("Field for file name generation. Will use seperator in settings (currently: " + multiFieldNameSep + ")", dicQPItems, [selectedPrimeDisplayField], false, true);
-        let groupByfields = await this.pickField("Field to group these records by. Will create subfolders, in order, based on selections.", dicQPItems, [], true, true);
-        let selectedSyncFields = await this.pickField("Field of data you want to sync.", dicQPItems, [], true, true);
-        
+        let selectedAdditionalDisplayFields = await this.pickField(
+            "Select a Field for file name generation. Will use seperator in settings (currently: " + multiFieldNameSep + ")",
+            "Would you like to select additional fields for File Name generation",
+            dicQPItems,
+            [selectedPrimeDisplayField],
+            false,
+            true
+        );
+        let groupByfields = await this.pickField(
+            "Select a Field to group these records by. Will create subfolders, in order, based on selections.",
+            "Would you like to selection additional fields to group the files into sub folders",
+            dicQPItems,
+            [],
+            false,
+            true
+        );
+        let selectedSyncFields = await this.pickField(
+            "Select a Field of data you want to sync.",
+            "Would you like to sync additional fields of data",
+            dicQPItems,
+            [],
+            true,
+            true
+        );
+
 
         if (selectedAdditionalDisplayFields && selectedAdditionalDisplayFields.length > 0) {
             selectedAdditionalDisplayFields.forEach((selectedOption: SNQPItem) => {
@@ -118,7 +142,7 @@ export class ConfiguredTables {
             return;
         }
 
-        if(groupByfields && groupByfields.length > 0){
+        if (groupByfields && groupByfields.length > 0) {
             groupByfields.forEach((selectedItem) => {
                 tableConfig.addGroupBy(selectedItem.value.element);
             })
@@ -167,7 +191,7 @@ export class ConfiguredTables {
         this.logger.info(this.lib, func, 'END');
     }
 
-    async pickField(placeHolder: string, dicQPItems: SNQPItem[], pickedItems?: SNQPItem[], firstPick = false, canPickMany = false): Promise<SNQPItem[]> {
+    async pickField(placeHolder: string, selectionAddPlaceHolder: string, dicQPItems: SNQPItem[], pickedItems?: SNQPItem[], firstPick = false, canPickMany = false): Promise<SNQPItem[]> {
         let func = 'pickField';
         this.logger.info(this.lib, func, 'START');
 
@@ -184,18 +208,18 @@ export class ConfiguredTables {
             var fieldsSoFar = pickedItems.map((item) => {
                 return item.value.element;
             })
-            let pickMoreFieldsAnswer = await vscode.window.showQuickPick(yesNo, <vscode.QuickPickOptions>{ placeHolder: `Pick additional ${placeHolder}? Selected so far: [${fieldsSoFar.length > 0 ? fieldsSoFar.join(', ') : "NONE"}]`, ignoreFocusOut: true, matchOnDetail: true, matchOnDescription: true });
+            let pickMoreFieldsAnswer = await vscode.window.showQuickPick(yesNo, <vscode.QuickPickOptions>{ placeHolder: `${selectionAddPlaceHolder}? Selected so far: [${fieldsSoFar.length > 0 ? fieldsSoFar.join(', ') : "NONE"}]`, ignoreFocusOut: true, matchOnDetail: true, matchOnDescription: true });
             if (pickMoreFieldsAnswer) {
                 pickMoreFields = pickMoreFieldsAnswer.value;
             }
         }
 
         if (pickMoreFields) {
-            let newItem = await vscode.window.showQuickPick(dicQPItems, <vscode.QuickPickOptions>{ placeHolder: `Pick ${placeHolder}`, ignoreFocusOut: true, matchOnDetail: true, matchOnDescription: true });
+            let newItem = await vscode.window.showQuickPick(dicQPItems, <vscode.QuickPickOptions>{ placeHolder: `${placeHolder}`, ignoreFocusOut: true, matchOnDetail: true, matchOnDescription: true });
             if (newItem) {
                 pickedItems.push(newItem);
             }
-            return await this.pickField(placeHolder, dicQPItems, pickedItems, false, canPickMany);
+            return await this.pickField(placeHolder, selectionAddPlaceHolder, dicQPItems, pickedItems, false, canPickMany);
         }
 
         this.logger.info(this.lib, func, 'END');
@@ -226,8 +250,8 @@ export class ConfiguredTables {
 
     }
 
-    getTable(tableName: String) {
-        var selectedTable = <TableConfig>{};
+    getTable(tableName: String): TableConfig | undefined {
+        var selectedTable;
         this.tables.forEach((table) => {
             if (table.name === tableName) {
                 selectedTable = table;
@@ -255,12 +279,20 @@ export class ConfiguredTables {
 
     setFromConfigFile(tableData: ConfiguredTables) {
         this.tables = []; //clear it and use only what is in config file.
+        const oldVer = tableData.version || 0;
+
         tableData.tables.forEach((table) => {
-            var config = new TableConfig(table.name);
+            const config = new TableConfig(table.name);
             config.setFromConfigFile(table);
             this.tables.push(config);
         });
+
         this.tableNameList = tableData.tableNameList;
+
+        if (oldVer < 2) {
+            this.upgradeV1toV2();
+            this.table_upgraded = true;
+        }
     }
 
     setupCommon() {
@@ -269,7 +301,6 @@ export class ConfiguredTables {
         sys_script.setDisplayField('name');
         sys_script.addDisplayField('when');
         sys_script.addField('script', 'Script', 'js');
-        sys_script.addGroupBy('collection');
         this.addTable(sys_script);
 
         //==== sp_widget ========
@@ -289,7 +320,6 @@ export class ConfiguredTables {
         let sp_angular_provider = new TableConfig('sp_angular_provider');
         sp_angular_provider.setDisplayField('name');
         sp_angular_provider.addDisplayField('type');
-        sp_angular_provider.addGroupBy('type');
         sp_angular_provider.addField('script', 'Client Script', 'js');
         this.addTable(sp_angular_provider);
 
@@ -324,10 +354,7 @@ export class ConfiguredTables {
         //==== UI Action ========
         let sys_ui_action = new TableConfig('sys_ui_action');
         sys_ui_action.setDisplayField('name');
-        sys_ui_action.addDisplayField('table');
-        sys_ui_action.addDisplayField('sys_id');
         sys_ui_action.addField('script', 'Script', 'js');
-        sys_ui_action.addGroupBy('table');
         this.addTable(sys_ui_action);
 
         //==== Client Script =======
@@ -336,7 +363,6 @@ export class ConfiguredTables {
         sys_script_client.addDisplayField('table');
         sys_script_client.addDisplayField('type');
         sys_script_client.addField('script', 'Script', 'js');
-        sys_script_client.addGroupBy('table');
         this.addTable(sys_script_client);
 
         //==== Scripted REST Resource =======
@@ -344,8 +370,6 @@ export class ConfiguredTables {
         sys_ws_operation.setDisplayField('name');
         sys_ws_operation.addDisplayField('http_method');
         sys_ws_operation.addField('operation_script', 'Script', 'js');
-        sys_ws_operation.addGroupBy('web_service_definition');
-        sys_ws_operation.addGroupBy('http_method');
         this.addTable(sys_ws_operation);
 
         //==== Fix Scripts =======
@@ -363,7 +387,6 @@ export class ConfiguredTables {
         //==== Record Producer =======
         let sys_cat_item_producer = new TableConfig('sc_cat_item_producer');
         sys_cat_item_producer.setDisplayField('name');
-        sys_cat_item_producer.addGroupBy('table_name');
         sys_cat_item_producer.addField('script', 'Script', 'js');
         this.addTable(sys_cat_item_producer);
 
@@ -381,6 +404,19 @@ export class ConfiguredTables {
         this.addTable(sys_ui_macro);
 
     }
+
+    upgradeV1toV2() {
+        this.getTable('sys_script')?.setGroupBy(['collection', 'when', 'order']);
+        this.getTable('sp_angular_provider')?.setGroupBy(['type']);
+        var uiActionTable = this.getTable('sys_ui_action');
+        uiActionTable?.setGroupBy(['table']);
+        uiActionTable?.setAdditionalDisplayFields([]);
+        this.getTable('sys_script_client')?.setGroupBy(['table']);
+        this.getTable('sys_ws_operation')?.setGroupBy(['web_service_definition', 'http_method']);
+        this.getTable('sc_cat_item_producer')?.setGroupBy(['table_name']);
+    }
+
+    upgraded() { return this.table_upgraded }
 
 }
 
@@ -405,11 +441,15 @@ export class TableConfig {
         this.display_field = fieldName;
     }
 
+    setGroupBy(fieldList: string[]) {
+        this.group_by = fieldList;
+    }
+
     addGroupBy(fieldName: string) {
         this.group_by.push(fieldName);
     }
 
-    getGroupBy(){
+    getGroupBy() {
         return this.group_by;
     }
 
@@ -431,7 +471,7 @@ export class TableConfig {
         }
     }
 
-    setAdditionalDisplayFields(fieldNames: Array<string>) {
+    setAdditionalDisplayFields(fieldNames: string[]) {
         this.additional_display_fields = fieldNames;
     }
 
@@ -449,15 +489,15 @@ export class TableConfig {
     }
 
     //will get display value based on record passed in.
-    getDisplayValue(record: any) {
-        var dv = record[this.display_field] || "";
+    getDisplayValue(record: snRecordDVAll) {
+        var dv = record[this.display_field].display_value || "";
 
         if (this.additional_display_fields && this.additional_display_fields.length && this.additional_display_fields.length > 0) {
 
             let settings = vscode.workspace.getConfiguration();
             let multiFieldNameSep = settings.get('snich.syncedRecordNameSeparator') || "^";
             this.additional_display_fields.forEach((fieldName) => {
-                dv += multiFieldNameSep + record[fieldName];
+                dv += multiFieldNameSep + record[fieldName].display_value;
             });
         }
         return dv;

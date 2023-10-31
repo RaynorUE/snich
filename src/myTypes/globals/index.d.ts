@@ -101,6 +101,15 @@ interface snRecord {
     short_description?:string;
 }
 
+interface snRecordDVAll {
+    [key: string]: DVAllField
+}
+
+interface DVAllField {
+    value: string,
+    display_value: string
+}
+
 interface SNQPItem extends QuickPickItem {
     value:any;
 }

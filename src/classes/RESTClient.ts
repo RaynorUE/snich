@@ -96,7 +96,7 @@ export class RESTClient {
         this.useProgress = false;
     }
 
-    async getRecord(table: string, sys_id: string, fields: Array<string>, displayValue?: boolean, refLinks?: boolean): Promise<snRecord> {
+    async getRecord<T>(table: string, sys_id: string, fields: string[], displayValue?: boolean | "all", refLinks?: boolean): Promise<T | undefined> {
         displayValue = displayValue || false;
         refLinks = refLinks === undefined ? true : refLinks;
 
@@ -104,19 +104,13 @@ export class RESTClient {
 
         //setup URL
         let url = this.instanceConfig.connection.url + '/api/now/' + this.apiVersion + 'table/' + table + '/' + sys_id + '?sysparm_fields=' + fields + '&sysparm_exclude_reference_link=' + refLinks + '&sysparm_display_value=' + displayValue;
-        let record: snRecord
+        let record: T;
         let response = await this.get(url, 'Getting record. ' + table + '_' + sys_id);
-
-        if (!response || !response.result) {
-            record = { label: "", name: "", sys_id: "" };
-        } else {
-            record = response.result;
-        }
-
+        record = response.result;
         return record;
     }
 
-    async getRecords(table: string, encodedQuery: string, fields: Array<string>, displayValue?: boolean, refLinks?: boolean) {
+    async getRecords<T>(table: string, encodedQuery: string, fields: string[], displayValue?: boolean | "all", refLinks?: boolean): Promise<T[]> {
         let func = 'getRecords';
         this.logger.info(this.lib, func, 'START');
         this.logger.debug(this.lib, func, 'table: ', table);
@@ -133,7 +127,7 @@ export class RESTClient {
         url += '&sysparm_display_value=' + displayValue;
         url += '&sysparm_query=' + encodedQuery;
 
-        let records: Array<snRecord> = [];
+        let records: T[] = [];
         let response = await this.get(url, "Retrieving records based on url: " + url);
 
         if (response && response.result) {
@@ -147,7 +141,7 @@ export class RESTClient {
         return records;
     }
 
-    async updateRecord(table: string, sys_id: string, body: object, fields?: Array<string>) {
+    async updateRecord(table: string, sys_id: string, body: object, fields?: string[]) {
         if(!fields){
             //to keep from updates echoing back to much info... Must pass in fields to override..
             fields = ['sys_id'];
@@ -165,7 +159,7 @@ export class RESTClient {
     }
 
     //unused...
-    async createRecord(table: string, body: object, fields?:Array<string>): Promise<snRecord> {
+    async createRecord(table: string, body: object, fields?:string[] ): Promise<snRecord> {
         if(!fields){
             //to keep from creates echoing back to much info... Must pass in fields to override..
             fields = ['sys_id'];

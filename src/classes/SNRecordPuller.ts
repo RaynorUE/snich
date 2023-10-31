@@ -1,4 +1,4 @@
-import { snRecord, SNApplication, SNQPItem } from "../myTypes/globals";
+import { snRecord, SNApplication, SNQPItem, snRecordDVAll } from "../myTypes/globals";
 import { SystemLogHelper } from "./LogHelper";
 import { InstanceMaster, InstancesList } from "./InstanceConfigManager";
 import { RESTClient } from "./RESTClient";
@@ -41,7 +41,7 @@ export class SNFilePuller {
         */
         let configuredTables = selectedInstance.tableConfig;
         let encodedQuery = 'nameIN' + configuredTables.tableNameList;
-        let tableRecs: Array<snRecord> = await client.getRecords('sys_db_object', encodedQuery, ["name", "label"], true);
+        let tableRecs= await client.getRecords<snRecord>('sys_db_object', encodedQuery, ["name", "label"], true);
         this.logger.debug(this.lib, func, "Table records returned: ", tableRecs);
         if (!tableRecs || tableRecs.length === 0) {
             vscode.window.showWarningMessage('Attempted to get configured tables from instance and failed. Aborting sync record. See logs for detail.');
@@ -125,7 +125,7 @@ export class SNFilePuller {
                 fieldsList.push(dvField);
             });
 
-            let recordToSave = await client.getRecord(tableConfig.name, fileRec.sys_id, fieldsList);
+            let recordToSave = await client.getRecord<snRecordDVAll>(tableConfig.name, fileRec.sys_id, fieldsList, 'all');
             if (!recordToSave) {
                 vscode.window.showWarningMessage(`For some reason we couldn't grab the file to sync. Aborting sync record.`);
                 return undefined;
@@ -220,7 +220,7 @@ export class SNFilePuller {
                 encodedQuery = 'sys_scope=' + appSys;
             }
 
-            let tableRecs = await client.getRecords(tableConfig.name, encodedQuery, fields);
+            let tableRecs = await client.getRecords<snRecordDVAll>(tableConfig.name, encodedQuery, fields, 'all');
             if (!tableRecs || tableRecs.length === 0) {
                 snichOutput.appendLine(`Created 0 files for: ${tableConfig.label} [${tableConfig.name}] (No Records Found)`);
                 return false;
@@ -235,7 +235,7 @@ export class SNFilePuller {
                 });
 
                 await Promise.all(tableRecFileRequests);
-                snichOutput.appendLine(`Created ${tableRecs.length} files for: ${tableConfig.label} [${tableConfig.name}] | [${tableConfig.getGroupBy()}]`);
+                snichOutput.appendLine(`Created ${tableRecs.length} files for: ${tableConfig.label} [${tableConfig.name}]`);
             }
 
             //this.logger.debug(this.lib, func, "About to write synced files!:", selectedInstance);
@@ -360,7 +360,7 @@ export class SNFilePuller {
                         
             let encodedQuery = 'sys_package=' + appSys;
 
-            let tableRecs = await client.getRecords(tableConfig.name, encodedQuery, fields);
+            let tableRecs = await client.getRecords<snRecordDVAll>(tableConfig.name, encodedQuery, fields, 'all');
             if (!tableRecs || tableRecs.length === 0) {
                 snichOutput.appendLine(`Created 0 files for: ${tableConfig.label} [${tableConfig.name}] (No Records Found)`);
                 return false;

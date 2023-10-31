@@ -1,6 +1,6 @@
 import { RESTClient } from './RESTClient';
 import { SystemLogHelper } from './LogHelper';
-import { SNApplication, InstanceConnectionData, SNQPItem, snTableField } from '../myTypes/globals';
+import { SNApplication, InstanceConnectionData, SNQPItem, snTableField, snRecordDVAll , snRecord} from '../myTypes/globals';
 import { WorkspaceManager } from './WorkspaceManager';
 import * as vscode from 'vscode';
 import { ConfiguredTables, TableConfig } from './SNDefaultTables';
@@ -230,12 +230,12 @@ export class InstancesList {
             //Next see if there are any d_ts tables that extend application file and auto-configure them.
 
             let dTSQuery = 'nameLIKE_d_ts&super_class.name=sys_metadata';
-            let dTSTables = await client.getRecords('sys_db_object', dTSQuery, ['name', 'label']);
+            let dTSTables = await client.getRecords<snRecord>('sys_db_object', dTSQuery, ['name', 'label']);
             this.logger.debug(this.lib, func, 'TypeScript Definition Tables: ', dTSTables);
             if (dTSTables.length > 0) {
                 dTSTables.forEach((tableRec) => {
                     var existingTable = instanceMaster.tableConfig.getTable(tableRec.name);
-                    if (!existingTable.name) {
+                    if (!existingTable?.name) {
                         this.logger.debug(this.lib, func, 'Typescript Definition table does not exist, creating! ' + tableRec.name);
                         var tConfig = new TableConfig(tableRec.name);
                         tConfig.addGroupBy('generated_from_table');
@@ -740,9 +740,9 @@ export class SyncedFiles {
         return fileConfig;
     }
 
-    addFile(fsPath: string, instanceName: string, snTableField: snTableField, snRecordObj: any) {
+    addFile(fsPath: string, instanceName: string, snTableField: snTableField, snRecordObj: snRecordDVAll) {
         let syncedFile = new SNSyncedFile(fsPath, instanceName, snTableField, snRecordObj);
-        let existingFile = this.getFileBySysID(snRecordObj.sys_id, snTableField.table, snTableField.name, syncedFile);
+        let existingFile = this.getFileBySysID(snRecordObj.sys_id.value, snTableField.table, snTableField.name, syncedFile);
         if (existingFile.sys_id) {
             //updated file happened in getFileBySysID;
         } else {

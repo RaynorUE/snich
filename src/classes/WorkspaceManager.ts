@@ -7,6 +7,7 @@ import * as path from 'path';
 import * as crypto from 'crypto';
 import { ConfiguredTables, TableConfig } from "./SNDefaultTables";
 import { SNPreferencesManager } from './preferences/SNPreferencesManager';
+import { DVAllField, snRecordDVAll } from "../myTypes/globals";
 
 /**
 * This class is intended to manage the configuration, files, and folders within the workspace. 
@@ -114,6 +115,10 @@ export class WorkspaceManager {
                 this.logger.info(this.lib, func, "Checking for table config at path:", tableConfigPath);
                 if (fs.existsSync(tableConfigPath)) {
                     instance.tableConfig.setFromConfigFile(<ConfiguredTables>this.loadJSONFromFile(tableConfigPath));
+                    if(instance.tableConfig.upgraded()){
+                        this.writeTableConfig(instance);
+                    }
+                    
                 }
 
                 let syncedFilePath = path.resolve(rootPath, folder, '.vscode', this.syncedFilesName);
@@ -205,7 +210,7 @@ export class WorkspaceManager {
     * @param record - The record details to create. 
     * @param openFile  - Open file or not. Default: True
     */
-    async createSyncedFile(instance: InstanceMaster, table: TableConfig, record: any, openFile?: boolean, scopeNameField?: string, scopeIdField?: string) {
+    async createSyncedFile(instance: InstanceMaster, table: TableConfig, record: snRecordDVAll, openFile?: boolean, scopeNameField?: string, scopeIdField?: string) {
         let func = 'createSyncedFile';
         this.logger.info(this.lib, func, 'START', { instanceMaster: instance, tableConfig: table, snRecord: record });
 
@@ -223,13 +228,14 @@ export class WorkspaceManager {
             scopeIdField = 'sys_scope.scope';
         }
 
-        let appName = record[scopeNameField] + ' (' + record[scopeIdField] + ')';
+
+        let appName = record[scopeNameField].value + ' (' + record[scopeIdField].value + ')';
         let tableName = table.name;
         let multiFile = false;
         let config = instance.getConfig();
         let syncedFiles = instance.getSyncedFiles();
-        let groupBys = table.getGroupBy().map((columnName) => {
-            return record[columnName];
+        let groupBys:DVAllField[] = table.getGroupBy().map((columnName) => {
+            return record[columnName] || {display_value:"", value:""};
         })
 
         let appPath = path.resolve(config.rootPath, this.fixPathForWindows(appName));
@@ -256,7 +262,13 @@ export class WorkspaceManager {
 
         for(let i = 0; i < groupBys.length; i++){
             let groupBy = groupBys[i];
-            rootPath2 = path.resolve(rootPath2, this.fixPathForWindows(groupBy));
+            let addPath = '';
+            if(groupBy.display_value == groupBy.value){
+                addPath = groupBy.display_value;
+            } else {
+                addPath = `${groupBy.display_value} [${groupBy.value}]`;
+            }
+            rootPath2 = path.resolve(rootPath2, this.fixPathForWindows(addPath));
             try {
                 await fsp.mkdir(rootPath2);
             } catch (err) {
@@ -297,7 +309,7 @@ export class WorkspaceManager {
             }
 
             let file = fileName + '.' + field.extention;
-            let content = record[field.name];
+            let content = record[field.name].value;
 
             //this.logger.debug(this.lib, func, "path before we go to create:", file);
 
