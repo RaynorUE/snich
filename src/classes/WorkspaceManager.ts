@@ -335,7 +335,7 @@ export class WorkspaceManager {
         if (!activeEditor) {
             vscode.window.showWarningMessage('No actived text editor to compare against server file.');
             return new Promise((resolve, reject) => {
-                resolve();
+                resolve(undefined);
             }).then(() => { });
         }
 
@@ -384,13 +384,13 @@ export class WorkspaceManager {
                 this.logger.info(this.lib, func, 'END');
                 return;
             }
-
+            
             willSaveEvent.waitUntil(new Promise((resolve, reject) => {
                 let func = "waitUntilPromise";
                 //copy and rename our current file so that we have a .old to compare to in our onDidSaveEvent
                 let visibleEditors = vscode.window.visibleTextEditors || [];
                 this.logger.debug(this.lib, func, "visible editors: ", visibleEditors);
-
+                
                 //See if in compare window
                 let compareWindow = this.isEditorCompareWindow(visibleEditors);
 
@@ -409,7 +409,9 @@ export class WorkspaceManager {
                     fs.copyFileSync(currentFSPath, dotOldPath);
                 }
                 this.logger.info(this.lib, func, "END");
-                resolve();
+                var position0 = new vscode.Position(0,0);
+                var textRange = new vscode.Range(position0, position0);
+                resolve([new vscode.TextEdit(textRange, "")]);
             }));
 
             this.logger.info(this.lib, func, 'END');
@@ -652,7 +654,7 @@ export class WorkspaceManager {
         return fsPath.replace(/"|\<|\>|\?|\||\/|\\|:|\*/g, '_');
     }
 
-    private isEditorCompareWindow(visibleEditors: Array<vscode.TextEditor>) {
+    private isEditorCompareWindow(visibleEditors:  readonly vscode.TextEditor[] ) {
         let isCompareWindow = false;
         visibleEditors.forEach((editor) => {
             if (editor.document.fileName.indexOf('compare_files_temp') > -1) {
