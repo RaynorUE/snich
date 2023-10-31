@@ -250,8 +250,8 @@ export class ConfiguredTables {
 
     }
 
-    getTable(tableName: String): TableConfig | undefined {
-        var selectedTable;
+    getTable(tableName: String): TableConfig {
+        var selectedTable = new TableConfig('');
         this.tables.forEach((table) => {
             if (table.name === tableName) {
                 selectedTable = table;

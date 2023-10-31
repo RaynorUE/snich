@@ -63,7 +63,7 @@ export class SNFilePuller {
 
         let tableRec = tableSelection.value;
         let tableConfig = configuredTables.getTable(tableRec.name);
-        if (!tableConfig || !tableConfig.name) {
+        if (tableConfig == undefined) {
             vscode.window.showErrorMessage('Sync Record aborted. For some reason we did not find the selected table in the instance tables.. Weird. Try re-configuring the table you are trying to sync a record for.');
             return undefined;
         }

@@ -684,13 +684,13 @@ export class SNSyncedFile {
     sys_scope: string = "";
     sys_package: string = "";
 
-    constructor(fsPath: string, instanceName: string, snTableField: snTableField, snRecordObj: any) {
+    constructor(fsPath: string, instanceName: string, snTableField: snTableField, snRecordObj: snRecordDVAll) {
         this.fsPath = fsPath + "";
         this.table = snTableField.table + "";
-        this.sys_id = snRecordObj.sys_id + "";
+        this.sys_id = snRecordObj.sys_id.value + "";
         this.content_field = snTableField.name + "";
-        this.sys_scope = snRecordObj['sys_scope.scope'] + "";
-        this.sys_package = snRecordObj.sys_package + "" || "";
+        this.sys_scope = snRecordObj['sys_scope.scope'].value + "";
+        this.sys_package = snRecordObj.sys_package.value + "" || "";
     }
 }
 

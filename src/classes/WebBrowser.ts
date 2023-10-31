@@ -9,7 +9,7 @@ export class WebBrowser {
 
     constructor(instance:InstanceMaster, logger?:SystemLogHelper){
         this.instance = instance;
-        if(logger && logger.info){
+        if(logger){
             this.logger = logger;
         } else {
             this.logger = new SystemLogHelper();

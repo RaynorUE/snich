@@ -35,7 +35,7 @@
         }
     ],
     "engines": {
-        "vscode": "^1.45.1"
+        "vscode": "^1.83.0"
     },
     "repository": {
         "type": "git",
@@ -46,6 +46,9 @@
         "SCM Providers"
     ],
     "main": "./dist/extension.js",
+    "activationEvents": [
+        "workspaceContains:**/snich_config.json"
+    ],
     "contributes": {
         "commands": [
             {
@@ -189,11 +192,11 @@
         "@types/request": "^2.48.8",
         "@types/request-promise-native": "^1.0.18",
         "@types/uuid": "^8.0.0",
-        "@types/vscode": "^1.78.0",
+        "@types/vscode": "^1.83.1",
         "@types/xml2js": "^0.4.11",
         "semver": "^7.3.2",
         "ts-loader": "^7.0.5",
-        "typescript": "^3.9.3",
+        "typescript": "^5.2.2",
         "webpack-cli": "^5.1.1"
     },
     "dependencies": {
