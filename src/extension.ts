@@ -57,7 +57,7 @@ export function activate(context: vscode.ExtensionContext) {
     }(logger));
 
     vscode.commands.registerCommand('snich.open_file_by.sn_file_path', async() =>{
-        new ExceptionFileOpener().openSNFilePath();
+        new ExceptionFileOpener().openSNFilePath(instanceList);
     });
     
     /**

@@ -103,16 +103,16 @@ export class ConfiguredTables {
         tableConfig.setDisplayField(primaryDisplayField);
 
         let selectedAdditionalDisplayFields = await this.pickField(
-            "Select a Field for file name generation. Will use seperator in settings (currently: " + multiFieldNameSep + ")",
-            "Would you like to select additional fields for File Name generation",
+            "Additional File Name Fields. Using separator from settings: " + multiFieldNameSep,
+            "Add more fields for File Name generation",
             dicQPItems,
             [selectedPrimeDisplayField],
             false,
             true
         );
         let groupByfields = await this.pickField(
-            "Select a Field to group these records by. Will create subfolders, in order, based on selections.",
-            "Would you like to selection additional fields to group the files into sub folders",
+            "Group records by field. Will create subfolders, in order, based on selections.",
+            "Add grouping fields?",
             dicQPItems,
             [],
             false,
@@ -120,7 +120,7 @@ export class ConfiguredTables {
         );
         let selectedSyncFields = await this.pickField(
             "Select a Field of data you want to sync.",
-            "Would you like to sync additional fields of data",
+            "Sync additional data fields",
             dicQPItems,
             [],
             true,

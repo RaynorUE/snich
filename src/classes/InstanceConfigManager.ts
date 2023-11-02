@@ -727,7 +727,7 @@ export class SyncedFiles {
     getFileBySysID(sysID: string, table: string, content_field: string, syncedFile?: SNSyncedFile) {
         let fileConfig = <SNSyncedFile>{};
         this.syncedFiles.forEach((file, index) => {
-            if (file.sys_id === sysID && file.table === table && file.content_field === content_field) {
+            if (file.sys_id == sysID && file.table == table && file.content_field == content_field) {
                 if (syncedFile) {
                     this.syncedFiles[index] = syncedFile;
                     fileConfig = file;

@@ -234,7 +234,8 @@ export class WorkspaceManager {
         let multiFile = false;
         let config = instance.getConfig();
         let syncedFiles = instance.getSyncedFiles();
-        let groupBys:DVAllField[] = table.getGroupBy().map((columnName) => {
+        let groupByFromTable = table.getGroupBy() || [];
+        let groupBys:DVAllField[] = groupByFromTable.map((columnName) => {
             return record[columnName] || {display_value:"", value:""};
         })
 
