@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
-import { InstancesList, SNSyncedFile } from './InstanceConfigManager';
+import { InstancesList } from './InstanceConfigManager';
 import { SystemLogHelper } from './LogHelper';
 
 export class ExceptionFileOpener {
