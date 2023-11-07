@@ -490,17 +490,23 @@ export class TableConfig {
 
     //will get display value based on record passed in.
     getDisplayValue(record: snRecordDVAll) {
-        var dv = record[this.display_field].display_value || "";
 
+        let dv = record[this.display_field] ? [record[this.display_field] + ""] : [];
+        if (record[this.display_field]?.display_value) {
+            dv = [record[this.display_field].display_value];
+        }
+        let settings = vscode.workspace.getConfiguration();
+        let multiFieldNameSep = settings.get('snich.syncedRecordNameSeparator') + "" || "^";
         if (this.additional_display_fields && this.additional_display_fields.length && this.additional_display_fields.length > 0) {
-
-            let settings = vscode.workspace.getConfiguration();
-            let multiFieldNameSep = settings.get('snich.syncedRecordNameSeparator') || "^";
             this.additional_display_fields.forEach((fieldName) => {
-                dv += multiFieldNameSep + record[fieldName].display_value;
+                if (record[fieldName]?.display_value) {
+                    dv.push(record[fieldName].display_value);
+                } else if (record[fieldName]) {
+                    dv.push(record[fieldName] + "");
+                }
             });
         }
-        return dv;
+        return dv.join(multiFieldNameSep);
     }
 
     setFromConfigFile(table: any) {
