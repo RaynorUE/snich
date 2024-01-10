@@ -4,9 +4,9 @@
     "displayName": "S.N.I.C.H. Canary",
     "description": "ServiceNow Integrated Code Helper - Canary. Get the latest as I build stuff ready to be tested! Provide feedback to integratenate@gmail.com",
     "icon": "images/icon-canary.png",
-    "version": "1.35.0",
+    "version": "1.42.1",
     "liveVersion": "1.1.0",
-    "canaryVersion": "1.35.0",
+    "canaryVersion": "1.42.1",
     "betaVersion": "1.0.6",
     "keywords": [
         "SNICH",
@@ -45,18 +45,19 @@
         "Other",
         "SCM Providers"
     ],
-    "activationEvents": [
-        "onCommand:snich.setup.new_instance",
-        "onCommand:snich.setup.test_connection",
-        "onCommand:snich.instance.pull_record",
-        "onCommand:snich.instance.setup.new_table",
-        "onCommand:snich.application.load.all",
-        "onCommand:snich.activeEditor.compare_with_server",
-        "workspaceContains:./**/.vscode/snich_config.json"
-    ],
     "main": "./dist/extension.js",
     "contributes": {
         "commands": [
+            {
+                "command": "snich.open_file_by.sn_file_path",
+                "title": "Open File by SN File Path (such as in an Exception / Error Log)",
+                "category": "SNICH"
+            },
+            {
+                "command": "snich.sys_package.load.all",
+                "title": "Load all Files from SN Package",
+                "category": "SNICH"
+            },
             {
                 "command": "snich.application.open_file.in.service_now",
                 "title": "Open File in Browser (ServiceNow)",
@@ -174,39 +175,30 @@
         ]
     },
     "scripts": {
-        "package": "vsce package",
-        "vscode:prepublish": "webpack --mode production",
-        "compile": "webpack --mode development && node ./prepublish-canary.js patch",
-        "watch": "webpack --mode development --watch",
-        "test-compile": "webpack --mode development --watch && node ./prepublish-canary.js patch"
+        "vscode:prepublish": "npm run package",
+        "compile": "webpack",
+        "watch": "webpack --watch",
+        "package": "webpack --mode production --devtool hidden-source-map",
+        "compile-tests": "tsc -p . --outDir out",
+        "watch-tests": "tsc -p . -w --outDir out",
+        "pretest": "npm run compile-tests && npm run compile && npm run lint",
+        "lint": "eslint src --ext ts",
+        "test": "node ./out/test/runTest.js"
     },
     "devDependencies": {
-        "@types/glob": "^7.1.1",
-        "@types/mocha": "^7.0.2",
-        "@types/node": "^13.11.0",
-        "@types/request": "^2.48.5",
+        "@types/request": "^2.48.8",
+        "@types/request-promise-native": "^1.0.18",
         "@types/uuid": "^8.0.0",
-        "@types/vscode": "^1.45.1",
-        "@typescript-eslint/eslint-plugin": "^2.30.0",
-        "@typescript-eslint/parser": "^2.30.0",
-        "eslint": "^6.8.0",
-        "glob": "^7.1.6",
-        "mocha": "^7.1.2",
+        "@types/vscode": "^1.78.0",
+        "@types/xml2js": "^0.4.11",
         "semver": "^7.3.2",
         "ts-loader": "^7.0.5",
         "typescript": "^3.9.3",
-        "vscode-test": "^1.4.0",
-        "webpack": "^4.43.0",
-        "webpack-cli": "^3.3.11",
-        "@types/needle": "^2.0.4",
-        "@types/request-promise-native": "^1.0.17",
-        "@types/xml2js": "^0.4.5"
+        "webpack-cli": "^5.1.1"
     },
     "dependencies": {
-        "http": "0.0.1-security",
-        "needle": "^2.5.0",
         "request": "^2.88.2",
-        "request-promise-native": "^1.0.8",
-        "xml2js": "^0.4.23"
+        "request-promise-native": "^1.0.9",
+        "xml2js": "^0.5.0"
     }
 }

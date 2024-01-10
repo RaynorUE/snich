@@ -367,16 +367,8 @@ export class TSDefinitionGenerator {
                     extends: 'sn_ws.RESTResponseV2'
                 },
                 {
-                    class:'gs',
-                    extends:'GlideSystem'
-                },
-                {
                     class:'SOAPResponse',
                     extends:'sn_ws.SOAPResponseV2'
-                },
-                {
-                    class:"$sp",
-                    extends:"GlideSPScriptable"
                 },
                 {
                     class:"GlideRecordSecure",
@@ -384,18 +376,29 @@ export class TSDefinitionGenerator {
                 }
             ],
 
-            client:<Array<SNClassExtensionMap>>[
+            serverConstants: [
                 {
-                    class:'g_form',
-                    extends:'GlideForm'
+                    const: 'gs',
+                    type: 'GlideSystem'
                 },
                 {
-                    class:'g_list',
-                    extends: 'GlideListV3'
+                    const: '$sp',
+                    type: 'GlideSPScriptable'
+                }
+            ],
+
+            clientConstants:<Array<any>>[
+                {
+                    const:'g_form',
+                    type:'GlideForm'
                 },
                 {
-                    class:'g_menu',
-                    extends:'GlideMenu'
+                    const:'g_list',
+                    type: 'GlideListV3'
+                },
+                {
+                    const:'g_menu',
+                    type:'GlideMenu'
                 }
             ],
             scoped:<Array<SNClassExtensionMap>>[],
@@ -407,10 +410,21 @@ export class TSDefinitionGenerator {
         extensionsMap.legacy = extensionsMap.server.concat(extensionsMap.legacy);
 
         let currentMap = extensionsMap[highType];
+        if(currentMap){
+            for(let i = 0; i < currentMap.length; i++){
+                let extendData = currentMap[i];
+                tsDefFileContent += '\n' + `declare class ${extendData.class} extends ${extendData.extends}{}`;
+            }
+        }
         
-        for(let i = 0; i < currentMap.length; i++){
-            let extendData = currentMap[i];
-            tsDefFileContent += '\n' + `declare class ${extendData.class} extends ${extendData.extends}{}`;
+        if(highType == "scoped" || highType == "legacy"){
+            extensionsMap.serverConstants.forEach((constant:any) => {
+                tsDefFileContent += '\n' + 'declare const ' + constant.const + ':' + constant.type +';'
+            });
+        } else if (highType == "client"){
+            extensionsMap.clientConstants.forEach((constant:any) => {
+                tsDefFileContent += '\n' + 'declare const ' + constant.const + ':' + constant.type +';'
+            });
         }
         
         return tsDefFileContent;
