@@ -115,10 +115,10 @@ export class WorkspaceManager {
                 this.logger.info(this.lib, func, "Checking for table config at path:", tableConfigPath);
                 if (fs.existsSync(tableConfigPath)) {
                     instance.tableConfig.setFromConfigFile(<ConfiguredTables>this.loadJSONFromFile(tableConfigPath));
-                    if(instance.tableConfig.upgraded()){
+                    if (instance.tableConfig.upgraded()) {
                         this.writeTableConfig(instance);
                     }
-                    
+
                 }
 
                 let syncedFilePath = path.resolve(rootPath, folder, '.vscode', this.syncedFilesName);
@@ -220,11 +220,11 @@ export class WorkspaceManager {
             openFile = true;
         }
 
-        if(!scopeNameField){
+        if (!scopeNameField) {
             scopeNameField = 'sys_scope.name';
         }
 
-        if(!scopeIdField){
+        if (!scopeIdField) {
             scopeIdField = 'sys_scope.scope';
         }
 
@@ -235,9 +235,11 @@ export class WorkspaceManager {
         let config = instance.getConfig();
         let syncedFiles = instance.getSyncedFiles();
         let groupByFromTable = table.getGroupBy() || [];
-        let groupBys:DVAllField[] = groupByFromTable.map((columnName) => {
-            return record[columnName] || {display_value:"", value:""};
+
+        let groupBys: DVAllField[] = groupByFromTable.map((columnName) => {
+            return record[columnName] || { display_value: "", value: "" };
         })
+        this.logger.debug(this.lib, func, "Group by fields from table config: ", groupBys);
 
         let appPath = path.resolve(config.rootPath, this.fixPathForWindows(appName));
         let rootPath = appPath.toString();
@@ -261,10 +263,10 @@ export class WorkspaceManager {
             ///do nothing 
         }
 
-        for(let i = 0; i < groupBys.length; i++){
+        for (let i = 0; i < groupBys.length; i++) {
             let groupBy = groupBys[i];
             let addPath = '';
-            if(groupBy.display_value == groupBy.value){
+            if (groupBy.display_value == groupBy.value) {
                 addPath = groupBy.display_value;
             } else {
                 addPath = `${groupBy.display_value} [${groupBy.value}]`;
@@ -410,13 +412,13 @@ export class WorkspaceManager {
                 this.logger.info(this.lib, func, 'END');
                 return;
             }
-            
+
             willSaveEvent.waitUntil(new Promise((resolve, reject) => {
                 let func = "waitUntilPromise";
                 //copy and rename our current file so that we have a .old to compare to in our onDidSaveEvent
                 let visibleEditors = vscode.window.visibleTextEditors || [];
                 this.logger.debug(this.lib, func, "visible editors: ", visibleEditors);
-                
+
                 //See if in compare window
                 let compareWindow = this.isEditorCompareWindow(visibleEditors);
 
@@ -438,7 +440,7 @@ export class WorkspaceManager {
                 //This was in another branch to fix something here.. 73-find-by-exception-report--specificall
                 //resolve([]);
                 //Canary
-                var position0 = new vscode.Position(0,0);
+                var position0 = new vscode.Position(0, 0);
                 var textRange = new vscode.Range(position0, position0);
                 resolve([new vscode.TextEdit(textRange, "")]);
             }));
@@ -683,7 +685,7 @@ export class WorkspaceManager {
         return fsPath.replace(/"|\<|\>|\?|\||\/|\\|:|\*/g, '_');
     }
 
-    private isEditorCompareWindow(visibleEditors:  readonly vscode.TextEditor[] ) {
+    private isEditorCompareWindow(visibleEditors: readonly vscode.TextEditor[]) {
         let isCompareWindow = false;
         visibleEditors.forEach((editor) => {
             if (editor.document.fileName.indexOf('compare_files_temp') > -1) {
