@@ -1,4 +1,4 @@
-import { snRecord, SNApplication, SNQPItem } from "../myTypes/globals";
+import { snRecord, SNApplication, SNQPItem, snRecordDVAll } from "../myTypes/globals";
 import { SystemLogHelper } from "./LogHelper";
 import { InstanceMaster, InstancesList } from "./InstanceConfigManager";
 import { RESTClient } from "./RESTClient";
@@ -41,7 +41,7 @@ export class SNFilePuller {
         */
         let configuredTables = selectedInstance.tableConfig;
         let encodedQuery = 'nameIN' + configuredTables.tableNameList;
-        let tableRecs: Array<snRecord> = await client.getRecords('sys_db_object', encodedQuery, ["name", "label"], true);
+        let tableRecs = await client.getRecords<snRecord>('sys_db_object', encodedQuery, ["name", "label"], true);
         this.logger.debug(this.lib, func, "Table records returned: ", tableRecs);
         if (!tableRecs || tableRecs.length === 0) {
             vscode.window.showWarningMessage('Attempted to get configured tables from instance and failed. Aborting sync record. See logs for detail.');
@@ -63,7 +63,7 @@ export class SNFilePuller {
 
         let tableRec = tableSelection.value;
         let tableConfig = configuredTables.getTable(tableRec.name);
-        if (!tableConfig || !tableConfig.name) {
+        if (tableConfig == undefined) {
             vscode.window.showErrorMessage('Sync Record aborted. For some reason we did not find the selected table in the instance tables.. Weird. Try re-configuring the table you are trying to sync a record for.');
             return undefined;
         }
@@ -125,7 +125,9 @@ export class SNFilePuller {
                 fieldsList.push(dvField);
             });
 
-            let recordToSave = await client.getRecord(tableConfig.name, fileRec.sys_id, fieldsList);
+            fieldsList = fieldsList.concat(tableConfig.getGroupBy());
+
+            let recordToSave = await client.getRecord<snRecordDVAll>(tableConfig.name, fileRec.sys_id, fieldsList, 'all');
             if (!recordToSave) {
                 vscode.window.showWarningMessage(`For some reason we couldn't grab the file to sync. Aborting sync record.`);
                 return undefined;
@@ -210,6 +212,8 @@ export class SNFilePuller {
             let fields = <Array<string>>[];
             fields.push(tableConfig.display_field);
             fields = fields.concat(tableConfig.additional_display_fields);
+            fields = fields.concat(tableConfig.getGroupBy());
+            this.logger.debug(this.lib, func, "group by: " + tableConfig.getGroupBy());
             tableConfig.fields.forEach((field) => {
                 fields.push(field.name);
             });
@@ -218,7 +222,7 @@ export class SNFilePuller {
                 encodedQuery = 'sys_scope=' + appSys;
             }
 
-            let tableRecs = await client.getRecords(tableConfig.name, encodedQuery, fields);
+            let tableRecs = await client.getRecords<snRecordDVAll>(tableConfig.name, encodedQuery, fields, 'all');
             if (!tableRecs || tableRecs.length === 0) {
                 snichOutput.appendLine(`Created 0 files for: ${tableConfig.label} [${tableConfig.name}] (No Records Found)`);
                 return false;
@@ -263,15 +267,15 @@ export class SNFilePuller {
 
         //setup our rest client and grab the available sys_package records.
         client = new RESTClient(selectedInstance);
-        
-        
+
+
 
         let packageRecQuery = [
             `sys_package.sys_class_name!=sys_store_app`,
             `sys_package.sys_class_name=NULL^sys_package.name!=Global`,
             `sys_package.name=NULL`
         ];
-        
+
 
         var fullQuery = [
             `active=true`,
@@ -279,9 +283,9 @@ export class SNFilePuller {
             packageRecQuery.join('^OR')
         ];
 
-        
+
         //let appRecords = await client.getRecords('sys_package', packageRecQuery, ['name', 'source']);
-        
+
         //its rough, but we need to use the /stats call to grab all the unique application files.. since sys_package is not accessible via web services /facepalm
 
         var packageQueryURL = selectedInstance.getURL() + '/api/now/stats/sys_metadata';
@@ -289,15 +293,15 @@ export class SNFilePuller {
         urlParams.append('sysparm_query', fullQuery.join('^'));
         urlParams.append('sysparm_count', 'true');
         urlParams.append('sysparm_group_by', 'sys_package.source,sys_package'),
-        urlParams.append('sysparm_display_value', 'all');
+            urlParams.append('sysparm_display_value', 'all');
 
         var packageResult = await client.get(packageQueryURL + '?' + urlParams.toString(), 'Retrieving Sys_package list.');
 
-        if(!packageResult || !packageResult.result){
+        if (!packageResult || !packageResult.result) {
             vscode.window.showWarningMessage('Load all package files aborted. Did not find any packages for the selected instance.');
             return;
         }
-        
+
         let appRecords = packageResult.result;
 
         let appItems = <Array<SNQPItem>>[];
@@ -307,18 +311,18 @@ export class SNFilePuller {
                 name: "",
                 source: ""
             }
-            appRec.groupby_fields.forEach((field:any) => {
-                if(field.field == 'sys_package'){
+            appRec.groupby_fields.forEach((field: any) => {
+                if (field.field == 'sys_package') {
                     appData.sys_id = field.value;
                     appData.name = field.display_value;
                 }
 
-                if(field.field == 'sys_package.source'){
+                if (field.field == 'sys_package.source') {
                     appData.source = field.value;
                 }
             })
 
-            appItems.push({ label: `${appData.name} (${appData.source})`, value: appData});
+            appItems.push({ label: `${appData.name} (${appData.source})`, value: appData });
         });
 
         let appSelected = await vscode.window.showQuickPick(appItems, { placeHolder: "Select Global Scope SN Package to retrieve files from.", ignoreFocusOut: true, matchOnDetail: true });
@@ -355,10 +359,10 @@ export class SNFilePuller {
             });
 
             fields.push('sys_package.name', 'sys_package', 'sys_package.source')
-                        
+
             let encodedQuery = 'sys_package=' + appSys;
 
-            let tableRecs = await client.getRecords(tableConfig.name, encodedQuery, fields);
+            let tableRecs = await client.getRecords<snRecordDVAll>(tableConfig.name, encodedQuery, fields, 'all');
             if (!tableRecs || tableRecs.length === 0) {
                 snichOutput.appendLine(`Created 0 files for: ${tableConfig.label} [${tableConfig.name}] (No Records Found)`);
                 return false;

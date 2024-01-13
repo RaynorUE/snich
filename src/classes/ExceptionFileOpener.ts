@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
-import { SNSyncedFile } from './InstanceConfigManager';
+import * as path from 'path';
+import { InstancesList } from './InstanceConfigManager';
 import { SystemLogHelper } from './LogHelper';
 
 export class ExceptionFileOpener {
@@ -9,50 +10,40 @@ export class ExceptionFileOpener {
         this.logger = logger || new SystemLogHelper();
     }
 
-    async openSNFilePath() {
+    async openSNFilePath(instanceList: InstancesList) {
         const snFilePath = await vscode.window.showInputBox({ ignoreFocusOut: true, prompt: `Please copy/paste an SN File Path value like 'sys_script_include.b8a6ada687baf0107bb3a86e0ebb357c.script'. Typically these patterns can be found in exception reports and reports from TPP App Review.` });
         if (!snFilePath) {
             vscode.window.showInformationMessage("Open File by table.sys_id.field aborted! No Path specified.");
             return;
         }
 
-        if (snFilePath.split('.').length < 3) {
+        const snFilePaths = snFilePath.split('.');
+        if (snFilePaths.length > 3) {
             vscode.window.showErrorMessage('Value provided is not an SN File Path. Please try again.');
+            return;
         }
-        const fs = vscode.workspace.fs;
-        const wsFolders = vscode.workspace.workspaceFolders || [];
-        const rootPath = wsFolders[0]?.uri;
 
-        const subFolders = await fs.readDirectory(rootPath);
-
-        let fileEntry:SNSyncedFile[] | undefined;
-
+        var instances = instanceList.getInstances();
+        let foundFile = false;
         loop1:
-        for (let i = 0; i < subFolders.length; i++) {
-            let folder = subFolders[i];
-            const dotVScode = await fs.readDirectory(vscode.Uri.joinPath(rootPath, folder[0], '.vscode'));
+        for (let i = 0; i < instances.length; i++) {
+            const instance = instances[i];
+            let files = instance.getSyncedFiles();
 
-            if (dotVScode) {
-                const syncedFiles = await fs.readFile(vscode.Uri.joinPath(rootPath, folder[0], '.vscode', 'snich_synced_files.json'));
-                if (syncedFiles) {
-                    var filesData = JSON.parse(syncedFiles.toString());
-                    if (filesData?.syncedFiles) {
-                        const snFilePathParts = snFilePath.split(',');
-                        const table = snFilePathParts[0];
-                        const sys_id = snFilePathParts[1];
-                        const field = snFilePathParts[2];
-
-                        let syncedFiles:SNSyncedFile[] = filesData.syncedFiles || [];
-                        fileEntry = syncedFiles.filter((fileEntry: SNSyncedFile) => fileEntry.content_field == field && fileEntry.sys_id == sys_id && fileEntry.table == table);
-                    }
-                }
+            let fileEntry = files.getFileBySysID(snFilePaths[1].trim(), snFilePaths[0].trim(), snFilePaths[2].trim());
+                if (fileEntry.fsPath) {
+                    var fileUri = vscode.Uri.file(path.resolve(fileEntry.fsPath))
+                    
+                vscode.window.showTextDocument(fileUri);
+                foundFile = true;
+                break loop1;
             }
+
         }
 
-        if(fileEntry && fileEntry.length == 1){
-            vscode.workspace.openTextDocument(vscode.Uri.parse(fileEntry[0].fsPath));
-        } else {
+        if (!foundFile) {
             vscode.window.showErrorMessage('Could not find file provided.');
         }
+
     }
 }

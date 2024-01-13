@@ -57,7 +57,7 @@ export function activate(context: vscode.ExtensionContext) {
     }(logger));
 
     vscode.commands.registerCommand('snich.open_file_by.sn_file_path', async() =>{
-        new ExceptionFileOpener().openSNFilePath();
+        new ExceptionFileOpener().openSNFilePath(instanceList);
     });
     
     /**
@@ -457,7 +457,9 @@ export function activate(context: vscode.ExtensionContext) {
     logger.info(lib, func, "We have finished registering all commands. Extension fully activated!");
 
     let instancesForMessage = instanceList.getInstances();
-    let instanceNamesForMessage = instancesForMessage.join(', ');
+    let instanceNamesForMessage = instancesForMessage.map((item) => {
+        return item.getName();
+    })
 
     vscode.window.showInformationMessage('S.N.I.C.H has been activated with the following ServiceNow Instances:\n' + instanceNamesForMessage);
     logger.info(lib, func, "END");
