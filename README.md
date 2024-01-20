@@ -1,11 +1,7 @@
-# Welcome to the Canary Build
-Hello there! This is the Canary branch of the populare SNICH VScode Extension. I cannot thank you enough for taking a risk and trying this one out!
+# Welcome to the Pre-Release Build
+Pre-release build of S.N.I.C.H.
 
 **WARNING:** This version may be unstable.
-
-<a href="https://developer.servicenow.com"><img src="https://badgen.net/badge/Supported%20ServiceNow%20Versions/Madrid%20%7C%20New York%20%7C%20Orlando%20%7C%20Paris/"/></a>
-
-
 
 # [TL;NGR]()
 This is too long and you're not gonna read it? No problem. We've got some "under 2 minute" instructional and tip videos you can find on youtube!
@@ -15,7 +11,32 @@ This is too long and you're not gonna read it? No problem. We've got some "under
 
 >__Tip:__ Everything is done through the command pallete (Ctrl+Shift+P, or CMD+Shift+P on macs). Once launching the command pallete type in SNICH to see a list of all the available commands. 
 
-# [NEW! Save and Load TableConfig to/from sys_user_preference (ServiceNow)]()
+# [NEW! Updated the Configur New Table (And modify) Question flow/process!]()
+Now when Configuring additional tables, you the system will ask you to add Name fields, grouping fields, and display fields. It will then ask if you want to add "additional fields" instead of the multi-select. This allows you the benefit of being able to "order" the fields based on the order you pick them in. Previously the multi-select style would not allow this.
+
+# [NEW! Table Configurations now support specifying Grouping / Sub folder organization!]()
+Updated the pre-configured tables to now group files into sub-folders. 
+
+## Groupings added to default tables
+The follow default tables have had "Grouping" functionality added to them. **Note** if you have configured custom tables, you will need to re-configure them.
+
+- Business Rules [sys_script]
+    - Collection\When\Order\Name  *(ex. \incident\after\100\Task State Manager)*
+- Angular Providers [sp_angular_provider]
+    - Type\Name *(ex. \Directive\addUibTabAccessibility)
+- UI Action [sys_ui_action]
+    - Table\Name *(ex. \incident\Create Change Request)
+- Client Script [sys_script_client]
+    - Table\Name *(ex. \incident\Work Notes Required)
+- Scripted REST Resource [sys_ws_operation]
+    - Scripted Rest Service\Method\Name *(ex. \FollowNotifications\POST\action)
+- Record Producer [sc_cat-item_producer]
+    - Table\Name *(ex. Incident\Report Incident)
+
+## Add your own groupings / sub-folders!
+Add your own or change the default groupings by using the command pallete command: **Configure Table (New and Update)**
+
+# [Save and Load TableConfig to/from sys_user_preference (ServiceNow)]()
 Now when configuring a new instance, we will reach out to the sys_user_preference table and look for a preference for you and your table config unique to that instance.
 
 ## Benefits
