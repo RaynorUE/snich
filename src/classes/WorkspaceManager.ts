@@ -271,7 +271,8 @@ export class WorkspaceManager {
 
 
             });
-
+            //consider testing path ends with the file extension you expected
+            //as a final fail out test that we'll actually generate a file
             processed.push({
                 name: name,
                 path: paths.join('\\')
