@@ -230,6 +230,7 @@ export class WorkspaceManager {
 
         //script include pascal case code that needs more work..
         var gr = new GlideRecord('sys_script_include');
+        //gr.addQuery('name', 'MIDPackage');
         gr.setLimit(40);
         gr.query();
 
@@ -237,21 +238,30 @@ export class WorkspaceManager {
 
         while (gr.next()) {
             var name = gr.getValue('name');
-            gs.info('Name: ' + name);
+            //gs.info('Name: ' + name);
             var matches = name.match(/(^[a-z]|[A-Z0-9])[a-z]*/g);
+            gs.info(JSON.stringify(matches));
             var singleCharMatches = [];
             var paths = [];
             var maxDepth = 2;
+            var wordLength = 4; //character threshold to be considered a individual "word" to be used for a sub-folder
             matches.forEach(function (match, $index) {
-
-                if (match.length == 1) {
+                if (matches.length == 1 || matches.length == maxDepth) {
+                    //only one entry, then it's just a file name..
+                    paths.push(name + '.js');
+                    matches.length = $index;
+                } else if (match.length == 1) {
+                    //gs.info('single character, adding to list of characters');
+                    //add single capital characters, accounting for this like VA-Utils (VAUtils), or USDMBLAHBLAH
                     singleCharMatches.push(match + '');
                 } else if (match.length > 1 && singleCharMatches.length > 0) {
+                    //until we find the next word, then join all of that together as "one word"
                     paths.push(singleCharMatches.concat([match]).join(''));
+                    singleCharMatches = [];
                 } else if (match.length > 1) {
                     paths.push(match);
-                } else {
-                    //need to take care of when it ENDS with all capital letters...
+                } else if (matches.length - 1 == $index && singleCharMatches.length > 0) {
+                    paths.push(singleCharMatches.join(''));
                 }
 
                 if (paths.length == maxDepth) {
@@ -268,7 +278,7 @@ export class WorkspaceManager {
             })
         }
 
-        gs.info(JSON.stringify(processed));
+        gs.info(JSON.stringify(processed, null, 4));
 
         let appName = record[scopeNameField].value + ' (' + record[scopeIdField].value + ')';
         let tableName = table.name;
