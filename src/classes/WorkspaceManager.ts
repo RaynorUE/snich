@@ -228,6 +228,47 @@ export class WorkspaceManager {
             scopeIdField = 'sys_scope.scope';
         }
 
+        //script include pascal case code that needs more work..
+        var gr = new GlideRecord('sys_script_include');
+        gr.setLimit(40);
+        gr.query();
+
+        var processed = [];
+
+        while (gr.next()) {
+            var name = gr.getValue('name');
+            gs.info('Name: ' + name);
+            var matches = name.match(/(^[a-z]|[A-Z0-9])[a-z]*/g);
+            var singleCharMatches = [];
+            var paths = [];
+            var maxDepth = 2;
+            matches.forEach(function (match, $index) {
+
+                if (match.length == 1) {
+                    singleCharMatches.push(match + '');
+                } else if (match.length > 1 && singleCharMatches.length > 0) {
+                    paths.push(singleCharMatches.concat([match]).join(''));
+                } else if (match.length > 1) {
+                    paths.push(match);
+                } else {
+                    //need to take care of when it ENDS with all capital letters...
+                }
+
+                if (paths.length == maxDepth) {
+                    paths.push(name + '.js');
+                    matches.length = $index;
+                }
+
+
+            });
+
+            processed.push({
+                name: name,
+                path: paths.join('\\')
+            })
+        }
+
+        gs.info(JSON.stringify(processed));
 
         let appName = record[scopeNameField].value + ' (' + record[scopeIdField].value + ')';
         let tableName = table.name;
