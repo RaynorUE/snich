@@ -242,40 +242,64 @@ export class WorkspaceManager {
             var matches = name.match(/(^[a-z]|[A-Z0-9])[a-z]*/g);
             gs.info(JSON.stringify(matches));
             var singleCharMatches = [];
+            var words = [];
             var paths = [];
-            var maxDepth = 2;
+            var maxDepth = 3;
             var wordLength = 4; //character threshold to be considered a individual "word" to be used for a sub-folder
             matches.forEach(function (match, $index) {
-                if (matches.length == 1 || matches.length == maxDepth) {
-                    //only one entry, then it's just a file name..
-                    paths.push(name + '.js');
-                    matches.length = $index;
-                } else if (match.length == 1) {
-                    //gs.info('single character, adding to list of characters');
-                    //add single capital characters, accounting for this like VA-Utils (VAUtils), or USDMBLAHBLAH
-                    singleCharMatches.push(match + '');
-                } else if (match.length > 1 && singleCharMatches.length > 0) {
-                    //until we find the next word, then join all of that together as "one word"
-                    paths.push(singleCharMatches.concat([match]).join(''));
-                    singleCharMatches = [];
-                } else if (match.length > 1) {
-                    paths.push(match);
-                } else if (matches.length - 1 == $index && singleCharMatches.length > 0) {
-                    paths.push(singleCharMatches.join(''));
+
+                //go through matches building words, then we will use the words output and maxDepth to figure out what to do next..
+
+                if (match.length == 1) {
+                    //gather singleCharacters...
+                    singleCharMatches.push(match);
+                } else if (match.length <= wordLength) {
+                    singleCharMatches = singleCharMatches.concat(match.split(''));
                 }
 
-                if (paths.length == maxDepth) {
-                    paths.push(name + '.js');
-                    matches.length = $index;
-                }
+                if (match.length > wordLength) {
+                    if (singleCharMatches.length > 0) {
+                        //treat it as a word!
+                        if (singleCharMatches.length > wordLength) {
+                            words.push(singleCharMatches.join(''))
+                        } else {
+                            words.push(singleCharMatches.join('') + match);
+                        }
+                        singleCharMatches = [];
+                    } else {
+                        words.push(match);
+                    }
 
+                } else if ($index == matches.length - 1) {
+                    //at the end, if we have single char matches, push them in as a word
+                    words.push(singleCharMatches.join(''));
+                }
 
             });
+
+
+            if (words.length <= maxDepth) {
+                paths.push(words.join('') + '.js');
+            } else if (words.length > maxDepth) {
+                words.forEach(function (word, $index) {
+                    if ($index < maxDepth) {
+                        paths.push(word);
+                    }
+                });
+                paths.push(name + '.js');
+            }
+
             //consider testing path ends with the file extension you expected
             //as a final fail out test that we'll actually generate a file
             processed.push({
+
                 name: name,
+                matches: matches,
+                words: words.join(','),
+                wordCount: words.length,
                 path: paths.join('\\')
+
+
             })
         }
 
