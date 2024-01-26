@@ -228,10 +228,12 @@ export class WorkspaceManager {
             scopeIdField = 'sys_scope.scope';
         }
 
+
         //script include pascal case code that needs more work..
         var gr = new GlideRecord('sys_script_include');
-        //gr.addQuery('name', 'MIDPackage');
-        gr.setLimit(40);
+        gr.addQuery('sys_scope', '!=', 'global');
+        gr.orderBy('sys_scope');
+        gr.setLimit(10000);
         gr.query();
 
         var processed = [];
@@ -240,42 +242,54 @@ export class WorkspaceManager {
             var name = gr.getValue('name');
             //gs.info('Name: ' + name);
             var matches = name.match(/(^[a-z]|[A-Z0-9])[a-z]*/g);
-            gs.info(JSON.stringify(matches));
+            // gs.info(JSON.stringify(matches));
             var singleCharMatches = [];
             var words = [];
             var paths = [];
-            var maxDepth = 3;
+            //allow config per app scope...
+
+            //when word length is less than depth, try to fall back a depth level... for example..
+            // - DiagramUtil.js
+            // - This would go into sys_script_include\\Diagram\\DiagramUtil.js
+            //DiagramBuilderTools.js
+            // - sys_script_include\\Diagram\\DiagramBuilder\\DiagramBuilderTools.js
+            //also need to try and maintain like "all the files in a grouping\subfolder" and if at the end it's only one file, we dump it back out
+            //to the base sys_Script_include folder or something.. or an "Other" folder..
+            var maxDepth = 1;
             var wordLength = 4; //character threshold to be considered a individual "word" to be used for a sub-folder
-            matches.forEach(function (match, $index) {
+            if (matches) {
+                matches.forEach(function (match, $index) {
 
-                //go through matches building words, then we will use the words output and maxDepth to figure out what to do next..
+                    //go through matches building words, then we will use the words output and maxDepth to figure out what to do next..
 
-                if (match.length == 1) {
-                    //gather singleCharacters...
-                    singleCharMatches.push(match);
-                } else if (match.length <= wordLength) {
-                    singleCharMatches = singleCharMatches.concat(match.split(''));
-                }
-
-                if (match.length > wordLength) {
-                    if (singleCharMatches.length > 0) {
-                        //treat it as a word!
-                        if (singleCharMatches.length > wordLength) {
-                            words.push(singleCharMatches.join(''))
-                        } else {
-                            words.push(singleCharMatches.join('') + match);
-                        }
-                        singleCharMatches = [];
-                    } else {
-                        words.push(match);
+                    if (match.length == 1) {
+                        //gather singleCharacters...
+                        singleCharMatches.push(match);
+                    } else if (match.length <= wordLength) {
+                        singleCharMatches = singleCharMatches.concat(match.split(''));
                     }
 
-                } else if ($index == matches.length - 1) {
-                    //at the end, if we have single char matches, push them in as a word
-                    words.push(singleCharMatches.join(''));
-                }
+                    if (match.length > wordLength) {
+                        if (singleCharMatches.length > 0) {
+                            //treat it as a word!
+                            if (singleCharMatches.length > wordLength) {
+                                words.push(singleCharMatches.join(''))
+                            } else {
+                                words.push(singleCharMatches.join('') + match);
+                            }
+                            singleCharMatches = [];
+                        } else {
+                            words.push(match);
+                        }
 
-            });
+                    } else if ($index == matches.length - 1) {
+                        //at the end, if we have single char matches, push them in as a word
+                        words.push(singleCharMatches.join(''));
+                    }
+
+                });
+            }
+
 
 
             if (words.length <= maxDepth) {
@@ -294,10 +308,10 @@ export class WorkspaceManager {
             processed.push({
 
                 name: name,
-                matches: matches,
-                words: words.join(','),
-                wordCount: words.length,
-                path: paths.join('\\')
+                //matches: matches,
+                //words: words.join(','),
+                // wordCount: words.length,
+                path: 'dev21889\\' + gr.sys_scope.getDisplayValue() + '\\sys_script_include\\' + paths.join('\\')
 
 
             })
