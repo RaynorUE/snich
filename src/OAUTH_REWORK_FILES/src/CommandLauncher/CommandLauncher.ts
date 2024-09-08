@@ -1,8 +1,24 @@
-import { ExtensionContext, commands, window, env, Uri } from "vscode";
-import { GenericURIHandler } from "../URIHandlers/Generic";
-import fetch, { RequestInit } from 'node-fetch';
-import { randomUUID } from "crypto";
-import { access } from "fs";
+import { ExtensionContext, commands, window, env, Uri, UriHandler } from "vscode";
+//import fetch, { RequestInit } from 'node-fetch';
+import { randomBytes } from "crypto";
+
+class MyURIHandler implements UriHandler {
+    resolve: any;
+    reject: any;
+    handleUri(uri: Uri) {
+        console.log('handled URI!', uri);
+        this.resolve();
+    }
+
+    async awaitURIResponse() {
+        return await new Promise((resolve, reject) => {
+            this.resolve = resolve;
+            this.reject = reject;
+        });
+
+
+    };
+}
 
 
 export class CommandLauncher {
@@ -26,7 +42,7 @@ export class CommandLauncher {
     }
 
     registerHelloWorld() {
-        var myURIHandler = new GenericURIHandler();
+        var myURIHandler = new MyURIHandler();
         this.context.subscriptions.push(window.registerUriHandler(myURIHandler));
 
         this.context.secrets.store('blops.integratenate', 'hello_world');
@@ -36,15 +52,15 @@ export class CommandLauncher {
             const blops = await this.context.secrets.get('blops.integratenate');
             const blops2 = await this.context.secrets.get('blops.2.integratenate');
 
-            const state = randomUUID();
-            const clientID = 'ffe0b639a2c6211084b301a204bc5738';
-            const clientSecret = 'wlxbh,P{@i';
+            const state = randomBytes(32).toString('hex');
+            const clientID = '0323ac1d4a2012102e839ea48f231770';
+            const clientSecret = 'Wh5sJ?fOcD';
             const redirectURI = 'vscode://integratenate.oauth-testing';
-            const uri = await env.asExternalUri(Uri.parse(`https://dev157962.service-now.com/oauth_auth.do?response_type=code&redirect_uri=${redirectURI}&client_id=${clientID}&state=${state}`));
+            const uri = await env.asExternalUri(Uri.parse(`http://localhost:1600/oauth_auth.do?response_type=code&redirect_uri=${redirectURI}&client_id=${clientID}&state=${state}`));
             let success = await commands.executeCommand('vscode.open', uri);
             let result = await myURIHandler.awaitURIResponse();
             console.log('Result: ', result);
-            const params = new URLSearchParams(result.query);
+            //const params = new URLSearchParams(result.query);
             console.log(params.get('code'));
 
             let snOauth = `https://dev157962.service-now.com/oauth_token.do`;
@@ -59,7 +75,7 @@ export class CommandLauncher {
 
             let dataResult = await request('https://dev157962.service-now.com/api/now/table/incident?sysparm_limit=1', {
                 method: "GET",
-                headers: {"Content-Type": "application/json", "Authorization":"Bearer " + accessToken}
+                headers: { "Content-Type": "application/json", "Authorization": "Bearer " + accessToken }
             })
 
             console.log('Data Result:', dataResult)
