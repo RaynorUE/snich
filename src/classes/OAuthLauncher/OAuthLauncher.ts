@@ -3,14 +3,14 @@ import { ExtensionContext, commands, window, env, Uri, UriHandler } from "vscode
 import { randomBytes } from "crypto";
 
 class MyURIHandler implements UriHandler {
-    resolve: any;
+    resolve: any
     reject: any;
     handleUri(uri: Uri) {
         console.log('handled URI!', uri);
-        this.resolve();
+        this.resolve(uri);
     }
 
-    async awaitURIResponse() {
+    async awaitURIResponse<T>(): Promise<T> {
         return await new Promise((resolve, reject) => {
             this.resolve = resolve;
             this.reject = reject;
@@ -48,22 +48,25 @@ export class CommandLauncher {
         this.context.secrets.store('blops.integratenate', 'hello_world');
         this.context.secrets.store('blops.2.integratenate', 'goodbye universe');
 
-        const disposable = commands.registerCommand('uri-handler-sample.start', async () => {
-            const blops = await this.context.secrets.get('blops.integratenate');
-            const blops2 = await this.context.secrets.get('blops.2.integratenate');
+        const disposable = commands.registerCommand('snich.uri-handler-sample.start', async () => {
+            //const blops = await this.context.secrets.get('blops.integratenate');
+            //const blops2 = await this.context.secrets.get('blops.2.integratenate');
 
             const state = randomBytes(32).toString('hex');
             const clientID = '0323ac1d4a2012102e839ea48f231770';
             const clientSecret = 'Wh5sJ?fOcD';
-            const redirectURI = 'vscode://integratenate.oauth-testing';
+            const redirectURI = `${env.uriScheme}://integratenate.snich-canary`;
             const uri = await env.asExternalUri(Uri.parse(`http://localhost:1600/oauth_auth.do?response_type=code&redirect_uri=${redirectURI}&client_id=${clientID}&state=${state}`));
-            let success = await commands.executeCommand('vscode.open', uri);
-            let result = await myURIHandler.awaitURIResponse();
+            await commands.executeCommand('vscode.open', uri);
+            let result = await myURIHandler.awaitURIResponse<Uri>();
             console.log('Result: ', result);
-            //const params = new URLSearchParams(result.query);
+            if (!result) {
+                throw new Error('Unable to retrieve results');
+            }
+            const params = new URLSearchParams(result.query);
             console.log(params.get('code'));
 
-            let snOauth = `https://dev157962.service-now.com/oauth_token.do`;
+            let snOauth = `http://localhost:1600/oauth_token.do`;
             let snOAuthBody = `grant_type=authorization_code&code=${params.get('code')}&redirect_uri=${redirectURI}&client_id=${clientID}&client_secret=${clientSecret}`;
 
 
@@ -73,16 +76,18 @@ export class CommandLauncher {
             console.log(fetchData);
             const accessToken = fetchData.access_token;
 
-            let dataResult = await request('https://dev157962.service-now.com/api/now/table/incident?sysparm_limit=1', {
+            let dataResult = await request('http://localhost:1600/api/now/table/incident?sysparm_limit=1', {
                 method: "GET",
                 headers: { "Content-Type": "application/json", "Authorization": "Bearer " + accessToken }
             })
-
+            await window.showInputBox({prompt:"Test"});
             console.log('Data Result:', dataResult)
             //window.showInformationMessage(`Starting to handle Uris. Open ${uri} in your browser to test.`);
         });
 
         this.context.subscriptions.push(disposable);
+
+        console.log('NATE: REGISTERED SAMPL URI HANDLER!');
     }
 }
 
