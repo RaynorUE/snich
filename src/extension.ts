@@ -13,6 +13,7 @@ import { WebBrowser } from './classes/WebBrowser';
 import { ExtensionMgmt } from './classes/ExtensionMgmt';
 import { ExceptionFileOpener } from './classes/ExceptionFileOpener';
 import { CommandLauncher } from './classes/OAuthLauncher/OAuthLauncher';
+import { test } from './classes/OAuthLauncher/test';
 
 export const snichOutput = vscode.window.createOutputChannel('S.N.I.C.H.');
 
@@ -60,6 +61,7 @@ export function activate(context: vscode.ExtensionContext) {
     const cl = new CommandLauncher(context);
 
     cl.registerCommands();
+    new test().registerOAuthTest(context);
 
     vscode.commands.registerCommand('snich.open_file_by.sn_file_path', async () => {
         new ExceptionFileOpener().openSNFilePath();

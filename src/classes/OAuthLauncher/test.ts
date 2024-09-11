@@ -1,52 +1,11 @@
-import { ExtensionContext, commands, window, env, Uri, UriHandler } from "vscode";
-//import fetch, { RequestInit } from 'node-fetch';
+import { MyURIHandler } from "./OAuthLauncher";
+import { ExtensionContext, commands, env, window, Uri } from "vscode";
 import { randomBytes } from "crypto";
 
-export class MyURIHandler implements UriHandler {
-    static resolve: any
-    static reject: any;
-    handleUri(uri: Uri) {
-        console.log('handled URI!', uri);
-        MyURIHandler.resolve(uri);
-    }
+export class test {
+    constructor() { }
 
-    static async awaitURIResponse<T>(): Promise<T> {
-        return await new Promise((resolve, reject) => {
-            MyURIHandler.resolve = resolve;
-            MyURIHandler.reject = reject;
-        });
-
-
-    };
-}
-
-
-export class CommandLauncher {
-
-    context: ExtensionContext;
-    commandsToRegister: Function[] = [];
-
-    constructor(extensionContext: ExtensionContext) {
-        this.context = extensionContext;
-    }
-
-    registerCommands() {
-        this.registerHandleURI();
-        //this.registerHelloWorld();
-    }
-
-    registerHandleURI() {
-
-        //set everything up... but we should be able to import
-        var myURIHandler = new MyURIHandler();
-        this.context.subscriptions.push(window.registerUriHandler(myURIHandler));
-
-
-    }
-/*
-    registerHelloWorld() {
-        
-
+    registerOAuthTest(context:ExtensionContext) {
         const disposable = commands.registerCommand('snich.uri-handler-sample.start', async () => {
             //const blops = await this.context.secrets.get('blops.integratenate');
             //const blops2 = await this.context.secrets.get('blops.2.integratenate');
@@ -79,25 +38,15 @@ export class CommandLauncher {
                 method: "GET",
                 headers: { "Content-Type": "application/json", "Authorization": "Bearer " + accessToken }
             })
-            await window.showInputBox({prompt:"Test"});
+            await window.showInputBox({ prompt: "Test" });
             console.log('Data Result:', dataResult)
             //window.showInformationMessage(`Starting to handle Uris. Open ${uri} in your browser to test.`);
         });
 
-        this.context.subscriptions.push(disposable);
+        context.subscriptions.push(disposable);
 
-        console.log('NATE: REGISTERED SAMPL URI HANDLER!');
     }
-        */
-}
 
-
-declare interface SNOAuthToken {
-    access_token: string
-    refresh_token: string
-    scope: string
-    token_type: string
-    expires_in: number
 }
 
 // Make the `request` function generic
@@ -121,4 +70,12 @@ function request<TResponse>(
 
     // We also can use some post-response
     // data-transformations in the last `then` clause.
+}
+
+declare interface SNOAuthToken {
+    access_token: string
+    refresh_token: string
+    scope: string
+    token_type: string
+    expires_in: number
 }
