@@ -125,9 +125,7 @@ export class SNFilePuller {
                 fieldsList.push(dvField);
             });
 
-            fieldsList = fieldsList.concat(tableConfig.getGroupBy());
-
-            let recordToSave = await client.getRecord<snRecordDVAll>(tableConfig.name, fileRec.sys_id, fieldsList, 'all');
+            let recordToSave = await client.getRecord<snRecord>(tableConfig.name, fileRec.sys_id, fieldsList);
             if (!recordToSave) {
                 vscode.window.showWarningMessage(`For some reason we couldn't grab the file to sync. Aborting sync record.`);
                 return undefined;
@@ -297,15 +295,15 @@ export class SNFilePuller {
 
         var packageResult = await client.get(packageQueryURL + '?' + urlParams.toString(), 'Retrieving Sys_package list.');
 
-        if (!packageResult || !packageResult.result) {
+        if(!packageResult || packageResult.status < 200 || packageResult.status > 299){
             vscode.window.showWarningMessage('Load all package files aborted. Did not find any packages for the selected instance.');
             return;
         }
-
-        let appRecords = packageResult.result;
+        
+        let appRecords = await packageResult.json();
 
         let appItems = <Array<SNQPItem>>[];
-        appRecords.forEach((appRec: any) => {
+        appRecords.result.forEach((appRec: any) => {
             let appData = {
                 sys_id: "",
                 name: "",
