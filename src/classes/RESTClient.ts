@@ -98,7 +98,7 @@ export class RESTClient {
         this.useProgress = false;
     }
 
-    async getRecord<T>(table: string, sys_id: string, fields: Array<string>, displayValue?: boolean, refLinks?: boolean): Promise<T | snRecord> {
+    async getRecord<T>(table: string, sys_id: string, fields: Array<string>, displayValue?: boolean, refLinks?: boolean): Promise<T | undefined> {
         displayValue = displayValue || false;
         refLinks = refLinks === undefined ? true : refLinks;
 
@@ -106,19 +106,14 @@ export class RESTClient {
 
         //setup URL
         let url = this.instanceConfig.connection.url + '/api/now/' + this.apiVersion + 'table/' + table + '/' + sys_id + '?sysparm_fields=' + fields + '&sysparm_exclude_reference_link=' + refLinks + '&sysparm_display_value=' + displayValue;
-        let record: T | snRecord;
+        let record: T;
         let response = await this.get(url, 'Getting record. ' + table + '_' + sys_id);
-        
-        if (!response || response.status < 200 || response.status > 299) {
-            record = { label: "", name: "", sys_id: "" };
-        } else {
-            record = await response.json();
-        }
-
+        let data = await response.json() as SNResponse<T>;
+        record = data.result;
         return record;
     }
 
-    async getRecords<T>(table: string, encodedQuery: string, fields: Array<string>, displayValue?: boolean, refLinks?: boolean):Promise<T | snRecord[]> {
+    async getRecords<T>(table: string, encodedQuery: string, fields: Array<string>, displayValue?: boolean | "all", refLinks?: boolean): Promise<T[]> {
         let func = 'getRecords';
         this.logger.info(this.lib, func, 'START');
         this.logger.debug(this.lib, func, 'table: ', table);
@@ -126,7 +121,7 @@ export class RESTClient {
         this.logger.debug(this.lib, func, 'fields: ', fields);
         this.logger.debug(this.lib, func, 'displayValue: ', displayValue);
         this.logger.debug(this.lib, func, 'refLinks: ', refLinks);
-        
+
         displayValue = displayValue || false;
         refLinks = refLinks === undefined ? true : refLinks;
         fields = fields.concat(this.alwaysFields);
@@ -137,10 +132,10 @@ export class RESTClient {
 
         let records: T[] = [];
         let response = await this.get(url, "Retrieving records based on url: " + url);
-        
+
 
         if (response && response.status >= 200 || response.status < 300) {
-            let data = await response.json()
+            let data = await response.json() as SNResponse<T[]>
             records = data.result; //when many records returned it's an array in the result property... 
         }
 
@@ -152,7 +147,7 @@ export class RESTClient {
     }
 
     async updateRecord(table: string, sys_id: string, body: object, fields?: string[]) {
-        if(!fields){
+        if (!fields) {
             //to keep from updates echoing back to much info... Must pass in fields to override..
             fields = ['sys_id'];
         }
@@ -162,7 +157,7 @@ export class RESTClient {
         let record: snRecord = { label: "", name: "", sys_id: "" };
 
         if (response && response.status >= 200 || response.status < 300) {
-            let data = await response.json();
+            let data = await response.json() as SNResponse<snRecord>;
             record = data.result;
         }
 
@@ -170,8 +165,8 @@ export class RESTClient {
     }
 
     //unused...
-    async createRecord(table: string, body: object, fields?:string[] ): Promise<snRecord> {
-        if(!fields){
+    async createRecord(table: string, body: object, fields?: string[]): Promise<snRecord> {
+        if (!fields) {
             //to keep from creates echoing back to much info... Must pass in fields to override..
             fields = ['sys_id'];
         }
@@ -181,14 +176,14 @@ export class RESTClient {
         let record: snRecord = { label: "", name: "", sys_id: "" };
 
         if (response && response.status >= 200 || response.status < 300) {
-            let data = await response.json();
+            let data = await response.json() as SNResponse<snRecord>;
             record = data.result;
         }
 
         return record;
     }
 
-    async testConnection(attemptNumber?: number, newInstance?:boolean): Promise<boolean> {
+    async testConnection(attemptNumber?: number, newInstance?: boolean): Promise<boolean> {
         let func = "testConnection";
 
         let maxAttempts = 3;
@@ -328,7 +323,7 @@ export class RESTClient {
             this.logger.debug(this.lib, func, "About to make evalScript call with:", { BSUrl: BSUrl, evalOptions: evalOptions });
             try {
                 response = await request.post(BSUrl, evalOptions);
-            } catch (e:any) {
+            } catch (e: any) {
                 response = e;
             }
 
@@ -617,12 +612,13 @@ export class RESTClient {
         this.logger.debug(this.lib, func, "Opened Browser!");
 
         return await vscode.window.withProgress(<vscode.ProgressOptions>{ location: vscode.ProgressLocation.Notification, cancellable: true, title: "SNICH" }, async (progress, token) => {
-            progress.report({message:"Launching Browser for OAuth Prompt"});
+            progress.report({ message: "Launching Browser for OAuth Prompt" });
             this.logger.debug(this.lib, func, "Inside WithProgress START");
-                let httpServer = () => { return new Promise((resolve, reject) =>{
+            let httpServer = () => {
+                return new Promise((resolve, reject) => {
                     this.logger.info(this.lib, func, "Creating server");
 
-            progress.report({ message: "OAuth Exchange Complete!", increment: 100 });
+                    progress.report({ message: "OAuth Exchange Complete!", increment: 100 });
 
                     let keyPath = path.resolve(extensionPath, 'WebServer', 'ssl', 'key.pem');
                     let certPath = path.resolve(extensionPath, 'WebServer', 'ssl', 'cert.pem');
@@ -635,29 +631,29 @@ export class RESTClient {
 
                     var server = https.createServer(oauthServOptions, function (req, res) {
 
-                        console.log("Inside createServer callback function. Req : Res are:", {req:req, res:res});
+                        console.log("Inside createServer callback function. Req : Res are:", { req: req, res: res });
                         const oauthRedirectPath = /snich_oauth_redirect?.*/;
-                
-                        if(req.url == '/snich_oauth_redirect'){
+
+                        if (req.url == '/snich_oauth_redirect') {
                             //no query parameters supplied... throw error
                             let errObj = {
-                                error:"No query parameters found. You've reached this page in error."
+                                error: "No query parameters found. You've reached this page in error."
                             };
-                            
+
                             res.writeHead(400, {
                                 'Content-Length': JSON.stringify(errObj).length,
-                                'Content-Type': 'application/json' 
+                                'Content-Type': 'application/json'
                             });
-                            
+
                             res.write(JSON.stringify(errObj))
                             server.close();
                             vscode.window.showErrorMessage('Failed oauth configuration. Please retry instance setup again.');
                             resolve(false);
-                        } else if(req.url?.match(oauthRedirectPath)){
+                        } else if (req.url?.match(oauthRedirectPath)) {
                             console.log('Inside oauthRedirect with code!');
-                            const queryObject = url.parse(req.url,true).query;
-                            
-                            if(queryObject.code && queryObject.state == state){
+                            const queryObject = url.parse(req.url, true).query;
+
+                            if (queryObject.code && queryObject.state == state) {
                                 oauthCode = queryObject.code.toString();
                                 res.write('OAuth Code Recieved by SNICH VSCode Extension. Please close this window.');
                                 resolve(true);
@@ -666,13 +662,13 @@ export class RESTClient {
                                 vscode.window.showErrorMessage('Failed oauth configuration. Please retry instance setup again.');
                                 resolve(false);
                             }
-                            
+
                         }
-                        
+
                         console.log('Ending response.');
                         res.end();
                     });
-                    
+
                     server.listen(62000);
                     this.logger.info(this.lib, func, 'Server is running on port 62000');
                 })
@@ -681,14 +677,14 @@ export class RESTClient {
             this.logger.info(this.lib, func, "About to Await httpServer()");
             let result = await httpServer();
 
-            progress.report({message:"OAuth Code Recieved.", increment:100})    
+            progress.report({ message: "OAuth Code Recieved.", increment: 100 })
 
-            if(!result){
+            if (!result) {
                 return false;
             }
-    
-            if(result){
-    
+
+            if (result) {
+
                 let oauthTokenURL = this.instanceConfig.connection.url + '/oauth_token.do';
                 let reqOpts: request.RequestPromiseOptions = {
                     gzip: true,
@@ -699,28 +695,28 @@ export class RESTClient {
                         client_secret: connectionData.auth.OAuth.client_secret,
                         code: oauthCode,
                         redirect_uri: redirectURI
-                        }
+                    }
                 }
                 this.logger.debug(this.lib, func, `About to get oauth token at URL: ${oauthTokenURL} with reqOpts: `, reqOpts);
-    
+
                 let tokenData = await request.post(oauthTokenURL, reqOpts);
                 this.logger.debug(this.lib, func, "oauthToken response: ", tokenData);
                 if (tokenData && tokenData.access_token) {
-        
+
                     this.instanceConfig.connection.auth.OAuth.lastRetrieved = Date.now();
                     this.instanceConfig.connection.auth.OAuth.token = tokenData;
-        
+
                     this.requestOpts.auth = {
                         bearer: tokenData.access_token
                     };
-        
+
                     this.logger.info(this.lib, func, 'RequestOpts have been set.', this.requestOpts);
-        
+
                     this.instance.setConfig(this.instanceConfig);
                     new WorkspaceManager(this.logger).writeInstanceConfig(this.instance);
                     this.logger.info(this.lib, func, 'END');
                     return '';
-        
+
                 }
             }
         });
@@ -753,4 +749,8 @@ function fetchRequest<TResponse>(
 declare interface TestResponse {
     statusCode: number,
     data: any
+}
+
+declare interface SNResponse<T> {
+    result: T
 }

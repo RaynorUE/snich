@@ -73,7 +73,7 @@ export class SNFilePuller {
         fields.push(tableConfig.display_field);
         fields = fields.concat(tableConfig.additional_display_fields);
 
-        let tableFileRecs = await client.getRecords(tableRec.name, "ORDERBYDESCsys_updated_on", fields, true);
+        let tableFileRecs = await client.getRecords<snRecord>(tableRec.name, "ORDERBYDESCsys_updated_on", fields, true);
         if (!tableFileRecs || tableFileRecs.length === 0) {
             vscode.window.showWarningMessage('Did not find any records for table. Aborting sync record.');
             return undefined;
@@ -125,7 +125,7 @@ export class SNFilePuller {
                 fieldsList.push(dvField);
             });
 
-            let recordToSave = await client.getRecord<snRecord>(tableConfig.name, fileRec.sys_id, fieldsList);
+            let recordToSave = await client.getRecord<snRecordDVAll>(tableConfig.name, fileRec.sys_id, fieldsList);
             if (!recordToSave) {
                 vscode.window.showWarningMessage(`For some reason we couldn't grab the file to sync. Aborting sync record.`);
                 return undefined;
@@ -300,7 +300,7 @@ export class SNFilePuller {
             return;
         }
         
-        let appRecords = await packageResult.json();
+        let appRecords = await packageResult.json() as any;
 
         let appItems = <Array<SNQPItem>>[];
         appRecords.result.forEach((appRec: any) => {
