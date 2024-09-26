@@ -33,9 +33,14 @@ export class OAuth {
         console.log(params.get('code'));
 
         let snOauth = `${config.connection.url}/oauth_token.do`;
-        let snOAuthBody = `grant_type=authorization_code&code=${params.get('code')}&redirect_uri=${redirectURI}&client_id=${client_id}&client_secret=${client_secret}`;
+        const snOAuthBody = new URLSearchParams();
+        snOAuthBody.set('grant_type', 'authorization_code');
+        snOAuthBody.set('code', params.get('code') || "");
+        snOAuthBody.set('redirect_uri', redirectURI);
+        snOAuthBody.set('client_id', client_id);
+        snOAuthBody.set('client_secret', client_secret);
 
-        const OAuthToken = await request<SNOAuthToken>(snOauth, { method: "POST", body: snOAuthBody, headers: { 'Content-Type': 'application/x-www-form-urlencoded' } });
+        const OAuthToken = await request<SNOAuthToken>(snOauth, { method: "POST", body: snOAuthBody.toString(), headers: { 'Content-Type': 'application/x-www-form-urlencoded' } });
         console.log('OAuth token', OAuthToken);
         return OAuthToken;
       

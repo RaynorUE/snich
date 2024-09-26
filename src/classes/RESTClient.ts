@@ -1,11 +1,12 @@
 import * as vscode from 'vscode';
 import { SystemLogHelper } from './LogHelper';
 import { InstanceMaster, InstanceConfig } from './InstanceConfigManager';
-import { snRecord } from '../myTypes/globals';
+import { SNOAuthToken, snRecord } from '../myTypes/globals';
 import * as request from 'request-promise-native';
 import { WorkspaceManager } from './WorkspaceManager';
 import { snichOutput } from '../extension';
 import { OAuth } from './OAuth/OAuth';
+import { RequestOptions } from 'https';
 
 export class RESTClient {
 
@@ -14,13 +15,7 @@ export class RESTClient {
         "Content-Type": "application/json",
         "Accept": "application/json"
     });
-    private requestOpts: request.RequestPromiseOptions = {
-        gzip: true,
-        json: true,
-        headers: {
-            "User-Agent": "SNICH_REQUEST-PROMISE-NATIVE"
-        }
-    };
+
     private instanceConfig: InstanceConfig;
     private instance: InstanceMaster;
     private logger: SystemLogHelper;
@@ -94,7 +89,7 @@ export class RESTClient {
         this.useProgress = false;
     }
 
-    async getRecord<T>(table: string, sys_id: string, fields: Array<string>, displayValue?: boolean, refLinks?: boolean): Promise<T | undefined> {
+    async getRecord<T>(table: string, sys_id: string, fields: Array<string>, displayValue?: boolean | "all", refLinks?: boolean): Promise<T | undefined> {
         displayValue = displayValue || false;
         refLinks = refLinks === undefined ? true : refLinks;
 
@@ -194,13 +189,7 @@ export class RESTClient {
         //querying sys_properties table this will test admin access and credentials.
         let url = baseURL + '/api/now/table/sys_properties?sysparm_limit=1&sysparm_fields=sys_id';
         this.logger.info(this.lib, func, 'Getting url: ' + url);
-
-
-
-
-        let response = await this.get(url, `Testing connection for ${baseURL}`);
-
-
+        const response = await this.get(url, `Testing connection for ${baseURL}`);
 
         this.logger.info(this.lib, func, 'Response body recieved:', response);
 
@@ -340,24 +329,19 @@ export class RESTClient {
             this.progressMessage = '';//clear it for next usage.
         }
 
+        await this.handleAuth();
+
         const fetchRequest: RequestInit = {
             headers: new Headers(this.headers),
             method: "GET"
         }
 
-        await this.handleAuth();
-
         if (this.useProgress) {
             return await vscode.window.withProgress(<vscode.ProgressOptions>{ location: vscode.ProgressLocation.Notification, cancellable: false, title: "SNICH" }, async (progress, token) => {
-
-
-                this.logger.debug(this.lib, func, 'requestOpts:', this.requestOpts);
-
                 progress.report({ message: progressMessage });
-
-
                 let response = await fetch(url, fetchRequest);
                 this.logger.debug(this.lib, func, '[REQUEST] Response was: ', response);
+                progress.report({increment: 100 });
                 return response;
 
             });
@@ -374,13 +358,14 @@ export class RESTClient {
         let func = "post";
         this.logger.info(this.lib, func, 'START');
 
+
+        await this.handleAuth();
+
         const fetchRequest: RequestInit = {
             headers: new Headers(this.headers),
             method: "POST",
             body: body
         }
-        await this.handleAuth();
-
         if (this.useProgress) {
             return vscode.window.withProgress(<vscode.ProgressOptions>{
                 location: vscode.ProgressLocation.Notification,
@@ -394,6 +379,7 @@ export class RESTClient {
 
                 let response = await fetch(url, fetchRequest);
                 this.logger.debug(this.lib, func, '[REQUEST] Response was: ', response);
+                progress.report({increment: 100 });
                 return response;
 
             });
@@ -409,15 +395,14 @@ export class RESTClient {
         let func = "post";
         this.logger.info(this.lib, func, 'START');
 
+
+        await this.handleAuth();
+
         const fetchRequest: RequestInit = {
             headers: new Headers(this.headers),
             method: "PUT",
             body: body
         }
-
-        await this.handleAuth();
-
-
         if (this.useProgress) {
             return vscode.window.withProgress(<vscode.ProgressOptions>{
                 location: vscode.ProgressLocation.Notification,
@@ -430,6 +415,7 @@ export class RESTClient {
 
                 let response = await fetch(url, fetchRequest);
                 this.logger.debug(this.lib, func, '[REQUEST] Response was: ', response);
+                progress.report({increment: 100 });
                 return response;
             });
         } else {
@@ -461,15 +447,15 @@ export class RESTClient {
         }
     }
 
-    private async processOAuth(getNew?: boolean): Promise<any> {
+    private async processOAuth(action?: "get_new" | "refresh"): Promise<any> {
 
         let func = 'processOAuth';
-        this.logger.info(this.lib, func, 'START', { getNew: getNew });
+        this.logger.info(this.lib, func, 'START', { action: action });
 
         let oauthData = this.instanceConfig.connection.auth.OAuth;
         if (!oauthData.token.access_token) {
             //if we don' thave any access token yet, jump straight to getNew!
-            getNew = true;
+            action = 'get_new';
         }
 
         let oauthTokenURL = this.instanceConfig.connection.url + '/oauth_token.do';
@@ -480,117 +466,54 @@ export class RESTClient {
 
         this.logger.debug(this.lib, func, "oAuth Data about to be used.", { oauthData: oauthData, now: now, hadTokenFor: hadTokenFor, expiresIn: expiresIn });
 
-        if (hadTokenFor < expiresIn && !getNew) {
+        if (hadTokenFor < expiresIn && !action) {
             this.logger.info(this.lib, func, 'Token not yet expire! Using it.');
 
-            if (this.requestOpts) {
-                this.requestOpts.auth = {
-                    bearer: oauthData.token.access_token
-                }
-            }
+            this.headers.set('Authorization', `Bearer ${oauthData.token.access_token}`); 
+                     
             this.logger.info(this.lib, func, 'END');
             return '';
-        } else if (hadTokenFor > expiresIn && oauthData.token.refresh_token && !getNew) {
+        } else if ((hadTokenFor > expiresIn && oauthData.token.refresh_token && !action) || action == "refresh" ) {
             this.logger.info(this.lib, func, 'token expired! Attempt to get new access token using refresh token!');
 
             let connectionData = this.instanceConfig.connection;
 
-            let reqOpts: request.RequestPromiseOptions = {};
             let oauthData = connectionData.auth.OAuth;
+            const {client_id, client_secret } = oauthData;
+            const { refresh_token } = oauthData.token;
+            const bodyParams = new URLSearchParams();
+            bodyParams.set('grant_type', 'refresh_token');
+            bodyParams.set('client_id', client_id);
+            bodyParams.set('client_secret', client_secret);
+            bodyParams.set('refresh_token', refresh_token);
 
-            reqOpts.gzip = true;
-            reqOpts.json = true;
-            reqOpts.form = {
-                grant_type: "refresh_token",
-                client_id: oauthData.client_id,
-                client_secret: oauthData.client_secret,
-                refresh_token: oauthData.token.refresh_token
-            };
-
-            var response = await request.post(oauthTokenURL, reqOpts);
+            const response = await fetch(oauthTokenURL, {method:"POST", body:bodyParams.toString(), headers:{ 'Content-Type': 'application/x-www-form-urlencoded' }});
             this.logger.debug(this.lib, func, "Response from post", response);
 
-            if (response && response.access_token) {
-                //got token!  
-                this.requestOpts.auth = {
-                    bearer: response.access_token
-                };
+            if (response && response.status == 200 ) {
+                const data = await response.json() as SNOAuthToken;
+                this.headers.set('Authorization', `Bearer ${data.access_token}`)
 
-
-                this.instanceConfig.connection.auth.OAuth.token = response;
+                this.instanceConfig.connection.auth.OAuth.token = data;
                 this.instanceConfig.connection.auth.OAuth.lastRetrieved = Date.now();
                 this.instance.setConfig(this.instanceConfig);
                 new WorkspaceManager(this.logger).writeInstanceConfig(this.instance);
 
             } else {
                 this.logger.warn(this.lib, func, "Attempted to get new access token using refresh token and failed. Sending through GetNew!");
-                getNew = true;
+                action = "get_new";
             }
 
         }
 
-        if (getNew) {
-            if (this.grantType == 'password') {
-                await this.getNewOAuthPasswordFlow();
-            } else if (this.grantType == 'authorization_code') {
+        if (action == "get_new") {
+            if (this.grantType == 'authorization_code') {
                 await this.getNewOAuthAuthCodeFlow();
             } else {
                 this.logger.error(this.lib, func, `Unknown grant type: ${this.grantType}`);
             }
         }
         this.logger.info(this.lib, func, "END");
-    }
-
-    private async getNewOAuthPasswordFlow() {
-        let func = 'getNewOAuthPasswordFlow'
-
-        let oauthTokenURL = this.instanceConfig.connection.url + '/oauth_token.do';
-
-        this.logger.debug(this.lib, func, 'Attempting to get new Access token.');
-        let prompt = `Refresh token expired. Please Enter password for ${this.instanceConfig.connection.auth.username} on: ${this.instanceConfig.connection.url}. We do not store your password. If using 2FA/OTP enter your 2FA/OTP code at the end of your password.`;
-        if (!this.instanceConfig.connection.auth.OAuth.token.access_token) {
-            //first time setup
-            prompt = `Enter password for ${this.instanceConfig.connection.auth.username} on: ${this.instanceConfig.connection.url}. We do not store this value. If using 2FA/OTP enter your 2FA/OTP code at the end of your password.`;
-        }
-
-        let enteredPwd = await vscode.window.showInputBox(<vscode.InputBoxOptions>{ prompt: prompt, password: true, ignoreFocusOut: true });
-
-        this.logger.debug(this.lib, func, "asked user for password. Proceeding to attempt to auth.",);
-
-        var connectionData = this.instanceConfig.connection;
-
-        let reqOpts: request.RequestPromiseOptions = {
-            gzip: true,
-            json: true,
-            form: {
-                grant_type: "password",
-                client_id: connectionData.auth.OAuth.client_id,
-                client_secret: connectionData.auth.OAuth.client_secret,
-                username: connectionData.auth.username,
-                password: enteredPwd || ""
-
-            }
-        }
-        this.logger.debug(this.lib, func, `About to get oauth token at URL: ${oauthTokenURL} with reqOpts: `, reqOpts);
-        let tokenData = await request.post(oauthTokenURL, reqOpts);
-        this.logger.debug(this.lib, func, "oauthToken response: ", tokenData);
-        if (tokenData && tokenData.access_token) {
-
-            this.instanceConfig.connection.auth.OAuth.lastRetrieved = Date.now();
-            this.instanceConfig.connection.auth.OAuth.token = tokenData;
-
-            this.requestOpts.auth = {
-                bearer: tokenData.access_token
-            };
-
-            this.logger.info(this.lib, func, 'RequestOpts have been set.', this.requestOpts);
-
-            this.instance.setConfig(this.instanceConfig);
-            new WorkspaceManager(this.logger).writeInstanceConfig(this.instance);
-            this.logger.info(this.lib, func, 'END');
-            return '';
-
-        }
     }
 
     private async getNewOAuthAuthCodeFlow() {
@@ -605,155 +528,23 @@ export class RESTClient {
             const oAuth = new OAuth();
             const tokenData = await oAuth.OAuthAuth(this.instance);
 
-            progress.report({ message: "OAuth Exchange Complete!", increment:100 });
+            progress.report({ message: "OAuth Exchange Complete!", increment: 100 });
 
 
             this.logger.debug(this.lib, func, "oauthToken response: ", tokenData);
-            if (tokenData && tokenData.access_token) {
+            if (tokenData) {
+                this.instanceConfig.connection.auth.OAuth.token = tokenData;
+                this.headers.set('Authorization', `Bearer ${tokenData.access_token}`);
 
-
-        return await vscode.window.withProgress(<vscode.ProgressOptions>{ location: vscode.ProgressLocation.Notification, cancellable: true, title: "SNICH" }, async (progress, token) => {
-            progress.report({ message: "Launching Browser for OAuth Prompt" });
-            this.logger.debug(this.lib, func, "Inside WithProgress START");
-            let httpServer = () => {
-                return new Promise((resolve, reject) => {
-                    this.logger.info(this.lib, func, "Creating server");
-
-                    progress.report({ message: "OAuth Exchange Complete!", increment: 100 });
-
-                    let keyPath = path.resolve(extensionPath, 'WebServer', 'ssl', 'key.pem');
-                    let certPath = path.resolve(extensionPath, 'WebServer', 'ssl', 'cert.pem');
-                    this.logger.info(this.lib, func, 'Key Path:', keyPath);
-                    this.logger.info(this.lib, func, 'certPath: ', certPath);
-                    let oauthServOptions = {
-                        key: fs.readFileSync(keyPath),
-                        cert: fs.readFileSync(certPath)
-                    };
-
-                    var server = https.createServer(oauthServOptions, function (req, res) {
-
-                        console.log("Inside createServer callback function. Req : Res are:", { req: req, res: res });
-                        const oauthRedirectPath = /snich_oauth_redirect?.*/;
-
-                        if (req.url == '/snich_oauth_redirect') {
-                            //no query parameters supplied... throw error
-                            let errObj = {
-                                error: "No query parameters found. You've reached this page in error."
-                            };
-
-                            res.writeHead(400, {
-                                'Content-Length': JSON.stringify(errObj).length,
-                                'Content-Type': 'application/json'
-                            });
-
-                            res.write(JSON.stringify(errObj))
-                            server.close();
-                            vscode.window.showErrorMessage('Failed oauth configuration. Please retry instance setup again.');
-                            resolve(false);
-                        } else if (req.url?.match(oauthRedirectPath)) {
-                            console.log('Inside oauthRedirect with code!');
-                            const queryObject = url.parse(req.url, true).query;
-
-                            if (queryObject.code && queryObject.state == state) {
-                                oauthCode = queryObject.code.toString();
-                                res.write('OAuth Code Recieved by SNICH VSCode Extension. Please close this window.');
-                                resolve(true);
-                            } else {
-                                res.write('Some error occured. Please retry instance setup again.');
-                                vscode.window.showErrorMessage('Failed oauth configuration. Please retry instance setup again.');
-                                resolve(false);
-                            }
-
-                        }
-
-                        console.log('Ending response.');
-                        res.end();
-                    });
-
-                    server.listen(62000);
-                    this.logger.info(this.lib, func, 'Server is running on port 62000');
-                })
+                this.instanceConfig.connection.auth.OAuth.lastRetrieved = Date.now();
+                this.instance.setConfig(this.instanceConfig);
+                new WorkspaceManager(this.logger).writeInstanceConfig(this.instance);
             }
-
-                this.requestOpts.auth = {
-                    bearer: tokenData.access_token
-                };
-
-
-            progress.report({ message: "OAuth Code Recieved.", increment: 100 })
-
-            if (!result) {
-                return false;
-            }
-
-            if (result) {
-
-                let oauthTokenURL = this.instanceConfig.connection.url + '/oauth_token.do';
-                let reqOpts: request.RequestPromiseOptions = {
-                    gzip: true,
-                    json: true,
-                    form: {
-                        grant_type: "authorization_code",
-                        client_id: connectionData.auth.OAuth.client_id,
-                        client_secret: connectionData.auth.OAuth.client_secret,
-                        code: oauthCode,
-                        redirect_uri: redirectURI
-                    }
-                }
-                this.logger.debug(this.lib, func, `About to get oauth token at URL: ${oauthTokenURL} with reqOpts: `, reqOpts);
-
-                let tokenData = await request.post(oauthTokenURL, reqOpts);
-                this.logger.debug(this.lib, func, "oauthToken response: ", tokenData);
-                if (tokenData && tokenData.access_token) {
-
-                    this.instanceConfig.connection.auth.OAuth.lastRetrieved = Date.now();
-                    this.instanceConfig.connection.auth.OAuth.token = tokenData;
-
-                    this.requestOpts.auth = {
-                        bearer: tokenData.access_token
-                    };
-
-                    this.logger.info(this.lib, func, 'RequestOpts have been set.', this.requestOpts);
-
-                    this.instance.setConfig(this.instanceConfig);
-                    new WorkspaceManager(this.logger).writeInstanceConfig(this.instance);
-                    this.logger.info(this.lib, func, 'END');
-                    return '';
-
-                }
-            }
-
         });
+
     }
 }
 
-// Make the `request` function generic
-// to specify the return data type:
-function fetchRequest<TResponse>(
-    url: string,
-    // `RequestInit` is a type for configuring 
-    // a `fetch` request. By default, an empty object.
-    config: RequestInit = {}
-
-    // This function is async, it will return a Promise:
-): Promise<TResponse> {
-
-    // Inside, we call the `fetch` function with 
-    // a URL and config given:
-    return fetch(url, config)
-        // When got a response call a `json` method on it
-        .then((response) => response.json())
-        // and return the result data.
-        .then((data) => data as TResponse);
-
-    // We also can use some post-response
-    // data-transformations in the last `then` clause.
-}
-
-declare interface TestResponse {
-    statusCode: number,
-    data: any
-}
 
 declare interface SNResponse<T> {
     result: T
