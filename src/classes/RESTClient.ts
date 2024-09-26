@@ -5,11 +5,7 @@ import { snRecord } from '../myTypes/globals';
 import * as request from 'request-promise-native';
 import { WorkspaceManager } from './WorkspaceManager';
 import { snichOutput } from '../extension';
-import * as https from 'https';
-import * as crypto from 'crypto';
-import * as url from 'url';
-import * as fs from 'fs';
-import * as path from 'path';
+import { OAuth } from './OAuth/OAuth';
 
 export class RESTClient {
 
@@ -118,7 +114,7 @@ export class RESTClient {
         this.logger.debug(this.lib, func, 'fields: ', fields);
         this.logger.debug(this.lib, func, 'displayValue: ', displayValue);
         this.logger.debug(this.lib, func, 'refLinks: ', refLinks);
-        
+
         displayValue = displayValue || false;
         refLinks = refLinks === undefined ? true : refLinks;
         fields = fields.concat(this.alwaysFields);
@@ -141,8 +137,8 @@ export class RESTClient {
         return records;
     }
 
-    async updateRecord(table: string, sys_id: string, body: object, fields?: string[]) {
-        if(!fields){
+    async updateRecord(table: string, sys_id: string, body: object, fields?: Array<string>) {
+        if (!fields) {
             //to keep from updates echoing back to much info... Must pass in fields to override..
             fields = ['sys_id'];
         }
@@ -159,8 +155,8 @@ export class RESTClient {
     }
 
     //unused...
-    async createRecord(table: string, body: object, fields?:string[] ): Promise<snRecord> {
-        if(!fields){
+    async createRecord(table: string, body: object, fields?: Array<string>): Promise<snRecord> {
+        if (!fields) {
             //to keep from creates echoing back to much info... Must pass in fields to override..
             fields = ['sys_id'];
         }
@@ -168,14 +164,14 @@ export class RESTClient {
         let postResponse = await this.post(postURL, body, `Creating ${table} record.`);
 
         let record: snRecord = { label: "", name: "", sys_id: "" };
-        if(postResponse && postResponse.result){
+        if (postResponse && postResponse.result) {
             record = postResponse.result;
         }
 
         return record;
     }
 
-    async testConnection(attemptNumber?: number, newInstance?:boolean): Promise<boolean> {
+    async testConnection(attemptNumber?: number, newInstance?: boolean): Promise<boolean> {
         let func = "testConnection";
 
         let maxAttempts = 3;
@@ -193,11 +189,11 @@ export class RESTClient {
         let response;
 
         try {
-            response = await this.get(url, `Testing connection for ${baseURL}`);    
-        } catch(e){
+            response = await this.get(url, `Testing connection for ${baseURL}`);
+        } catch (e) {
             response = e;
         }
-        
+
 
         this.logger.info(this.lib, func, 'Response body recieved:', response);
 
@@ -217,7 +213,7 @@ export class RESTClient {
                         await this.instance.askForOauth();
                         return await this.testConnection(attemptNumber);
                     } else if (this.instance.getAuthType() == 'oauth-authorization_code') {
-                        await this.instance.askForOAuthAuthCodeFlow();
+                        await this.getNewOAuthAuthCodeFlow();
                         return await this.testConnection(attemptNumber);
                     } else {
                         vscode.window.showErrorMessage(`Max attempts (${maxAttempts}) reached. Please validate account/config on instance: ${this.instance.getName()}`);
@@ -318,7 +314,7 @@ export class RESTClient {
             this.logger.debug(this.lib, func, "About to make evalScript call with:", { BSUrl: BSUrl, evalOptions: evalOptions });
             try {
                 response = await request.post(BSUrl, evalOptions);
-            } catch (e:any) {
+            } catch (e: any) {
                 response = e;
             }
 
@@ -364,6 +360,7 @@ export class RESTClient {
             let response;
             try {
                 response = await request.get(url, this.requestOpts);
+
             } catch (e) {
                 response = e;
             } finally {
@@ -607,136 +604,37 @@ export class RESTClient {
         let func = 'getNewOAuthAuthCodeFlow';
         this.logger.info(this.lib, func, "START");
 
-        let connectionData = this.instanceConfig.connection;
 
-        let state = crypto.randomBytes(16).toString("hex");
-
-        let oauthCode = '';
-
-        let redirectURI = 'https://localhost:62000';
-
-        let oauthAuthURL = vscode.Uri.parse(`${this.instance.getURL()}/oauth_auth.do?response_type=code&client_id=${connectionData.auth.OAuth.client_id}&state=${state}&redirect_url=${redirectURI}`, true);
-        vscode.env.openExternal(oauthAuthURL);
-
-        this.logger.debug(this.lib, func, "Opened Browser!");
 
         return await vscode.window.withProgress(<vscode.ProgressOptions>{ location: vscode.ProgressLocation.Notification, cancellable: true, title: "SNICH" }, async (progress, token) => {
-            progress.report({message:"Launching Browser for OAuth Prompt"});
+            progress.report({ message: "Launching Browser for OAuth Prompt" });
             this.logger.debug(this.lib, func, "Inside WithProgress START");
-                let httpServer = () => { return new Promise((resolve, reject) =>{
-                    this.logger.info(this.lib, func, "Creating server");
+            const oAuth = new OAuth();
+            const tokenData = await oAuth.OAuthAuth(this.instance);
 
-                    /**
-                     * @todo Pass along extension context or find a way to get the current extension context from here..? 
-                     */
-                    let snichCore = vscode.extensions.getExtension('integrateNate.snich');
-                    let snichCanary = vscode.extensions.getExtension('integrateNate.snich-canary');
-                    let extensionPath = '';
-                    if(snichCore){
-                        extensionPath = snichCore.extensionPath;
-                    } else if(snichCanary){
-                        extensionPath = snichCanary.extensionPath;
-                    }
+            progress.report({ message: "OAuth Exchange Complete!", increment:100 });
 
-                    let keyPath = path.resolve(extensionPath, 'WebServer', 'ssl', 'key.pem');
-                    let certPath = path.resolve(extensionPath, 'WebServer', 'ssl', 'cert.pem');
-                    this.logger.info(this.lib, func, 'Key Path:', keyPath);
-                    this.logger.info(this.lib, func, 'certPath: ', certPath);
-                    let oauthServOptions = {
-                        key: fs.readFileSync(keyPath),
-                        cert: fs.readFileSync(certPath)
-                    };
 
-                    var server = https.createServer(oauthServOptions, function (req, res) {
+            this.logger.debug(this.lib, func, "oauthToken response: ", tokenData);
+            if (tokenData && tokenData.access_token) {
 
-                        console.log("Inside createServer callback function. Req : Res are:", {req:req, res:res});
-                        const oauthRedirectPath = /snich_oauth_redirect?.*/;
-                
-                        if(req.url == '/snich_oauth_redirect'){
-                            //no query parameters supplied... throw error
-                            let errObj = {
-                                error:"No query parameters found. You've reached this page in error."
-                            };
-                            
-                            res.writeHead(400, {
-                                'Content-Length': JSON.stringify(errObj).length,
-                                'Content-Type': 'application/json' 
-                            });
-                            
-                            res.write(JSON.stringify(errObj))
-                            server.close();
-                            vscode.window.showErrorMessage('Failed oauth configuration. Please retry instance setup again.');
-                            resolve(false);
-                        } else if(req.url?.match(oauthRedirectPath)){
-                            console.log('Inside oauthRedirect with code!');
-                            const queryObject = url.parse(req.url,true).query;
-                            
-                            if(queryObject.code && queryObject.state == state){
-                                oauthCode = queryObject.code.toString();
-                                res.write('OAuth Code Recieved by SNICH VSCode Extension. Please close this window.');
-                                resolve(true);
-                            } else {
-                                res.write('Some error occured. Please retry instance setup again.');
-                                vscode.window.showErrorMessage('Failed oauth configuration. Please retry instance setup again.');
-                                resolve(false);
-                            }
-                            
-                        }
-                        
-                        console.log('Ending response.');
-                        res.end();
-                    });
-                    
-                    server.listen(62000);
-                    this.logger.info(this.lib, func, 'Server is running on port 62000');
-                })
+                this.instanceConfig.connection.auth.OAuth.lastRetrieved = Date.now();
+                this.instanceConfig.connection.auth.OAuth.token = tokenData;
+
+
+                this.requestOpts.auth = {
+                    bearer: tokenData.access_token
+                };
+
+                this.logger.info(this.lib, func, 'RequestOpts have been set.', this.requestOpts);
+
+                this.instance.setConfig(this.instanceConfig);
+                new WorkspaceManager(this.logger).writeInstanceConfig(this.instance);
+                this.logger.info(this.lib, func, 'END');
+                return '';
+
             }
 
-            this.logger.info(this.lib, func, "About to Await httpServer()");
-            let result = await httpServer();
-
-            progress.report({message:"OAuth Code Recieved.", increment:100})    
-
-            if(!result){
-                return false;
-            }
-    
-            if(result){
-    
-                let oauthTokenURL = this.instanceConfig.connection.url + '/oauth_token.do';
-                let reqOpts: request.RequestPromiseOptions = {
-                    gzip: true,
-                    json: true,
-                    form: {
-                        grant_type: "authorization_code",
-                        client_id: connectionData.auth.OAuth.client_id,
-                        client_secret: connectionData.auth.OAuth.client_secret,
-                        code: oauthCode,
-                        redirect_uri: redirectURI
-                        }
-                }
-                this.logger.debug(this.lib, func, `About to get oauth token at URL: ${oauthTokenURL} with reqOpts: `, reqOpts);
-    
-                let tokenData = await request.post(oauthTokenURL, reqOpts);
-                this.logger.debug(this.lib, func, "oauthToken response: ", tokenData);
-                if (tokenData && tokenData.access_token) {
-        
-                    this.instanceConfig.connection.auth.OAuth.lastRetrieved = Date.now();
-                    this.instanceConfig.connection.auth.OAuth.token = tokenData;
-        
-                    this.requestOpts.auth = {
-                        bearer: tokenData.access_token
-                    };
-        
-                    this.logger.info(this.lib, func, 'RequestOpts have been set.', this.requestOpts);
-        
-                    this.instance.setConfig(this.instanceConfig);
-                    new WorkspaceManager(this.logger).writeInstanceConfig(this.instance);
-                    this.logger.info(this.lib, func, 'END');
-                    return '';
-        
-                }
-            }
         });
     }
 }
