@@ -9,6 +9,11 @@ import { OAuth } from './OAuth/OAuth';
 
 export class RESTClient {
 
+    headers: Headers = new Headers({
+        "User-Agent": "SNICH_REQUEST-PROMISE-NATIVE",
+        "Content-Type": "application/json",
+        "Accept": "application/json"
+    });
     private requestOpts: request.RequestPromiseOptions = {
         gzip: true,
         json: true,
@@ -49,6 +54,7 @@ export class RESTClient {
 
     }
 
+
     setBasicAuth(username: string, password: string) {
         let func = 'setBasicAuth';
         this.logger.info(this.lib, func, 'START', {
@@ -56,11 +62,9 @@ export class RESTClient {
             password: password ? 'not logged' : password
         });
 
-        this.requestOpts.auth = {};
-        this.requestOpts.auth.username = username || "";
-        this.requestOpts.auth.password = password || "";
-        this.authType = 'basic';
+        this.headers.set('Authorization', `Basic ${username}:${password}`);
 
+        this.authType = 'basic';
         this.logger.info(this.lib, func, 'END');
 
     }
@@ -68,7 +72,6 @@ export class RESTClient {
     setOAuthAuthCode() {
         let func = 'setOAuthAuthCode';
         this.logger.info(this.lib, func, "START");
-        this.requestOpts.auth = {};
         this.authType = 'oauth';
         this.grantType = 'authorization_code';
         this.logger.info(this.lib, func, "END");
@@ -77,7 +80,6 @@ export class RESTClient {
     setOAuth() {
         let func = "setOAuth";
         this.logger.info(this.lib, func, "START");
-        this.requestOpts.auth = {};
         this.authType = 'oauth';
         this.grantType = 'password';
         this.logger.info(this.lib, func, "END");
@@ -92,7 +94,7 @@ export class RESTClient {
         this.useProgress = false;
     }
 
-    async getRecord<T>(table: string, sys_id: string, fields: string[], displayValue?: boolean | "all", refLinks?: boolean): Promise<T | undefined> {
+    async getRecord<T>(table: string, sys_id: string, fields: Array<string>, displayValue?: boolean, refLinks?: boolean): Promise<T | undefined> {
         displayValue = displayValue || false;
         refLinks = refLinks === undefined ? true : refLinks;
 
@@ -102,11 +104,12 @@ export class RESTClient {
         let url = this.instanceConfig.connection.url + '/api/now/' + this.apiVersion + 'table/' + table + '/' + sys_id + '?sysparm_fields=' + fields + '&sysparm_exclude_reference_link=' + refLinks + '&sysparm_display_value=' + displayValue;
         let record: T;
         let response = await this.get(url, 'Getting record. ' + table + '_' + sys_id);
-        record = response.result;
+        let data = await response.json() as SNResponse<T>;
+        record = data.result;
         return record;
     }
 
-    async getRecords<T>(table: string, encodedQuery: string, fields: string[], displayValue?: boolean | "all", refLinks?: boolean): Promise<T[]> {
+    async getRecords<T>(table: string, encodedQuery: string, fields: Array<string>, displayValue?: boolean | "all", refLinks?: boolean): Promise<T[]> {
         let func = 'getRecords';
         this.logger.info(this.lib, func, 'START');
         this.logger.debug(this.lib, func, 'table: ', table);
@@ -126,8 +129,10 @@ export class RESTClient {
         let records: T[] = [];
         let response = await this.get(url, "Retrieving records based on url: " + url);
 
-        if (response && response.result) {
-            records = response.result; //when many records returned it's an array in the result property... 
+
+        if (response && response.status >= 200 || response.status < 300) {
+            let data = await response.json() as SNResponse<T[]>
+            records = data.result; //when many records returned it's an array in the result property... 
         }
 
         if (!records || !records.length) {
@@ -137,7 +142,7 @@ export class RESTClient {
         return records;
     }
 
-    async updateRecord(table: string, sys_id: string, body: object, fields?: Array<string>) {
+    async updateRecord(table: string, sys_id: string, body: object, fields?: string[]) {
         if (!fields) {
             //to keep from updates echoing back to much info... Must pass in fields to override..
             fields = ['sys_id'];
@@ -147,25 +152,29 @@ export class RESTClient {
 
         let record: snRecord = { label: "", name: "", sys_id: "" };
 
-        if (response && response.result) {
-            record = response.result
+        if (response && response.status >= 200 || response.status < 300) {
+            let data = await response.json() as SNResponse<snRecord>;
+            record = data.result;
         }
 
         return record;
     }
 
     //unused...
-    async createRecord(table: string, body: object, fields?: Array<string>): Promise<snRecord> {
+    async createRecord(table: string, body: object, fields?: string[]): Promise<snRecord> {
         if (!fields) {
             //to keep from creates echoing back to much info... Must pass in fields to override..
             fields = ['sys_id'];
         }
         var postURL = `${this.instanceConfig.connection.url}/api/now/table/${table}?sysparm_fields=${fields.toString()}`;
-        let postResponse = await this.post(postURL, body, `Creating ${table} record.`);
+        let response = await this.post(postURL, body, `Creating ${table} record.`);
 
         let record: snRecord = { label: "", name: "", sys_id: "" };
-        if (postResponse && postResponse.result) {
-            record = postResponse.result;
+
+
+        if (response && response.status >= 200 || response.status < 300) {
+            let data = await response.json() as SNResponse<snRecord>;
+            record = data.result;
         }
 
         return record;
@@ -186,24 +195,22 @@ export class RESTClient {
         let url = baseURL + '/api/now/table/sys_properties?sysparm_limit=1&sysparm_fields=sys_id';
         this.logger.info(this.lib, func, 'Getting url: ' + url);
 
-        let response;
 
-        try {
-            response = await this.get(url, `Testing connection for ${baseURL}`);
-        } catch (e) {
-            response = e;
-        }
+
+
+        let response = await this.get(url, `Testing connection for ${baseURL}`);
+
 
 
         this.logger.info(this.lib, func, 'Response body recieved:', response);
 
-        if (response && response.result && response.result.length && response.result.length > 0) {
+        if (response && response.status == 200) {
             vscode.window.showInformationMessage("Connection Successful!");
             return true;
         } else {
-            if (response && response.statusCode) {
-                if (response.statusCode == 401) {
-                    let respMsg = `${response.message}`;
+            if (response && response.status) {
+                if (response.status == 401) {
+                    let respMsg = `${response.statusText}`;
                     snichOutput.appendLine('Authorization Failed: ' + respMsg);
 
                     if (this.instance.getAuthType() == 'basic' && attemptNumber < maxAttempts) {
@@ -221,7 +228,7 @@ export class RESTClient {
                     }
 
                 } else {
-                    let respMsg = `${response.statusCode} - ${response.statusMessage}`;
+                    let respMsg = `${response.status} - ${response.statusText}`;
                     snichOutput.appendLine('Test connection failed. Please resetup instance. Error Details:\n' + respMsg);
                     vscode.window.showErrorMessage(`Connection Failed.`, 'Show Error').then((clickedItem) => {
                         if (clickedItem == 'Show Error') {
@@ -333,42 +340,32 @@ export class RESTClient {
             this.progressMessage = '';//clear it for next usage.
         }
 
+        const fetchRequest: RequestInit = {
+            headers: new Headers(this.headers),
+            method: "GET"
+        }
+
+        await this.handleAuth();
 
         if (this.useProgress) {
             return await vscode.window.withProgress(<vscode.ProgressOptions>{ location: vscode.ProgressLocation.Notification, cancellable: false, title: "SNICH" }, async (progress, token) => {
 
-                await this.handleAuth();
 
                 this.logger.debug(this.lib, func, 'requestOpts:', this.requestOpts);
 
                 progress.report({ message: progressMessage });
-                let response;
-                try {
-                    response = await request.get(url, this.requestOpts);
-                } catch (e) {
-                    response = e;
-                } finally {
-                    this.logger.debug(this.lib, func, '[REQUEST] Response was: ', response);
-                    this.logger.info(this.lib, func, '[REQUEST] Response Status Code: ' + response.statusCode);
-                    this.logger.info(this.lib, func, "END");
-                    return response;
-                }
+
+
+                let response = await fetch(url, fetchRequest);
+                this.logger.debug(this.lib, func, '[REQUEST] Response was: ', response);
+                return response;
+
             });
         } else {
-            await this.handleAuth();
 
-            let response;
-            try {
-                response = await request.get(url, this.requestOpts);
-
-            } catch (e) {
-                response = e;
-            } finally {
-                this.logger.debug(this.lib, func, '[REQUEST] Response was: ', response);
-                this.logger.info(this.lib, func, '[REQUEST] Response Status Code: ' + response.statusCode);
-                this.logger.info(this.lib, func, "END");
-                return response;
-            }
+            let response = await fetch(url, fetchRequest);
+            this.logger.debug(this.lib, func, '[REQUEST] Response was: ', response);
+            return response;
         }
 
     }
@@ -376,6 +373,14 @@ export class RESTClient {
     private async post(url: string, body: any, progressMessage: string) {
         let func = "post";
         this.logger.info(this.lib, func, 'START');
+
+        const fetchRequest: RequestInit = {
+            headers: new Headers(this.headers),
+            method: "POST",
+            body: body
+        }
+        await this.handleAuth();
+
         if (this.useProgress) {
             return vscode.window.withProgress(<vscode.ProgressOptions>{
                 location: vscode.ProgressLocation.Notification,
@@ -383,36 +388,36 @@ export class RESTClient {
                 cancellable: false
             }, async (progress, token) => {
 
-                await this.handleAuth();
+
 
                 progress.report({ message: progressMessage });
 
-                this.requestOpts.body = body;
-                var response = await request.post(url, this.requestOpts);
-                this.requestOpts.body = null; //clear for next usage.
-
+                let response = await fetch(url, fetchRequest);
                 this.logger.debug(this.lib, func, '[REQUEST] Response was: ', response);
-                this.logger.info(this.lib, func, "END");
+                return response;
 
-                return response
             });
         } else {
-            await this.handleAuth();
 
-            this.requestOpts.body = body;
-            var response = await request.post(url, this.requestOpts);
-            this.requestOpts.body = null; //clear for next usage.
-
+            let response = await fetch(url, fetchRequest);
             this.logger.debug(this.lib, func, '[REQUEST] Response was: ', response);
-            this.logger.info(this.lib, func, "END");
-
-            return response
+            return response;
         }
     }
 
     private async put(url: string, body: any, progressMessage: string) {
         let func = "post";
         this.logger.info(this.lib, func, 'START');
+
+        const fetchRequest: RequestInit = {
+            headers: new Headers(this.headers),
+            method: "PUT",
+            body: body
+        }
+
+        await this.handleAuth();
+
+
         if (this.useProgress) {
             return vscode.window.withProgress(<vscode.ProgressOptions>{
                 location: vscode.ProgressLocation.Notification,
@@ -420,30 +425,18 @@ export class RESTClient {
                 cancellable: false
             }, async (progress, token) => {
 
-                await this.handleAuth();
 
                 progress.report({ message: progressMessage });
 
-                this.requestOpts.body = body;
-                var response = await request.put(url, this.requestOpts);
-                this.requestOpts.body = null; //clear for next usage.
-
+                let response = await fetch(url, fetchRequest);
                 this.logger.debug(this.lib, func, '[REQUEST] Response was: ', response);
-                this.logger.info(this.lib, func, "END");
-
-                return response
+                return response;
             });
         } else {
-            await this.handleAuth();
 
-            this.requestOpts.body = body;
-            var response = await request.post(url, this.requestOpts);
-            this.requestOpts.body = null; //clear for next usage.
-
+            let response = await fetch(url, fetchRequest);
             this.logger.debug(this.lib, func, '[REQUEST] Response was: ', response);
-            this.logger.info(this.lib, func, "END");
-
-            return response
+            return response;
         }
     }
 
@@ -618,23 +611,150 @@ export class RESTClient {
             this.logger.debug(this.lib, func, "oauthToken response: ", tokenData);
             if (tokenData && tokenData.access_token) {
 
-                this.instanceConfig.connection.auth.OAuth.lastRetrieved = Date.now();
-                this.instanceConfig.connection.auth.OAuth.token = tokenData;
 
+        return await vscode.window.withProgress(<vscode.ProgressOptions>{ location: vscode.ProgressLocation.Notification, cancellable: true, title: "SNICH" }, async (progress, token) => {
+            progress.report({ message: "Launching Browser for OAuth Prompt" });
+            this.logger.debug(this.lib, func, "Inside WithProgress START");
+            let httpServer = () => {
+                return new Promise((resolve, reject) => {
+                    this.logger.info(this.lib, func, "Creating server");
+
+                    progress.report({ message: "OAuth Exchange Complete!", increment: 100 });
+
+                    let keyPath = path.resolve(extensionPath, 'WebServer', 'ssl', 'key.pem');
+                    let certPath = path.resolve(extensionPath, 'WebServer', 'ssl', 'cert.pem');
+                    this.logger.info(this.lib, func, 'Key Path:', keyPath);
+                    this.logger.info(this.lib, func, 'certPath: ', certPath);
+                    let oauthServOptions = {
+                        key: fs.readFileSync(keyPath),
+                        cert: fs.readFileSync(certPath)
+                    };
+
+                    var server = https.createServer(oauthServOptions, function (req, res) {
+
+                        console.log("Inside createServer callback function. Req : Res are:", { req: req, res: res });
+                        const oauthRedirectPath = /snich_oauth_redirect?.*/;
+
+                        if (req.url == '/snich_oauth_redirect') {
+                            //no query parameters supplied... throw error
+                            let errObj = {
+                                error: "No query parameters found. You've reached this page in error."
+                            };
+
+                            res.writeHead(400, {
+                                'Content-Length': JSON.stringify(errObj).length,
+                                'Content-Type': 'application/json'
+                            });
+
+                            res.write(JSON.stringify(errObj))
+                            server.close();
+                            vscode.window.showErrorMessage('Failed oauth configuration. Please retry instance setup again.');
+                            resolve(false);
+                        } else if (req.url?.match(oauthRedirectPath)) {
+                            console.log('Inside oauthRedirect with code!');
+                            const queryObject = url.parse(req.url, true).query;
+
+                            if (queryObject.code && queryObject.state == state) {
+                                oauthCode = queryObject.code.toString();
+                                res.write('OAuth Code Recieved by SNICH VSCode Extension. Please close this window.');
+                                resolve(true);
+                            } else {
+                                res.write('Some error occured. Please retry instance setup again.');
+                                vscode.window.showErrorMessage('Failed oauth configuration. Please retry instance setup again.');
+                                resolve(false);
+                            }
+
+                        }
+
+                        console.log('Ending response.');
+                        res.end();
+                    });
+
+                    server.listen(62000);
+                    this.logger.info(this.lib, func, 'Server is running on port 62000');
+                })
+            }
 
                 this.requestOpts.auth = {
                     bearer: tokenData.access_token
                 };
 
-                this.logger.info(this.lib, func, 'RequestOpts have been set.', this.requestOpts);
 
-                this.instance.setConfig(this.instanceConfig);
-                new WorkspaceManager(this.logger).writeInstanceConfig(this.instance);
-                this.logger.info(this.lib, func, 'END');
-                return '';
+            progress.report({ message: "OAuth Code Recieved.", increment: 100 })
 
+            if (!result) {
+                return false;
+            }
+
+            if (result) {
+
+                let oauthTokenURL = this.instanceConfig.connection.url + '/oauth_token.do';
+                let reqOpts: request.RequestPromiseOptions = {
+                    gzip: true,
+                    json: true,
+                    form: {
+                        grant_type: "authorization_code",
+                        client_id: connectionData.auth.OAuth.client_id,
+                        client_secret: connectionData.auth.OAuth.client_secret,
+                        code: oauthCode,
+                        redirect_uri: redirectURI
+                    }
+                }
+                this.logger.debug(this.lib, func, `About to get oauth token at URL: ${oauthTokenURL} with reqOpts: `, reqOpts);
+
+                let tokenData = await request.post(oauthTokenURL, reqOpts);
+                this.logger.debug(this.lib, func, "oauthToken response: ", tokenData);
+                if (tokenData && tokenData.access_token) {
+
+                    this.instanceConfig.connection.auth.OAuth.lastRetrieved = Date.now();
+                    this.instanceConfig.connection.auth.OAuth.token = tokenData;
+
+                    this.requestOpts.auth = {
+                        bearer: tokenData.access_token
+                    };
+
+                    this.logger.info(this.lib, func, 'RequestOpts have been set.', this.requestOpts);
+
+                    this.instance.setConfig(this.instanceConfig);
+                    new WorkspaceManager(this.logger).writeInstanceConfig(this.instance);
+                    this.logger.info(this.lib, func, 'END');
+                    return '';
+
+                }
             }
 
         });
     }
+}
+
+// Make the `request` function generic
+// to specify the return data type:
+function fetchRequest<TResponse>(
+    url: string,
+    // `RequestInit` is a type for configuring 
+    // a `fetch` request. By default, an empty object.
+    config: RequestInit = {}
+
+    // This function is async, it will return a Promise:
+): Promise<TResponse> {
+
+    // Inside, we call the `fetch` function with 
+    // a URL and config given:
+    return fetch(url, config)
+        // When got a response call a `json` method on it
+        .then((response) => response.json())
+        // and return the result data.
+        .then((data) => data as TResponse);
+
+    // We also can use some post-response
+    // data-transformations in the last `then` clause.
+}
+
+declare interface TestResponse {
+    statusCode: number,
+    data: any
+}
+
+declare interface SNResponse<T> {
+    result: T
 }
