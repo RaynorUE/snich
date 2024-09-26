@@ -5,11 +5,7 @@ import { snRecord } from '../myTypes/globals';
 import * as request from 'request-promise-native';
 import { WorkspaceManager } from './WorkspaceManager';
 import { snichOutput } from '../extension';
-import * as https from 'https';
-import * as crypto from 'crypto';
-import * as url from 'url';
-import * as fs from 'fs';
-import * as path from 'path';
+import { OAuth } from './OAuth/OAuth';
 
 export class RESTClient {
 
@@ -175,6 +171,7 @@ export class RESTClient {
 
         let record: snRecord = { label: "", name: "", sys_id: "" };
 
+
         if (response && response.status >= 200 || response.status < 300) {
             let data = await response.json() as SNResponse<snRecord>;
             record = data.result;
@@ -200,6 +197,7 @@ export class RESTClient {
 
 
 
+
         let response = await this.get(url, `Testing connection for ${baseURL}`);
 
 
@@ -222,7 +220,7 @@ export class RESTClient {
                         await this.instance.askForOauth();
                         return await this.testConnection(attemptNumber);
                     } else if (this.instance.getAuthType() == 'oauth-authorization_code') {
-                        await this.instance.askForOAuthAuthCodeFlow();
+                        await this.getNewOAuthAuthCodeFlow();
                         return await this.testConnection(attemptNumber);
                     } else {
                         vscode.window.showErrorMessage(`Max attempts (${maxAttempts}) reached. Please validate account/config on instance: ${this.instance.getName()}`);
@@ -356,6 +354,7 @@ export class RESTClient {
                 this.logger.debug(this.lib, func, 'requestOpts:', this.requestOpts);
 
                 progress.report({ message: progressMessage });
+
 
                 let response = await fetch(url, fetchRequest);
                 this.logger.debug(this.lib, func, '[REQUEST] Response was: ', response);
@@ -598,18 +597,20 @@ export class RESTClient {
         let func = 'getNewOAuthAuthCodeFlow';
         this.logger.info(this.lib, func, "START");
 
-        let connectionData = this.instanceConfig.connection;
 
-        let state = crypto.randomBytes(16).toString("hex");
 
-        let oauthCode = '';
+        return await vscode.window.withProgress(<vscode.ProgressOptions>{ location: vscode.ProgressLocation.Notification, cancellable: true, title: "SNICH" }, async (progress, token) => {
+            progress.report({ message: "Launching Browser for OAuth Prompt" });
+            this.logger.debug(this.lib, func, "Inside WithProgress START");
+            const oAuth = new OAuth();
+            const tokenData = await oAuth.OAuthAuth(this.instance);
 
-        let redirectURI = 'https://localhost:62000';
+            progress.report({ message: "OAuth Exchange Complete!", increment:100 });
 
-        let oauthAuthURL = vscode.Uri.parse(`${this.instance.getURL()}/oauth_auth.do?response_type=code&client_id=${connectionData.auth.OAuth.client_id}&state=${state}&redirect_url=${redirectURI}`, true);
-        vscode.env.openExternal(oauthAuthURL);
 
-        this.logger.debug(this.lib, func, "Opened Browser!");
+            this.logger.debug(this.lib, func, "oauthToken response: ", tokenData);
+            if (tokenData && tokenData.access_token) {
+
 
         return await vscode.window.withProgress(<vscode.ProgressOptions>{ location: vscode.ProgressLocation.Notification, cancellable: true, title: "SNICH" }, async (progress, token) => {
             progress.report({ message: "Launching Browser for OAuth Prompt" });
@@ -674,8 +675,10 @@ export class RESTClient {
                 })
             }
 
-            this.logger.info(this.lib, func, "About to Await httpServer()");
-            let result = await httpServer();
+                this.requestOpts.auth = {
+                    bearer: tokenData.access_token
+                };
+
 
             progress.report({ message: "OAuth Code Recieved.", increment: 100 })
 
@@ -719,6 +722,7 @@ export class RESTClient {
 
                 }
             }
+
         });
     }
 }
