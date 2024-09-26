@@ -25,7 +25,7 @@ export class WorkspaceManager {
     readonly tableConfigFileName: string = "snich_table_config.json";
     readonly syncedFilesName: string = "snich_synced_files.json";
     readonly ignoreFiles: Array<string> = [this.configFileName, this.tableConfigFileName, this.syncedFilesName, 'jsconfig.json'];
-    readonly ignoreFolders = ['@Types'];
+    readonly ignoreFolders = ['@Types', '.vscode'];
 
     logger: SystemLogHelper;
     lib: string = 'ConfigMgr';
@@ -391,6 +391,13 @@ export class WorkspaceManager {
             this.logger.info(this.lib, func, 'Will save event started. About to step into wawitUntil. WillSaveEvent currently:', willSaveEvent);
             let document = willSaveEvent.document;
 
+            const wsFolder = vscode.workspace.workspaceFolders ? vscode.workspace.workspaceFolders[0] : undefined;
+            this.logger.info(this.lib, func, "WS Folder FS Path: " + wsFolder?.uri.fsPath);
+            if(!wsFolder || document.uri.fsPath.indexOf(wsFolder.uri.fsPath) == -1){
+                this.logger.info(this.lib, func, "File was saved OUTSIDE Workspace path, ignoring!");
+                return;
+            }
+
             for (let i = 0; i < this.ignoreFolders.length; i++) {
                 let folderName = this.ignoreFolders[i];
                 if (document.uri.fsPath.indexOf(folderName) > -1) {
@@ -452,6 +459,12 @@ export class WorkspaceManager {
             let func = 'onDidSaveTextDocument';
             this.logger.debug(this.lib, func, 'START', didSaveDocument);
 
+            const wsFolder = vscode.workspace.workspaceFolders ? vscode.workspace.workspaceFolders[0] : undefined;
+            this.logger.info(this.lib, func, "WS Folder FS Path: " + wsFolder?.uri.fsPath);
+            if(!wsFolder || didSaveDocument.uri.fsPath.indexOf(wsFolder.uri.fsPath) == -1){
+                this.logger.info(this.lib, func, "File was saved OUTSIDE Workspace path, ignoring!");
+                return;
+            }
             for (let i = 0; i < this.ignoreFolders.length; i++) {
                 let folderName = this.ignoreFolders[i];
                 if (didSaveDocument.uri.fsPath.indexOf(folderName) > -1) {
