@@ -6,7 +6,6 @@ import * as request from 'request-promise-native';
 import { WorkspaceManager } from './WorkspaceManager';
 import { snichOutput } from '../extension';
 import { OAuth } from './OAuth/OAuth';
-import { RequestOptions } from 'https';
 
 export class RESTClient {
 
@@ -244,6 +243,10 @@ export class RESTClient {
 
         let jar = request.jar();
 
+        if(!username){
+            await this.instance.askForUsername();
+            username = this.instance.getUserName();
+        }
         if (!password) {
             await this.instance.askForPassword();
             password = this.instance.getPassword();
@@ -263,6 +266,7 @@ export class RESTClient {
             "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8"
         };
 
+
         let loginOpts: request.RequestPromiseOptions = {
             method: "POST",
             followAllRedirects: true,
@@ -278,6 +282,20 @@ export class RESTClient {
         };
 
         let loginURL = baseURI + 'login.do';
+/*
+        const loginBody = new URLSearchParams();
+        loginBody.set('user_name', username);
+        loginBody.set('user_password', password);
+        loginBody.set('remember_me', 'true');
+        loginBody.set('sys_action', 'sysverb_login');
+        const newLoginResponse = await fetch(loginURL, {method:"POST", redirect:"follow", headers:headers, body:loginBody.toString(), credentials:'same-origin'});
+        const loginResponse = await newLoginResponse.text();
+
+        this.logger.debug(this.lib, func, "NewLoginResponse: ", newLoginResponse);
+        this.logger.debug(this.lib, func, "NewLoginResponse: newLoginResponse.headers.get('set-cookie')", newLoginResponse.headers.get('set-cookie'));
+        //this.logger.debug(this.lib, func, "loginResponse: ", loginResponse);
+        //this.logger.debug(this.lib, func, "NewLoginResponse: ", newLoginResponse);
+        */
 
         this.logger.debug(this.lib, func, "About to make post to following:", { loginURL: loginURL, loginOpts: loginOpts });
         let loginResponse: string = await request.post(loginURL, loginOpts);
@@ -305,8 +323,30 @@ export class RESTClient {
                     "record_for_rollback": "on"
                 }
             };
-
+            
             let BSUrl = baseURI + 'sys.scripts.do?sysparm_transaction_scope=' + scope;
+
+            /*
+            const scriptData = new URLSearchParams();
+            script = 'gs.info("hello world")'; //testing!
+            scriptData.set('script', script);
+            scriptData.set('sysparm_ck', sysparm_ck);
+            scriptData.set('sys_scope', scope);
+            scriptData.set('runscript', 'Run Script');
+            scriptData.set('quota_managed_transaction', 'on');
+            scriptData.set('record_for_rollback', 'on');
+
+            const scriptExecHeaders = new Headers(headers);
+            scriptExecHeaders.set('cookie', newLoginResponse.headers.get('set-cookie') || "");
+            this.logger.debug(this.lib, func, "HEADERS: ", scriptExecHeaders.get('cookie'));
+
+            const newScriptExecRes = await fetch(BSUrl, {method:"POST", redirect:"follow", headers: scriptExecHeaders, credentials:'same-origin', body:scriptData.toString()})
+            this.logger.debug(this.lib, func, "newScriptExecRes: ", newScriptExecRes)
+            this.logger.debug(this.lib, func, "newScriptExecRes.status: ", newScriptExecRes.status)
+            this.logger.debug(this.lib, func, "newScriptExecRes.statusText: ", newScriptExecRes.statusText)
+            let newResponseBody = await newScriptExecRes.text();
+            this.logger.debug(this.lib, func, "newResponseBody: ", newResponseBody);
+            */
             this.logger.debug(this.lib, func, "About to make evalScript call with:", { BSUrl: BSUrl, evalOptions: evalOptions });
             try {
                 response = await request.post(BSUrl, evalOptions);
@@ -341,6 +381,8 @@ export class RESTClient {
                 progress.report({ message: progressMessage });
                 let response = await fetch(url, fetchRequest);
                 this.logger.debug(this.lib, func, '[REQUEST] Response was: ', response);
+                this.logger.debug(this.lib, func, '[REQUEST] Response.headers.getSetCookies() was: ', response.headers.getSetCookie());
+                this.logger.debug(this.lib, func, '[REQUEST] Response was: ', response.headers.get('set-cookie'));
                 progress.report({increment: 100 });
                 return response;
 
