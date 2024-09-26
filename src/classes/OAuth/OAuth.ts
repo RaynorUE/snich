@@ -1,11 +1,17 @@
-import { ExtensionContext, commands, window, env, Uri } from "vscode";
+import { commands, env, Uri } from "vscode";
 import { URIHandlerCore } from "../URIHandler/URIHandlerCore";
 import { InstanceMaster } from "../InstanceConfigManager";
 //import fetch, { RequestInit } from 'node-fetch';
 import { randomBytes } from "crypto";
+import { extensionContext } from '../../extension';
 
 export class OAuth {
-
+    static getOAuthRedirectURL(){
+        return `${env.uriScheme}://${extensionContext?.extension.id}/oauth`;
+    }
+    static getLogoURL(){
+        return `https://snich.integratenate.com/logos/icon-canary.png`
+    }
     constructor() {
 
     }
@@ -15,7 +21,7 @@ export class OAuth {
         const config = instance.getConfig();
         const {client_id, client_secret} = config.connection.auth.OAuth;
         //const clientSecret = 'Wh5sJ?fOcD';
-        const redirectURI = `${env.uriScheme}://integratenate.snich-canary/oauth`;
+        const redirectURI = OAuth.getOAuthRedirectURL();
         const uri = await env.asExternalUri(Uri.parse(`${config.connection.url}/oauth_auth.do?response_type=code&redirect_uri=${redirectURI}&client_id=${client_id}&state=${state}`));
         await commands.executeCommand('vscode.open', uri);
         let result = await URIHandlerCore.awaitURIResponse();
