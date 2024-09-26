@@ -2,6 +2,7 @@ import { RESTClient } from '../RESTClient';
 import { InstanceMaster, InstancePreferenceMap } from '../InstanceConfigManager'
 import { WebBrowser } from '../WebBrowser';
 import { SystemLogHelper } from '../LogHelper';
+import { snRecord } from '../../myTypes/globals';
 
 export class SNPreferencesManager {
 
@@ -24,7 +25,7 @@ export class SNPreferencesManager {
         let rClient = new RESTClient(instance);
         try {
             var encQuery = `name=${prefMap.name}^user.user_name=${instance.getUserName()}`;
-            let prefExists = await rClient.getRecords(this.TABLE_NAME, encQuery, ["sys_id", "name"]);
+            let prefExists = await rClient.getRecords<snRecord>(this.TABLE_NAME, encQuery, ["sys_id", "name"]);
             if(prefExists.length > 0){
                 var pref = prefExists[0];
                 let updateBody = {value:value};

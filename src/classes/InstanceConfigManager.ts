@@ -1,6 +1,6 @@
 import { RESTClient } from './RESTClient';
 import { SystemLogHelper } from './LogHelper';
-import { SNApplication, InstanceConnectionData, SNQPItem, snTableField } from '../myTypes/globals';
+import { SNApplication, InstanceConnectionData, SNQPItem, snTableField, snRecordDVAll , snRecord} from '../myTypes/globals';
 import { WorkspaceManager } from './WorkspaceManager';
 import * as vscode from 'vscode';
 import { ConfiguredTables, TableConfig } from './SNDefaultTables';
@@ -230,15 +230,15 @@ export class InstancesList {
             //Next see if there are any d_ts tables that extend application file and auto-configure them.
 
             let dTSQuery = 'nameLIKE_d_ts&super_class.name=sys_metadata';
-            let dTSTables = await client.getRecords('sys_db_object', dTSQuery, ['name', 'label']);
+            let dTSTables = await client.getRecords<snRecord>('sys_db_object', dTSQuery, ['name', 'label']);
             this.logger.debug(this.lib, func, 'TypeScript Definition Tables: ', dTSTables);
             if (dTSTables.length > 0) {
                 dTSTables.forEach((tableRec) => {
                     var existingTable = instanceMaster.tableConfig.getTable(tableRec.name);
-                    if (!existingTable.name) {
+                    if (!existingTable?.name) {
                         this.logger.debug(this.lib, func, 'Typescript Definition table does not exist, creating! ' + tableRec.name);
                         var tConfig = new TableConfig(tableRec.name);
-                        tConfig.addDisplayField('name');
+                        tConfig.addGroupBy('generated_from_table');
                         tConfig.addField('definition', 'Definition', 'd.ts');
                         tConfig.setLabel('TypeScript Definition');
                         instanceMaster.tableConfig.addTable(tConfig);
@@ -684,13 +684,13 @@ export class SNSyncedFile {
     sys_scope: string = "";
     sys_package: string = "";
 
-    constructor(fsPath: string, instanceName: string, snTableField: snTableField, snRecordObj: any) {
+    constructor(fsPath: string, instanceName: string, snTableField: snTableField, snRecordObj: snRecordDVAll) {
         this.fsPath = fsPath + "";
         this.table = snTableField.table + "";
-        this.sys_id = snRecordObj.sys_id + "";
+        this.sys_id = snRecordObj.sys_id.value + "";
         this.content_field = snTableField.name + "";
-        this.sys_scope = snRecordObj['sys_scope.scope'] + "";
-        this.sys_package = snRecordObj.sys_package + "" || "";
+        this.sys_scope = snRecordObj['sys_scope.scope'].value + "";
+        this.sys_package = snRecordObj.sys_package.value + "" || "";
     }
 }
 
@@ -727,7 +727,7 @@ export class SyncedFiles {
     getFileBySysID(sysID: string, table: string, content_field: string, syncedFile?: SNSyncedFile) {
         let fileConfig = <SNSyncedFile>{};
         this.syncedFiles.forEach((file, index) => {
-            if (file.sys_id === sysID && file.table === table && file.content_field === content_field) {
+            if (file.sys_id == sysID && file.table == table && file.content_field == content_field) {
                 if (syncedFile) {
                     this.syncedFiles[index] = syncedFile;
                     fileConfig = file;
@@ -740,9 +740,9 @@ export class SyncedFiles {
         return fileConfig;
     }
 
-    addFile(fsPath: string, instanceName: string, snTableField: snTableField, snRecordObj: any) {
+    addFile(fsPath: string, instanceName: string, snTableField: snTableField, snRecordObj: snRecordDVAll) {
         let syncedFile = new SNSyncedFile(fsPath, instanceName, snTableField, snRecordObj);
-        let existingFile = this.getFileBySysID(snRecordObj.sys_id, snTableField.table, snTableField.name, syncedFile);
+        let existingFile = this.getFileBySysID(snRecordObj.sys_id.value, snTableField.table, snTableField.name, syncedFile);
         if (existingFile.sys_id) {
             //updated file happened in getFileBySysID;
         } else {

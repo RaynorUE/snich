@@ -7,6 +7,7 @@ import * as path from 'path';
 import * as crypto from 'crypto';
 import { ConfiguredTables, TableConfig } from "./SNDefaultTables";
 import { SNPreferencesManager } from './preferences/SNPreferencesManager';
+import { DVAllField, snRecordDVAll } from "../myTypes/globals";
 
 /**
 * This class is intended to manage the configuration, files, and folders within the workspace. 
@@ -114,6 +115,10 @@ export class WorkspaceManager {
                 this.logger.info(this.lib, func, "Checking for table config at path:", tableConfigPath);
                 if (fs.existsSync(tableConfigPath)) {
                     instance.tableConfig.setFromConfigFile(<ConfiguredTables>this.loadJSONFromFile(tableConfigPath));
+                    if (instance.tableConfig.upgraded()) {
+                        this.writeTableConfig(instance);
+                    }
+
                 }
 
                 let syncedFilePath = path.resolve(rootPath, folder, '.vscode', this.syncedFilesName);
@@ -205,7 +210,7 @@ export class WorkspaceManager {
     * @param record - The record details to create. 
     * @param openFile  - Open file or not. Default: True
     */
-    async createSyncedFile(instance: InstanceMaster, table: TableConfig, record: any, openFile?: boolean, scopeNameField?: string, scopeIdField?: string) {
+    async createSyncedFile(instance: InstanceMaster, table: TableConfig, record: snRecordDVAll, openFile?: boolean, scopeNameField?: string, scopeIdField?: string) {
         let func = 'createSyncedFile';
         this.logger.info(this.lib, func, 'START', { instanceMaster: instance, tableConfig: table, snRecord: record });
 
@@ -215,19 +220,26 @@ export class WorkspaceManager {
             openFile = true;
         }
 
-        if(!scopeNameField){
+        if (!scopeNameField) {
             scopeNameField = 'sys_scope.name';
         }
 
-        if(!scopeIdField){
+        if (!scopeIdField) {
             scopeIdField = 'sys_scope.scope';
         }
 
-        let appName = record[scopeNameField] + ' (' + record[scopeIdField] + ')';
+
+        let appName = record[scopeNameField].value + ' (' + record[scopeIdField].value + ')';
         let tableName = table.name;
         let multiFile = false;
         let config = instance.getConfig();
         let syncedFiles = instance.getSyncedFiles();
+        let groupByFromTable = table.getGroupBy() || [];
+
+        let groupBys: DVAllField[] = groupByFromTable.map((columnName) => {
+            return record[columnName] || { display_value: "", value: "" };
+        })
+        this.logger.debug(this.lib, func, "Group by fields from table config: ", groupBys);
 
         let appPath = path.resolve(config.rootPath, this.fixPathForWindows(appName));
         let rootPath = appPath.toString();
@@ -249,6 +261,22 @@ export class WorkspaceManager {
             await fsp.mkdir(rootPath2);
         } catch (err) {
             ///do nothing 
+        }
+
+        for (let i = 0; i < groupBys.length; i++) {
+            let groupBy = groupBys[i];
+            let addPath = '';
+            if (groupBy.display_value == groupBy.value) {
+                addPath = groupBy.display_value;
+            } else {
+                addPath = `${groupBy.display_value} [${groupBy.value}]`;
+            }
+            rootPath2 = path.resolve(rootPath2, this.fixPathForWindows(addPath));
+            try {
+                await fsp.mkdir(rootPath2);
+            } catch (err) {
+                ///do nothing 
+            }
         }
 
         finalRootFolderPath = rootPath2;
@@ -284,7 +312,7 @@ export class WorkspaceManager {
             }
 
             let file = fileName + '.' + field.extention;
-            let content = record[field.name];
+            let content = record[field.name].value;
 
             //this.logger.debug(this.lib, func, "path before we go to create:", file);
 
@@ -384,13 +412,13 @@ export class WorkspaceManager {
                 this.logger.info(this.lib, func, 'END');
                 return;
             }
-            
+
             willSaveEvent.waitUntil(new Promise((resolve, reject) => {
                 let func = "waitUntilPromise";
                 //copy and rename our current file so that we have a .old to compare to in our onDidSaveEvent
                 let visibleEditors = vscode.window.visibleTextEditors || [];
                 this.logger.debug(this.lib, func, "visible editors: ", visibleEditors);
-                
+
                 //See if in compare window
                 let compareWindow = this.isEditorCompareWindow(visibleEditors);
 
@@ -412,7 +440,7 @@ export class WorkspaceManager {
                 //This was in another branch to fix something here.. 73-find-by-exception-report--specificall
                 //resolve([]);
                 //Canary
-                var position0 = new vscode.Position(0,0);
+                var position0 = new vscode.Position(0, 0);
                 var textRange = new vscode.Range(position0, position0);
                 resolve([new vscode.TextEdit(textRange, "")]);
             }));
@@ -657,7 +685,7 @@ export class WorkspaceManager {
         return fsPath.replace(/"|\<|\>|\?|\||\/|\\|:|\*/g, '_');
     }
 
-    private isEditorCompareWindow(visibleEditors:  readonly vscode.TextEditor[] ) {
+    private isEditorCompareWindow(visibleEditors: readonly vscode.TextEditor[]) {
         let isCompareWindow = false;
         visibleEditors.forEach((editor) => {
             if (editor.document.fileName.indexOf('compare_files_temp') > -1) {

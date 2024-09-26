@@ -92,7 +92,7 @@ export class RESTClient {
         this.useProgress = false;
     }
 
-    async getRecord(table: string, sys_id: string, fields: Array<string>, displayValue?: boolean, refLinks?: boolean): Promise<snRecord> {
+    async getRecord<T>(table: string, sys_id: string, fields: string[], displayValue?: boolean | "all", refLinks?: boolean): Promise<T | undefined> {
         displayValue = displayValue || false;
         refLinks = refLinks === undefined ? true : refLinks;
 
@@ -100,19 +100,13 @@ export class RESTClient {
 
         //setup URL
         let url = this.instanceConfig.connection.url + '/api/now/' + this.apiVersion + 'table/' + table + '/' + sys_id + '?sysparm_fields=' + fields + '&sysparm_exclude_reference_link=' + refLinks + '&sysparm_display_value=' + displayValue;
-        let record: snRecord
+        let record: T;
         let response = await this.get(url, 'Getting record. ' + table + '_' + sys_id);
-
-        if (!response || !response.result) {
-            record = { label: "", name: "", sys_id: "" };
-        } else {
-            record = response.result;
-        }
-
+        record = response.result;
         return record;
     }
 
-    async getRecords(table: string, encodedQuery: string, fields: Array<string>, displayValue?: boolean, refLinks?: boolean) {
+    async getRecords<T>(table: string, encodedQuery: string, fields: string[], displayValue?: boolean | "all", refLinks?: boolean): Promise<T[]> {
         let func = 'getRecords';
         this.logger.info(this.lib, func, 'START');
         this.logger.debug(this.lib, func, 'table: ', table);
@@ -129,7 +123,7 @@ export class RESTClient {
         url += '&sysparm_display_value=' + displayValue;
         url += '&sysparm_query=' + encodedQuery;
 
-        let records: Array<snRecord> = [];
+        let records: T[] = [];
         let response = await this.get(url, "Retrieving records based on url: " + url);
 
         if (response && response.result) {
@@ -219,7 +213,7 @@ export class RESTClient {
                         await this.instance.askForOauth();
                         return await this.testConnection(attemptNumber);
                     } else if (this.instance.getAuthType() == 'oauth-authorization_code') {
-                        await this.instance.askForOAuthAuthCodeFlow();
+                        await this.getNewOAuthAuthCodeFlow();
                         return await this.testConnection(attemptNumber);
                     } else {
                         vscode.window.showErrorMessage(`Max attempts (${maxAttempts}) reached. Please validate account/config on instance: ${this.instance.getName()}`);
@@ -366,6 +360,7 @@ export class RESTClient {
             let response;
             try {
                 response = await request.get(url, this.requestOpts);
+
             } catch (e) {
                 response = e;
             } finally {
@@ -626,6 +621,7 @@ export class RESTClient {
                 this.instanceConfig.connection.auth.OAuth.lastRetrieved = Date.now();
                 this.instanceConfig.connection.auth.OAuth.token = tokenData;
 
+
                 this.requestOpts.auth = {
                     bearer: tokenData.access_token
                 };
@@ -636,6 +632,7 @@ export class RESTClient {
                 new WorkspaceManager(this.logger).writeInstanceConfig(this.instance);
                 this.logger.info(this.lib, func, 'END');
                 return '';
+
             }
 
         });
