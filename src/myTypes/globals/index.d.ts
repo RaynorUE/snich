@@ -27,7 +27,7 @@ interface InstanceConnectionData{
  * @type oauth or basic
  */
 interface InstanceAuthData {
-    type:string,
+    type: "" | "oauth-authorization_code" | "basic" |"oauth",
     writeBasicToDisk:boolean,
     username: string,
     password: string,

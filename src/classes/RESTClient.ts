@@ -142,7 +142,7 @@ export class RESTClient {
             fields = ['sys_id'];
         }
         let url = `${this.instanceConfig.connection.url}/api/now/table/${table}/${sys_id}?sysparm_fields=${fields.toString()}`;
-        let response = await this.put(url, body, "Updating record at url:" + url);
+        let response = await this.put(url, JSON.stringify(body), "Updating record at url:" + url);
 
         let record: snRecord = { label: "", name: "", sys_id: "" };
 
@@ -161,7 +161,7 @@ export class RESTClient {
             fields = ['sys_id'];
         }
         var postURL = `${this.instanceConfig.connection.url}/api/now/table/${table}?sysparm_fields=${fields.toString()}`;
-        let response = await this.post(postURL, body, `Creating ${table} record.`);
+        let response = await this.post(postURL, JSON.stringify(body), `Creating ${table} record.`);
 
         let record: snRecord = { label: "", name: "", sys_id: "" };
 
@@ -243,7 +243,7 @@ export class RESTClient {
 
         let jar = request.jar();
 
-        if(!username){
+        if (!username) {
             await this.instance.askForUsername();
             username = this.instance.getUserName();
         }
@@ -282,20 +282,20 @@ export class RESTClient {
         };
 
         let loginURL = baseURI + 'login.do';
-/*
-        const loginBody = new URLSearchParams();
-        loginBody.set('user_name', username);
-        loginBody.set('user_password', password);
-        loginBody.set('remember_me', 'true');
-        loginBody.set('sys_action', 'sysverb_login');
-        const newLoginResponse = await fetch(loginURL, {method:"POST", redirect:"follow", headers:headers, body:loginBody.toString(), credentials:'same-origin'});
-        const loginResponse = await newLoginResponse.text();
-
-        this.logger.debug(this.lib, func, "NewLoginResponse: ", newLoginResponse);
-        this.logger.debug(this.lib, func, "NewLoginResponse: newLoginResponse.headers.get('set-cookie')", newLoginResponse.headers.get('set-cookie'));
-        //this.logger.debug(this.lib, func, "loginResponse: ", loginResponse);
-        //this.logger.debug(this.lib, func, "NewLoginResponse: ", newLoginResponse);
-        */
+        /*
+                const loginBody = new URLSearchParams();
+                loginBody.set('user_name', username);
+                loginBody.set('user_password', password);
+                loginBody.set('remember_me', 'true');
+                loginBody.set('sys_action', 'sysverb_login');
+                const newLoginResponse = await fetch(loginURL, {method:"POST", redirect:"follow", headers:headers, body:loginBody.toString(), credentials:'same-origin'});
+                const loginResponse = await newLoginResponse.text();
+        
+                this.logger.debug(this.lib, func, "NewLoginResponse: ", newLoginResponse);
+                this.logger.debug(this.lib, func, "NewLoginResponse: newLoginResponse.headers.get('set-cookie')", newLoginResponse.headers.get('set-cookie'));
+                //this.logger.debug(this.lib, func, "loginResponse: ", loginResponse);
+                //this.logger.debug(this.lib, func, "NewLoginResponse: ", newLoginResponse);
+                */
 
         this.logger.debug(this.lib, func, "About to make post to following:", { loginURL: loginURL, loginOpts: loginOpts });
         let loginResponse: string = await request.post(loginURL, loginOpts);
@@ -323,7 +323,7 @@ export class RESTClient {
                     "record_for_rollback": "on"
                 }
             };
-            
+
             let BSUrl = baseURI + 'sys.scripts.do?sysparm_transaction_scope=' + scope;
 
             /*
@@ -379,11 +379,18 @@ export class RESTClient {
         if (this.useProgress) {
             return await vscode.window.withProgress(<vscode.ProgressOptions>{ location: vscode.ProgressLocation.Notification, cancellable: false, title: "SNICH" }, async (progress, token) => {
                 progress.report({ message: progressMessage });
-                let response = await fetch(url, fetchRequest);
+                let response = await fetch(url, {
+                    ...fetchRequest,
+                    headers: new Headers(this.headers),
+                });
+                if (await this.OAuthRetry(response)) {
+                    response = await fetch(url, {
+                        ...fetchRequest,
+                        headers: new Headers(this.headers),
+                    });
+                }
                 this.logger.debug(this.lib, func, '[REQUEST] Response was: ', response);
-                this.logger.debug(this.lib, func, '[REQUEST] Response.headers.getSetCookies() was: ', response.headers.getSetCookie());
-                this.logger.debug(this.lib, func, '[REQUEST] Response was: ', response.headers.get('set-cookie'));
-                progress.report({increment: 100 });
+                progress.report({ increment: 100 });
                 return response;
 
             });
@@ -419,9 +426,18 @@ export class RESTClient {
 
                 progress.report({ message: progressMessage });
 
-                let response = await fetch(url, fetchRequest);
+                let response = await fetch(url, {
+                    ...fetchRequest,
+                    headers: new Headers(this.headers),
+                });
+                if (await this.OAuthRetry(response)) {
+                    response = await fetch(url, {
+                        ...fetchRequest,
+                        headers: new Headers(this.headers),
+                    });
+                }
                 this.logger.debug(this.lib, func, '[REQUEST] Response was: ', response);
-                progress.report({increment: 100 });
+                progress.report({ increment: 100 });
                 return response;
 
             });
@@ -455,9 +471,18 @@ export class RESTClient {
 
                 progress.report({ message: progressMessage });
 
-                let response = await fetch(url, fetchRequest);
+                let response = await fetch(url, {
+                    ...fetchRequest,
+                    headers: new Headers(this.headers),
+                });
+                if (await this.OAuthRetry(response)) {
+                    response = await fetch(url, {
+                        ...fetchRequest,
+                        headers: new Headers(this.headers),
+                    });
+                }
                 this.logger.debug(this.lib, func, '[REQUEST] Response was: ', response);
-                progress.report({increment: 100 });
+                progress.report({ increment: 100 });
                 return response;
             });
         } else {
@@ -489,7 +514,7 @@ export class RESTClient {
         }
     }
 
-    private async processOAuth(action?: "get_new" | "refresh"): Promise<any> {
+    private async processOAuth(action?: "get_new" | "refresh"): Promise<boolean> {
 
         let func = 'processOAuth';
         this.logger.info(this.lib, func, 'START', { action: action });
@@ -511,17 +536,17 @@ export class RESTClient {
         if (hadTokenFor < expiresIn && !action) {
             this.logger.info(this.lib, func, 'Token not yet expire! Using it.');
 
-            this.headers.set('Authorization', `Bearer ${oauthData.token.access_token}`); 
-                     
+            this.headers.set('Authorization', `Bearer ${oauthData.token.access_token}`);
+
             this.logger.info(this.lib, func, 'END');
-            return '';
-        } else if ((hadTokenFor > expiresIn && oauthData.token.refresh_token && !action) || action == "refresh" ) {
+            return true;
+        } else if ((hadTokenFor > expiresIn && oauthData.token.refresh_token && !action) || action == "refresh") {
             this.logger.info(this.lib, func, 'token expired! Attempt to get new access token using refresh token!');
 
             let connectionData = this.instanceConfig.connection;
 
             let oauthData = connectionData.auth.OAuth;
-            const {client_id, client_secret } = oauthData;
+            const { client_id, client_secret } = oauthData;
             const { refresh_token } = oauthData.token;
             const bodyParams = new URLSearchParams();
             bodyParams.set('grant_type', 'refresh_token');
@@ -529,18 +554,20 @@ export class RESTClient {
             bodyParams.set('client_secret', client_secret);
             bodyParams.set('refresh_token', refresh_token);
 
-            const response = await fetch(oauthTokenURL, {method:"POST", body:bodyParams.toString(), headers:{ 'Content-Type': 'application/x-www-form-urlencoded' }});
+            const response = await fetch(oauthTokenURL, { method: "POST", body: bodyParams.toString(), headers: { 'Content-Type': 'application/x-www-form-urlencoded' } });
             this.logger.debug(this.lib, func, "Response from post", response);
+            this.logger.debug(this.lib, func, "Response from post");
 
-            if (response && response.status == 200 ) {
+            if (response && response.status == 200) {
                 const data = await response.json() as SNOAuthToken;
-                this.headers.set('Authorization', `Bearer ${data.access_token}`)
+                this.headers.set('Authorization', `Bearer ${data.access_token}`);
+                this.logger.debug(this.lib, func, "Set Auth header");
 
                 this.instanceConfig.connection.auth.OAuth.token = data;
                 this.instanceConfig.connection.auth.OAuth.lastRetrieved = Date.now();
                 this.instance.setConfig(this.instanceConfig);
                 new WorkspaceManager(this.logger).writeInstanceConfig(this.instance);
-
+                return true;
             } else {
                 this.logger.warn(this.lib, func, "Attempted to get new access token using refresh token and failed. Sending through GetNew!");
                 action = "get_new";
@@ -550,12 +577,14 @@ export class RESTClient {
 
         if (action == "get_new") {
             if (this.grantType == 'authorization_code') {
-                await this.getNewOAuthAuthCodeFlow();
+                return await this.getNewOAuthAuthCodeFlow();
+
             } else {
                 this.logger.error(this.lib, func, `Unknown grant type: ${this.grantType}`);
             }
         }
         this.logger.info(this.lib, func, "END");
+        return false;
     }
 
     private async getNewOAuthAuthCodeFlow() {
@@ -581,9 +610,25 @@ export class RESTClient {
                 this.instanceConfig.connection.auth.OAuth.lastRetrieved = Date.now();
                 this.instance.setConfig(this.instanceConfig);
                 new WorkspaceManager(this.logger).writeInstanceConfig(this.instance);
+                return true;
             }
+
+            return false;
         });
 
+    }
+
+    private async OAuthRetry(response: Response) {
+        const func = "OAuthRetry";
+        this.logger.info(this.lib, func, "START", { status: response.status, statusText: response.statusText });
+        if (this.instanceConfig.connection.auth.type != "oauth-authorization_code") {
+            return false;
+        } else if (response.status == 401) {
+
+            return await this.processOAuth('refresh');
+        } else {
+            return false;
+        }
     }
 }
 
