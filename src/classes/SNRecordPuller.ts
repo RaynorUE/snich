@@ -125,7 +125,7 @@ export class SNFilePuller {
                 fieldsList.push(dvField);
             });
 
-            let recordToSave = await client.getRecord<snRecordDVAll>(tableConfig.name, fileRec.sys_id, fieldsList);
+            let recordToSave = await client.getRecord<snRecordDVAll>(tableConfig.name, fileRec.sys_id, fieldsList, 'all');
             if (!recordToSave) {
                 vscode.window.showWarningMessage(`For some reason we couldn't grab the file to sync. Aborting sync record.`);
                 return undefined;
