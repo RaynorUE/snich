@@ -3,8 +3,8 @@
     "publisher": "integrateNate",
     "displayName": "S.N.I.C.H.",
     "description": "ServiceNow Integrated Code Helper. Get the latest as I build stuff ready to be tested! Provide feedback to integratenate@gmail.com",
-    "icon": "images/icon-canary.png",
-    "version": "1.5.1",
+    "icon": "images/icon.png",
+    "version": "1.5.2",
     "liveVersion": "1.1.0",
     "canaryVersion": "1.5.0",
     "betaVersion": "1.0.6",
@@ -35,7 +35,7 @@
         }
     ],
     "engines": {
-        "vscode": "^1.92.0"
+        "vscode": "^1.93.0"
     },
     "repository": {
         "type": "git",

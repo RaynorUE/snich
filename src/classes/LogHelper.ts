@@ -141,15 +141,32 @@ export class SystemLogHelper {
     }
 
     debug(library:string, func:string, msg:string, obj?:any){
-        this.log(this._DEBUG, library, func, msg, obj);
+        if(arguments.length == 4){
+            this.log(this._DEBUG, library, func, msg, obj);
+        } else {
+            this.log(this._DEBUG, library, func, msg);
+        }
+        
     }
     info(library:string, func:string, msg:string, obj?:any){
-        this.log(this._INFO, library, func, msg, obj);
+        if(arguments.length == 4){
+            this.log(this._INFO, library, func, msg, obj);
+        } else {
+            this.log(this._INFO, library, func, msg);
+        }
     }
     warn(library:string, func:string, msg:string, obj?:any){
-        this.log(this._WARN, library, func, msg, obj);
+        if(arguments.length == 4){
+            this.log(this._WARN, library, func, msg, obj);
+        } else {
+            this.log(this._WARN, library, func, msg);
+        }
     }
     error(library:string, func:string, msg:string, obj?:any){
-        this.log(this._ERROR, library, func, msg, obj);
+        if(arguments.length == 4){
+            this.log(this._ERROR, library, func, msg, obj);
+        } else {
+            this.log(this._ERROR, library, func, msg);
+        }
     }
 }
