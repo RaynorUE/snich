@@ -10,7 +10,7 @@ export class OAuth {
         return `${env.uriScheme}://${extensionContext?.extension.id}/oauth`;
     }
     static getLogoURL(){
-        return `https://snich.integratenate.com/logos/icon-canary.png`
+        return `https://snich.integratenate.com/logos/icon-canary_sso.png`
     }
     constructor() {
 
