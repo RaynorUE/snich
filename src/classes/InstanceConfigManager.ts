@@ -615,7 +615,7 @@ export class InstanceMaster {
         this.config.connection.auth.writeBasicToDisk = flag;
     }
 
-    private setAuthType(authType: string) {
+    private setAuthType(authType: "" | "oauth-authorization_code" | "basic" | "oauth") {
         this.config.connection.auth.type = authType;
     }
 
