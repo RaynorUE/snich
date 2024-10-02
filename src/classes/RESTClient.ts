@@ -53,10 +53,11 @@ export class RESTClient {
         let func = 'setBasicAuth';
         this.logger.info(this.lib, func, 'START', {
             username: username,
-            password: password ? 'not logged' : password
+            //password: password ? 'not logged' : password
+            password: password
         });
 
-        this.headers.set('Authorization', `Basic ${username}:${password}`);
+        this.headers.set('Authorization', `Basic ${btoa(`${username}:${password}`)}`);
 
         this.authType = 'basic';
         this.logger.info(this.lib, func, 'END');
@@ -622,11 +623,13 @@ export class RESTClient {
         const func = "OAuthRetry";
         this.logger.info(this.lib, func, "START", { status: response.status, statusText: response.statusText });
         if (this.instanceConfig.connection.auth.type != "oauth-authorization_code") {
+            this.logger.info(this.lib, func, "END", false)
             return false;
         } else if (response.status == 401) {
 
             return await this.processOAuth('refresh');
         } else {
+            this.logger.info(this.lib, func, "END", false)
             return false;
         }
     }

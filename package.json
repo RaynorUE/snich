@@ -3,7 +3,7 @@
     "publisher": "integrateNate",
     "displayName": "S.N.I.C.H.",
     "description": "ServiceNow Integrated Code Helper. Get the latest as I build stuff ready to be tested! Provide feedback to integratenate@gmail.com",
-    "icon": "images/icon.png",
+    "icon": "images/icon.PNG",
     "version": "1.5.2",
     "liveVersion": "1.1.0",
     "canaryVersion": "1.5.0",
