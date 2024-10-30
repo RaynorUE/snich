@@ -159,7 +159,7 @@ export class InstancesList {
         let instanceName = enteredInstanceValue.replace(/https:\/\/|http:\/\//, '');
         const hostParts = instanceName.split('.');
         const subDomained = hostParts.length > 2;
-        const isNowDotCom = enteredInstanceValue.indexOf('service-now.com');
+        const isNowDotCom = enteredInstanceValue.indexOf('service-now.com') > -1;
         if(isNowDotCom){
             //behavor as folks are used to.
             instanceName = hostParts[0];
