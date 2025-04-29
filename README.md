@@ -1,7 +1,10 @@
-# Welcome to the Pre-Release Build
-Pre-release build of S.N.I.C.H.
+# ServiceNow Integrated Code Helper
+Increase your development speed and Reduce Errors! Get out of ServiceNows clunky web editors and edit your scripts using all the power of VSCode!
 
-**WARNING:** This version may be unstable.
+This extension allows you to sync any application file record from ServiceNow. Including any field from that file! (Not just script fields!) Fully customize the fields of data being synced for any table!
+
+<a href="https://www.servicenow.com"><img src="https://badgen.net/badge/ServiceNow/Washington%20%7C%20Xanadu%20%7C%20Yokohama/"/></a>
+
 
 # [TL;NGR]()
 This is too long and you're not gonna read it? No problem. We've got some "under 2 minute" instructional and tip videos you can find on youtube!

@@ -4,10 +4,7 @@
     "displayName": "S.N.I.C.H.",
     "description": "ServiceNow Integrated Code Helper. Get the latest as I build stuff ready to be tested! Provide feedback to integratenate@gmail.com",
     "icon": "images/icon.PNG",
-    "version": "1.5.2",
-    "liveVersion": "1.1.0",
-    "canaryVersion": "1.5.0",
-    "betaVersion": "1.0.6",
+    "version": "2.0.2",
     "keywords": [
         "SNICH",
         "snich",
@@ -29,7 +26,7 @@
             "href": "https://www.youtube.com/playlist?list=PLp0BtdkD38PWd9PTib4OgRaTQ3SIQDE17"
         },
         {
-            "url": "https://badgen.net/badge/ServiceNow/Utah%20%7C%20Vancouver/red",
+            "url": "https://badgen.net/badge/ServiceNow/Washington%20%7C%20Xanadu%20%7C%20Yokohama/",
             "description": "Supported Service Now Versions",
             "href": "https://www.servicenow.com"
         }
