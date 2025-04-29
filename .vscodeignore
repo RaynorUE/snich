@@ -8,9 +8,11 @@ webpack.config.json
 .vscodeignore
 ACSIILogo.md
 package.json
+package-lock.json
 tsconfig.json
 webpack.config.json
 prepublish-beta.js
+prepublish-canary.js
 prepublish-live.js
 README-canary.md
 README-live.md
@@ -19,4 +21,5 @@ ext_version.json
 prepublish-canary.js
 New Logo Baseline.png
 icon-canary_sso.png
+ext_version.json
 SNCodeDefinitions/madrid.json

@@ -156,7 +156,19 @@ export class InstancesList {
         }
 
         //get just the subdomain part if a full URL was entered.
-        let instanceName = enteredInstanceValue.replace(/https:\/\/|http:\/\/|.service-now.com|\//g, '');
+        let instanceName = enteredInstanceValue.replace(/https:\/\/|http:\/\//, '');
+        const hostParts = instanceName.split('.');
+        const subDomained = hostParts.length > 2;
+        const isNowDotCom = enteredInstanceValue.indexOf('service-now.com') > -1;
+        if(isNowDotCom){
+            //behavor as folks are used to.
+            instanceName = hostParts[0];
+        } else if(subDomained && !isNowDotCom){
+            //get all sub-domained parts from the base domain..
+            hostParts.splice(hostParts.length - 2, 2);
+            instanceName = hostParts.join('.');
+        }
+        
         let existingInstance = this.getInstance(instanceName);
 
         if (existingInstance.getName()) {

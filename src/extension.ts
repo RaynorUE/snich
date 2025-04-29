@@ -17,7 +17,6 @@ export let extensionContext:vscode.ExtensionContext | undefined;
 
 export const snichOutput = vscode.window.createOutputChannel('S.N.I.C.H.');
 
-
 // this method is called when your extension is activated
 // your extension is activated the very first time the command is executed
 export function activate(context: vscode.ExtensionContext) {
