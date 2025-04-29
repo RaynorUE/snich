@@ -3,3 +3,5 @@ out
 node_modules
 *.vsix
 ./.vscode/settings.json
+.github
+ext_version.json

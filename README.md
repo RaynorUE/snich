@@ -3,18 +3,97 @@ Increase your development speed and Reduce Errors! Get out of ServiceNows clunky
 
 This extension allows you to sync any application file record from ServiceNow. Including any field from that file! (Not just script fields!) Fully customize the fields of data being synced for any table!
 
-<a href="https://www.servicenow.com"><img src="https://badgen.net/badge/ServiceNow/Kingston%20%7C%20London%20%7C%20Madrid/"/></a>
-
-<img src="https://vsmarketplacebadge.apphb.com/version-short/integrateNate.snich.svg"/> <img src="https://vsmarketplacebadge.apphb.com/installs/integrateNate.snich.svg
-"/> <img src="https://vsmarketplacebadge.apphb.com/rating-short/integrateNate.snich.svg"/>
+<a href="https://www.servicenow.com"><img src="https://badgen.net/badge/ServiceNow/Washington%20%7C%20Xanadu%20%7C%20Yokohama/"/></a>
 
 
+# [TL;NGR]()
+This is too long and you're not gonna read it? No problem. We've got some "under 2 minute" instructional and tip videos you can find on youtube!
 
-# [TL;DR]()
 <a href="https://www.youtube.com/playlist?list=PLp0BtdkD38PWd9PTib4OgRaTQ3SIQDE17"><img src="https://badgen.net/badge/YouTube/Instructional Videos/red?icon=googleplay"/></a>
 <br/>
 
 >__Tip:__ Everything is done through the command pallete (Ctrl+Shift+P, or CMD+Shift+P on macs). Once launching the command pallete type in SNICH to see a list of all the available commands. 
+
+# [NEW! Updated the Configur New Table (And modify) Question flow/process!]()
+Now when Configuring additional tables, you the system will ask you to add Name fields, grouping fields, and display fields. It will then ask if you want to add "additional fields" instead of the multi-select. This allows you the benefit of being able to "order" the fields based on the order you pick them in. Previously the multi-select style would not allow this.
+
+# [NEW! Table Configurations now support specifying Grouping / Sub folder organization!]()
+Updated the pre-configured tables to now group files into sub-folders. 
+
+## Groupings added to default tables
+The follow default tables have had "Grouping" functionality added to them. **Note** if you have configured custom tables, you will need to re-configure them.
+
+- Business Rules [sys_script]
+    - Collection\When\Order\Name  *(ex. \incident\after\100\Task State Manager)*
+- Angular Providers [sp_angular_provider]
+    - Type\Name *(ex. \Directive\addUibTabAccessibility)
+- UI Action [sys_ui_action]
+    - Table\Name *(ex. \incident\Create Change Request)
+- Client Script [sys_script_client]
+    - Table\Name *(ex. \incident\Work Notes Required)
+- Scripted REST Resource [sys_ws_operation]
+    - Scripted Rest Service\Method\Name *(ex. \FollowNotifications\POST\action)
+- Record Producer [sc_cat-item_producer]
+    - Table\Name *(ex. Incident\Report Incident)
+
+## Add your own groupings / sub-folders!
+Add your own or change the default groupings by using the command pallete command: **Configure Table (New and Update)**
+
+# [Save and Load TableConfig to/from sys_user_preference (ServiceNow)]()
+Now when configuring a new instance, we will reach out to the sys_user_preference table and look for a preference for you and your table config unique to that instance.
+
+## Benefits
+- When configuring a new table, will sync your entire table config to a user preference: vscode.extension.snich.table_config
+- Then, when you need to wipe out your Instance folder and start over (For any reason) you won't lose you configured tables!
+- In short... 
+    - "Setup new instance" - Checks for existing user preference and pulls config if available. If not available, creates the standard table config and syncs to your instance/preference
+    - Then when configuring new tables, we ensure to keep that sys_user_preference in sync!
+    
+
+# [Open File in Browser (ServiceNow)]()
+You can now open the Active file in ServiceNow! Will Launch your default web browser directly to the record. Passing along the application scope so you don't get that pesky prompt about switching scopes!
+
+# [OAuth "Code Flow" fully supported!]()
+Originally, the OAuth mechanism didn't work consistently and even more so I still had to store your **username** AND snich "saw" your **password** A security hole I honestly want nothing to do with, but understand it's a necessity in some cases (like background scripts currently).
+
+For regular SNICH usage (everything but background scripts) the Authorization Code OAuth flow is now supported!
+
+## Quick Steps
+1. Setup a new instance (Sorry if you want to convert an old one, no options right now..)
+2. Select the "OAuth (Preferred)" Option
+3. It will prompt you to choose:
+    1. Create a New OAUTH Application registry in ServiceNow. This will launch your web browser with a pre-filled record. All you need to do is "Save" that record, and copy the client ID and Client Secret over to SNICH when prompted. 
+    2. Open Your OAUTH applicaation Registry in ServiceNow. This is so that if you've already created one, you can re-use it! Note the redirect URI is https://localhost:62000
+    3. "Im Good". You've already got your Client ID and Client Secret handy. Look at you, you OAuth wizard!
+4. After determining how you want to get your Client ID and Client Secret, you will be prompted to enter them.
+5. After entering your **Client Secret** the system will launch your web browser to perform the OAuth code request.
+6. In your browser, it will ask if you want to "Allow"... Click Allow
+7. This will redirect you to https://localhost:62000 **IMPORTANT** Some browsers may warn about the site being "unsafe", this is due to a self-signed cert. However, because we're hosting this "web site" from your local machine, this data never traverses the internet. Either way, we still encrypt it with SSL! :)
+8. At this point, you should get a message to close the browser window if everything went succesfully. 
+9. After closing your browser window and coming back to SNICH you should see a "Test Connection Succesful Message". If you do not, open your command pallete and manually execute a "Test Connection" to validate successfull connection!
+
+# [NEW! Run Background Scripts!]()
+You can now run background scripts! woo! Some quick instructions (More to follow on insiders / main build);
+
+## Quick Steps
+1. Highlight any text, in any open editor, (Could be a new unsaved file, or an existing file)
+    - Optionally, you can choose not to highlight any text. If no text is highlighted we will run all text in active editor in the background script.
+2. Open the Command Pallete
+3. Search for "Run Background Script"
+4. Select the scope to run the background script in
+    1. "Global" Run the script in global. 
+    2. "Scoped" Run the script in an application scope.
+        1. If an unsaved file, it will prompt which scope to execute in.
+        2. If file is saved, it will try to figure out the application scope based on the location of the saved file. 
+
+
+## Couple of notes
+- Currently this only works with Username/Password via Basic Auth. If you do not have a local password on your SN account and cannot set one up. I only have apologies and humbleness to not hate me for eternity. 
+  - I am looking into providing this via OAuth mechanisms. Or optionally, launching you to the browser page with everything filled in as a last resort possibly..
+  - **NOTE:** While it does ask for your username/password when executing, it DOES NOT save them to disk and ONLY stores them in memory until you close VSCode.
+- Right now the results will open a "Webview panel" and show the content exactly as it would appear in SN. It will also open the VSCode "Output Window" and show a HTML Stripped version there. 
+  - There are plans to provide some settings to control this behavior. Right now mostly looking for feedback!
+
 
 # [SeriviceNow API Code Class Intellisense]()
 This extention provides code completion for ServiceNow Code API And Classes. 

@@ -131,19 +131,8 @@ export class SystemLogHelper {
                 log = console.error;
             }
 
-            if (obj) {
-                var objString = "";
-                try{
-                    objString = JSON.stringify(obj).toLowerCase(); //may throw error on circular objects.
-                } catch (err) {
-                    objString = "";
-                }
-                
-                if(objString.indexOf('password') > -1 || objString.indexOf('pass') > -1 || objString.indexOf('pw') > -1){
-                    log(fullMsg, {log_exception:'Data to be logged may have contained a password. Not logging.'});
-                } else {
-                    log(fullMsg, obj);
-                }
+            if (arguments.length > 4) {
+                log(fullMsg, obj);
             } else {
                 log(fullMsg);
             }
@@ -152,15 +141,32 @@ export class SystemLogHelper {
     }
 
     debug(library:string, func:string, msg:string, obj?:any){
-        this.log(this._DEBUG, library, func, msg, obj);
+        if(arguments.length == 4){
+            this.log(this._DEBUG, library, func, msg, obj);
+        } else {
+            this.log(this._DEBUG, library, func, msg);
+        }
+        
     }
     info(library:string, func:string, msg:string, obj?:any){
-        this.log(this._INFO, library, func, msg, obj);
+        if(arguments.length == 4){
+            this.log(this._INFO, library, func, msg, obj);
+        } else {
+            this.log(this._INFO, library, func, msg);
+        }
     }
     warn(library:string, func:string, msg:string, obj?:any){
-        this.log(this._WARN, library, func, msg, obj);
+        if(arguments.length == 4){
+            this.log(this._WARN, library, func, msg, obj);
+        } else {
+            this.log(this._WARN, library, func, msg);
+        }
     }
     error(library:string, func:string, msg:string, obj?:any){
-        this.log(this._ERROR, library, func, msg, obj);
+        if(arguments.length == 4){
+            this.log(this._ERROR, library, func, msg, obj);
+        } else {
+            this.log(this._ERROR, library, func, msg);
+        }
     }
 }
